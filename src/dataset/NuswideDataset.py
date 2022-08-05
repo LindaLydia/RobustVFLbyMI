@@ -21,10 +21,10 @@ class NUSWIDEDataset():
         # {'sky':74190, 'clouds':54087, 'person':51577, 'water':35264, 'animal':33887, 'grass':22561, 'buildings':17835, 'window':15051, 'plants':14345, 'lake':13392}
 
         self.data_dir = data_dir
-        self.selected_labels = ['buildings', 'grass', 'animal', 'water', 'person']
-        self.class_num = 5
-        # self.selected_labels = ['clouds','person']
-        # self.class_num = 2
+        # self.selected_labels = ['buildings', 'grass', 'animal', 'water', 'person']
+        # self.class_num = 5
+        self.selected_labels = ['clouds','person']
+        self.class_num = 2
 
         if data_type == 'train':
             X_image, X_text, Y = get_labeled_data(self.data_dir, self.selected_labels, 60000, 'Train')
@@ -61,7 +61,7 @@ if __name__ == '__main__':
     print(torch.sum(train_dataset.y), torch.sum(test_dataset.y))
 
 
-    # '''X是特征，不包含target;X_tsne是已经降维之后的特征'''
+    # '''X�?特征，不包含target;X_tsne�?已经降维之后的特�?'''
     # tsne = manifold.TSNE(n_components=2, init='pca', random_state=501)
     # train_X0_tsne = tsne.fit_transform(train_dataset.x[0])
     # test_X0_tsne = tsne.fit_transform(test_dataset.x[0])
@@ -69,9 +69,9 @@ if __name__ == '__main__':
     # test_X1_tsne = tsne.fit_transform(test_dataset.x[1])
     # print("Org data dimension is {}. Embedded data dimension is {}".format(train_dataset.x[0].shape[1:], train_X0_tsne.shape[1:]))
         
-    # '''嵌入空间可视化'''
+    # '''嵌入空间�?视化'''
     # x_min, x_max = train_X0_tsne.min(0), train_X0_tsne.max(0)
-    # X_norm = (train_X0_tsne - x_min) / (x_max - x_min)  # 归一化
+    # X_norm = (train_X0_tsne - x_min) / (x_max - x_min)  # 归一�?
     # plt.figure(figsize=(8, 8))
     # for i in range(X_norm.shape[0]):
     #     plt.text(X_norm[i, 0], X_norm[i, 1], str(y[i]), color=plt.cm.Set1(train_dataset.y[i]), 
@@ -81,7 +81,7 @@ if __name__ == '__main__':
     # plt.show()
 
     # x_min, x_max = test_X0_tsne.min(0), test_X0_tsne.max(0)
-    # X_norm = (test_X0_tsne - x_min) / (x_max - x_min)  # 归一化
+    # X_norm = (test_X0_tsne - x_min) / (x_max - x_min)  # 归一�?
     # plt.figure(figsize=(8, 8))
     # for i in range(X_norm.shape[0]):
     #     plt.text(X_norm[i, 0], X_norm[i, 1], str(y[i]), color=plt.cm.Set1(test_dataset.y[i]), 

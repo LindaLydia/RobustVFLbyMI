@@ -43,11 +43,11 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', default=0, type=int, help='gpu id')
     # defense
     parser.add_argument('--apply_trainable_layer', default=False, type=bool, help='whether to use trainable layer in active party')
-    # parser.add_argument('--apply_laplace', default=False, type=bool, help='whether to use dp-laplace')
-    # parser.add_argument('--apply_gaussian', default=False, type=bool, help='whether to use dp-gaussian')
-    # parser.add_argument('--dp_strength', default=0, type=float, help='the parameter of dp defense')
-    # parser.add_argument('--apply_grad_spar', default=False, type=bool, help='whether to use gradient sparsification')
-    # parser.add_argument('--grad_spars', default=0, type=float, help='the parameter of gradient sparsification')
+    parser.add_argument('--apply_laplace', default=False, type=bool, help='whether to use dp-laplace')
+    parser.add_argument('--apply_gaussian', default=False, type=bool, help='whether to use dp-gaussian')
+    parser.add_argument('--dp_strength', default=0, type=float, help='the parameter of dp defense')
+    parser.add_argument('--apply_grad_spar', default=False, type=bool, help='whether to use gradient sparsification')
+    parser.add_argument('--grad_spars', default=0, type=float, help='the parameter of gradient sparsification')
     parser.add_argument('--apply_encoder', default=False, type=bool, help='whether to use CoAE')
     # parser.add_argument('--apply_random_encoder', default=False, type=bool, help='whether to use CoAE')
     # parser.add_argument('--apply_adversarial_encoder', default=False, type=bool, help='whether to use AAE')
@@ -59,15 +59,16 @@ if __name__ == '__main__':
     parser.add_argument('--apply_marvell', default=False, type=bool, help='whether to use marvell(optimal gaussian noise)')
     parser.add_argument('--marvell_s', default=1, type=int, help='scaler of bound in MARVELL')
 
-    # # defense methods given in 
+    # # defense methods given in MC
     # parser.add_argument('--apply_ppdl', help='turn_on_privacy_preserving_deep_learning', type=bool, default=False)
     # parser.add_argument('--ppdl_theta_u', help='theta-u parameter for defense privacy-preserving deep learning', type=float, default=0.5)
-    # parser.add_argument('--apply_gc', help='turn_on_gradient_compression', type=bool, default=False)
+    # # parser.add_argument('--apply_gc', help='turn_on_gradient_compression', type=bool, default=False)
     # parser.add_argument('--gc_preserved_percent', help='preserved-percent parameter for defense gradient compression', type=float, default=0.1)
     # parser.add_argument('--apply_lap_noise', help='turn_on_lap_noise', type=bool, default=False)
     # parser.add_argument('--noise_scale', help='noise-scale parameter for defense noisy gradients', type=float, default=1e-3)
-    # parser.add_argument('--apply_discrete_gradients', default=False, type=bool, help='whether to use Discrete Gradients')
-    # parser.add_argument('--discrete_gradients_bins', default=12, type=int, help='number of bins for discrete gradients')
+    parser.add_argument('--apply_discrete_gradients', default=False, type=bool, help='whether to use Discrete Gradients')
+    parser.add_argument('--discrete_gradients_bins', default=12, type=int, help='number of bins for discrete gradients')
+    parser.add_argument('--discrete_gradients_bound', default=3e-4, type=float, help='value of bound for discrete gradients')
     
     parser.add_argument('--apply_mi', default=False, type=bool, help='wheather to use MutualInformation-loss instead of CrossEntropy-loss')
     parser.add_argument('--mi_loss_lambda', default=1.0, type=float, help='the parameter for MutualInformation-loss')
@@ -92,7 +93,7 @@ if __name__ == '__main__':
 
     if args.dataset == 'cifar100':
         args.dst = datasets.CIFAR100("../../../share_dataset/", download=True)
-        args.num_class_list = [100] #[5, 10, 15, 20, 40, 60, 80, 100]
+        args.num_class_list = [20] #[5, 10, 15, 20, 40, 60, 80, 100]
     elif args.dataset == 'cifar10':
         args.dst = datasets.CIFAR10("../../../share_dataset/", download=True)
         args.num_class_list = [10] #[5, 10, 15, 20, 40, 60, 80, 100]
@@ -102,7 +103,12 @@ if __name__ == '__main__':
     elif args.dataset == 'nuswide':
         args.dst = None
         args.num_class_list = [5] #[2, 4, 8, 16, 20, 40, 60, 81]
+    
+    # # attention, change to binary classification
+    # args.num_class_list = [2]
+
     args.batch_size_list = [2048]
+    # args.batch_size_list = [1]
     
     if args.num_class_list[0] == 2:
         ae_name_list = ['autoencoder_2_1.0_1636175704','autoencoder_2_0.5_1636175420',\
@@ -120,25 +126,38 @@ if __name__ == '__main__':
                         'autoencoder_20_0.1_1645374527','autoencoder_20_0.05_1645374482','autoencoder_20_0.0_1645374739']
         # ae_name_list = ['negative/autoencoder_20_0.5_1647127262', 'negative/autoencoder_20_1.0_1647127164']
 
-    args.exp_res_dir = f'exp_result/{args.dataset}/'
+
+
+    # args.exp_res_dir = f'exp_result/{args.dataset}/'
+    # args.exp_res_dir = f'exp_result_2048/{args.dataset}/'
+    args.exp_res_dir = f'exp_result_binary/{args.dataset}/'
+    # all the route can be concatenated
     if args.apply_trainable_layer:
         args.exp_res_dir += '_top_model/'
     if args.apply_mid:
         args.exp_res_dir += 'MID/'
-    elif args.apply_mi:
+    if args.apply_mi:
         args.exp_res_dir += 'MI/'
-    elif args.apply_distance_correlation:
+    if args.apply_distance_correlation:
         args.exp_res_dir += 'DistanceCorrelation/'
-    elif args.apply_encoder:
+    if args.apply_laplace:
+        args.exp_res_dir += 'Laplace/'
+    elif args.apply_gaussian:
+        args.exp_res_dir += 'Gaussian/'
+    elif args.apply_grad_spar:
+        args.exp_res_dir += 'GradientSparsification/'
+    if args.apply_encoder:
         args.exp_res_dir += 'CAE/'
+    if args.apply_discrete_gradients:
+        args.exp_res_dir += 'DiscreteGradients/'
     if not os.path.exists(args.exp_res_dir):
         os.makedirs(args.exp_res_dir)
-    filename = f'dataset={args.dataset},model={args.model},lr={args.lr},num_exp={args.num_exp},' \
-           f'epochs={args.epochs},early_stop={args.early_stop}.txt'
+    filename = f'attack_task_acc.txt'
     args.exp_res_path = args.exp_res_dir + filename
     
+    config_text = f'model={args.model},lr={args.lr},epochs={args.epochs},early_stop={args.early_stop},batch_size={args.batch_size_list[0]},num_classes={args.num_class_list[0]}'
+    append_exp_res(args.exp_res_path, config_text)
     if args.apply_encoder:
-        print(ae_name_list)
         for ae_name in ae_name_list:
             args.ae_lambda = ae_name.split('_')[2]
             dim = args.num_class_list[0]
@@ -147,11 +166,36 @@ if __name__ == '__main__':
             args.encoder = encoder
             label_leakage = vfl_dlg_mid.LabelLeakage(args)
             label_leakage.train()
-    else:
-        if args.apply_mid or args.apply_distance_correlation or args.apply_encoder:
+    elif args.apply_laplace or args.apply_gaussian:
+        # dp_strength_list = [0.00005, 0.0001, 0.0005, 0.001, 0.01, 0.1]
+        dp_strength_list = [0.0001, 0.001, 0.01, 0.1]
+        for dp_strength in dp_strength_list:
+            args.dp_strength = dp_strength
             label_leakage = vfl_dlg_mid.LabelLeakage(args)
             label_leakage.train()
-        else:
+    elif args.apply_grad_spar:
+        gradient_sparsification_list = [90, 95, 96, 97, 98, 99]
+        for grad_spars in gradient_sparsification_list:
+            args.grad_spars = grad_spars
+            label_leakage = vfl_dlg_mid.LabelLeakage(args)
+            label_leakage.train()
+    elif args.apply_mid:
+        mid_lambda_list = [1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
+        for mid_loss_lambda in mid_lambda_list:
+            args.mid_loss_lambda = mid_loss_lambda
+            label_leakage = vfl_dlg_mid.LabelLeakage(args)
+            label_leakage.train()
+    else:
+        if args.apply_mi:
             label_leakage = vfl_dlg.LabelLeakage(args)
             label_leakage.train()
+        else:
+            label_leakage = vfl_dlg_mid.LabelLeakage(args)
+            label_leakage.train()
+        # if args.apply_mid or args.apply_distance_correlation or args.apply_encoder:
+        #     label_leakage = vfl_dlg_mid.LabelLeakage(args)
+        #     label_leakage.train()
+        # else:
+        #     label_leakage = vfl_dlg.LabelLeakage(args)
+        #     label_leakage.train()
 

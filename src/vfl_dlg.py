@@ -283,7 +283,7 @@ class LabelLeakage(object):
                 if self.apply_mi:
                     exp_result = str(self.mi_loss_lambda) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
                 else:
-                    exp_result = f"bs|num_class|recovery_rate,%d|%d|%lf|%s|%lf" % (batch_size, num_classes, avg_rec_rate, str(recovery_rate_history), np.max(recovery_rate_history))
+                    exp_result = f"bs|num_class|recovery_rate,%d|%d| %lf %s %lf" % (batch_size, num_classes, avg_rec_rate, str(recovery_rate_history), np.max(recovery_rate_history))
 
                 append_exp_res(self.exp_res_path, exp_result)
                 print(exp_result)

@@ -67,25 +67,27 @@ if __name__ == '__main__':
     parser.add_argument('--seed', default=100, type=int, help='')
     parser.add_argument('--dataset_name', default='mnist', type=str, help='the dataset which the experiments are based on')
     parser.add_argument('--apply_trainable_layer', default=False, type=bool, help='whether to use trainable layer in active party')
-    # parser.add_argument('--apply_laplace', default=False, type=bool, help='whether to use dp-laplace')
-    # parser.add_argument('--apply_gaussian', default=False, type=bool, help='whether to use dp-gaussian')
-    # parser.add_argument('--dp_strength', default=0, type=float, help='the parameter of dp defense')
-    # parser.add_argument('--apply_grad_spar', default=False, type=bool, help='whether to use gradient sparsification')
-    # parser.add_argument('--grad_spars', default=0, type=float, help='the parameter of gradient sparsification')
+    parser.add_argument('--apply_laplace', default=False, type=bool, help='whether to use dp-laplace')
+    parser.add_argument('--apply_gaussian', default=False, type=bool, help='whether to use dp-gaussian')
+    parser.add_argument('--dp_strength', default=0, type=float, help='the parameter of dp defense')
+    parser.add_argument('--apply_grad_spar', default=False, type=bool, help='whether to use gradient sparsification')
+    parser.add_argument('--grad_spars', default=0, type=float, help='the parameter of gradient sparsification')
     parser.add_argument('--apply_encoder', default=False, type=bool, help='whether to use CoAE')
     # parser.add_argument('--apply_random_encoder', default=False, type=bool, help='whether to use CoAE')
     parser.add_argument('--apply_marvell', default=False, type=bool, help='whether to use Marvell')
     parser.add_argument('--marvell_s', default=1, type=int, help='scaler of bound in MARVELL')
     # parser.add_argument('--apply_adversarial_encoder', default=False, type=bool, help='whether to use AAE')
-    # # defense methods given in 
+    
+    # # defense methods given in MC
     # parser.add_argument('--apply_ppdl', help='turn_on_privacy_preserving_deep_learning', type=bool, default=False)
     # parser.add_argument('--ppdl_theta_u', help='theta-u parameter for defense privacy-preserving deep learning', type=float, default=0.5)
     # parser.add_argument('--apply_gc', help='turn_on_gradient_compression', type=bool, default=False)
     # parser.add_argument('--gc_preserved_percent', help='preserved-percent parameter for defense gradient compression', type=float, default=0.9)
     # parser.add_argument('--apply_lap_noise', help='turn_on_lap_noise', type=bool, default=False)
     # parser.add_argument('--noise_scale', help='noise-scale parameter for defense noisy gradients', type=float, default=1e-3)
-    # parser.add_argument('--apply_discrete_gradients', default=False, type=bool, help='whether to use Discrete Gradients')
-    # parser.add_argument('--discrete_gradients_bins', default=12, type=int, help='number of bins for discrete gradients')
+    parser.add_argument('--apply_discrete_gradients', default=False, type=bool, help='whether to use Discrete Gradients')
+    parser.add_argument('--discrete_gradients_bins', default=12, type=int, help='number of bins for discrete gradients')
+    parser.add_argument('--discrete_gradients_bound', default=3e-4, type=float, help='value of bound for discrete gradients')
     
     parser.add_argument('--epochs', default=100, type=int, help='')
     parser.add_argument('--lr', default=0.001, type=float, help='learning rate')
@@ -112,6 +114,8 @@ if __name__ == '__main__':
     if args.dataset_name == "cifar100":
         half_dim = 16
         num_classes = 100
+        num_classes = 20
+        # num_classes = 2
         train_dst = datasets.CIFAR100("../../../share_dataset/", download=True, train=True, transform=transform)
         data, label = fetch_data_and_label(train_dst, num_classes)
         train_dst = SimpleDataset(data, label)
@@ -121,6 +125,7 @@ if __name__ == '__main__':
     elif args.dataset_name == "cifar10":
         half_dim = 16
         num_classes = 10
+        # num_classes = 2
         train_dst = datasets.CIFAR10("../../../share_dataset/", download=True, train=True, transform=transform)
         data, label = fetch_data_and_label(train_dst, num_classes)
         train_dst = SimpleDataset(data, label)
@@ -130,6 +135,7 @@ if __name__ == '__main__':
     elif args.dataset_name == "mnist":
         half_dim = 14
         num_classes = 10
+        # num_classes = 2
         train_dst = datasets.MNIST("~/.torch", download=True, train=True, transform=transform_fn)
         data, label = fetch_data_and_label(train_dst, num_classes)
         train_dst = SimpleDataset(data, label)
@@ -139,8 +145,10 @@ if __name__ == '__main__':
     elif args.dataset_name == 'nuswide':
         half_dim = [634, 1000]
         num_classes = 5
+        # num_classes = 2
         train_dst = NUSWIDEDataset('../../../share_dataset/NUS_WIDE', 'train')
         test_dst = NUSWIDEDataset('../../../share_dataset/NUS_WIDE', 'test')
+    
     args.train_dataset = train_dst
     args.val_dataset = test_dst
     args.half_dim = half_dim
@@ -170,17 +178,27 @@ if __name__ == '__main__':
                         'autoencoder_20_0.1_1645374527','autoencoder_20_0.05_1645374482','autoencoder_20_0.0_1645374739']
         # ae_name_list = ['negative/autoencoder_20_0.5_1647127262', 'negative/autoencoder_20_1.0_1647127164']
 
-    path = f'./exp_result/{args.dataset_name}/'
+    # path = f'./exp_result/{args.dataset_name}/'
+    # path = f'./exp_result_2048/{args.dataset_name}/'
+    path = f'./exp_result_binary/{args.dataset_name}/'
     if args.apply_trainable_layer:
         path += '_top_model/'
     if args.apply_mid:
         path += 'MID/'
-    elif args.apply_mi:
+    if args.apply_mi:
         path += 'MI/'
-    elif args.apply_distance_correlation:
+    if args.apply_distance_correlation:
         path += 'DistanceCorrelation/'
-    elif args.apply_encoder:
+    if args.apply_laplace:
+        path += 'Laplace/'
+    elif args.apply_gaussian:
+        path += 'Gaussian/'
+    elif args.apply_grad_spar:
+        path += 'GradientSparsification/'
+    if args.apply_encoder:
         path += 'CAE/'
+    if args.apply_discrete_gradients:
+        path += 'DiscreteGradients/'
     if not os.path.exists(path):
         os.makedirs(path)
     path += 'main_task_acc.txt'
@@ -208,6 +226,38 @@ if __name__ == '__main__':
                 test_acc = vfl_defence_image.train()
                 test_acc_list.append(test_acc[0])
             append_exp_res(path, str(_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+    elif args.apply_laplace or args.apply_gaussian:
+        # dp_strength_list = [0.00005, 0.0001, 0.0005, 0.001, 0.01, 0.1]
+        dp_strength_list = [0.0001, 0.001, 0.01, 0.1]
+        for dp_strength in dp_strength_list:
+            test_acc_list = []
+            for i in range(num_exp):
+                args.dp_strength = dp_strength
+                vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
+                test_acc = vfl_defence_image.train()
+                test_acc_list.append(test_acc[0])
+            append_exp_res(path, str(dp_strength) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+    elif args.apply_grad_spar:
+        gradient_sparsification_list = [90, 95, 96, 97, 98, 99]
+        for grad_spars in gradient_sparsification_list:
+            test_acc_list = []
+            for i in range(num_exp):
+                args.grad_spars = grad_spars
+                vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
+                test_acc = vfl_defence_image.train()
+                test_acc_list.append(test_acc[0])
+            append_exp_res(path, str(grad_spars) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+    elif args.apply_mid:
+        mid_lambda_list = [1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
+        mid_lambda_list = [1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
+        for mid_loss_lambda in mid_lambda_list:
+            test_acc_list = []
+            for i in range(num_exp):
+                args.mid_loss_lambda = mid_loss_lambda
+                vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
+                test_acc = vfl_defence_image.train()
+                test_acc_list.append(test_acc[0])
+            append_exp_res(path, str(args.mid_loss_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
     else:
         test_acc_list = []
         for _ in range(num_exp):
@@ -223,5 +273,11 @@ if __name__ == '__main__':
             append_exp_res(path, str(args.mid_loss_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
         elif args.apply_distance_correlation:
             append_exp_res(path, str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+        elif args.apply_laplace or args.apply_gaussian:
+            append_exp_res(path, str(args.dp_strength) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+        elif args.apply_grad_spar:
+            append_exp_res(path, str(args.grad_spars) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+        elif args.apply_discrete_gradients:
+            append_exp_res(path, str(args.discrete_gradients_bins) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
         else:
-            append_exp_res(path, str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+            append_exp_res(path, "bs|num_class|recovery_rate," + str(args.batch_size) + '|' + str(num_classes) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))

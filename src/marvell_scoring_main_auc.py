@@ -12,6 +12,7 @@ from utils import *
 
 import tensorflow as tf
 import math
+from sklearn.metrics import roc_auc_score
 
 from marvell_model import (
     update_all_norm_leak_auc,
@@ -24,7 +25,7 @@ import marvell_shared_values as shared_var
 tf.compat.v1.enable_eager_execution() 
 
 
-class VFLDefenceExperimentBase(object):
+class VFLmodel_AUC(object):
 
     def __init__(self, args):
         self.device = args.device
@@ -329,9 +330,10 @@ class VFLDefenceExperimentBase(object):
         model_optimizer.step()
 
         predict_prob = F.softmax(pred, dim=-1)
-        suc_cnt = torch.sum(torch.argmax(predict_prob, dim=-1) == torch.argmax(gt_one_hot_label, dim=-1)).item()
-        train_acc = suc_cnt / predict_prob.shape[0]
-        return loss.item(), train_acc
+        # print(torch.argmax(gt_one_hot_label,dim=-1), torch.argmax(gt_one_hot_label,dim=-1).size())
+        # print(torch.argmax(predict_prob,dim=-1).size())
+        auc = roc_auc_score(y_true=torch.argmax(gt_one_hot_label, dim=-1).cpu().numpy(), y_score=torch.argmax(predict_prob, dim=-1).cpu().numpy())
+        return loss.item(), auc
 
     def train(self):
 
@@ -369,11 +371,10 @@ class VFLDefenceExperimentBase(object):
                 model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()), lr=self.lr)
         criterion = cross_entropy_for_onehot
 
-        test_acc = 0.0
-        test_acc_topk = 0.0
+        test_auc = 0.0
         for i_epoch in range(self.epochs):
             tqdm_train = tqdm(train_loader, desc='Training (epoch #{})'.format(i_epoch + 1))
-            postfix = {'train_loss': 0.0, 'train_acc': 0.0, 'test_acc': 0.0}
+            postfix = {'train_loss': 0.0, 'train_auc': 0.0, 'test_auc': 0.0}
             for i, (gt_data, gt_label) in enumerate(tqdm_train):
                 net_a.train()
                 net_b.train()
@@ -385,7 +386,7 @@ class VFLDefenceExperimentBase(object):
                 gt_one_hot_label = gt_one_hot_label.to(self.device)
                 # print('before batch, gt_one_hot_label:', gt_one_hot_label)
                 # ====== train batch ======
-                loss, train_acc = self.train_batch(gt_data_a, gt_data_b, gt_one_hot_label,
+                loss, train_auc = self.train_batch(gt_data_a, gt_data_b, gt_one_hot_label,
                                               net_a, net_b, self.encoder, model_optimizer, criterion)
                 # validation
                 if (i + 1) % print_every == 0:
@@ -401,6 +402,8 @@ class VFLDefenceExperimentBase(object):
                     with torch.no_grad():
                         # enc_result_matrix = np.zeros((self.num_classes, self.num_classes), dtype=int)
                         # result_matrix = np.zeros((self.num_classes, self.num_classes), dtype=int)
+                        actual_labels = np.array([])
+                        predict_labels = np.array([])
                         for gt_val_data, gt_val_label in val_loader:
                             gt_val_one_hot_label = self.label_to_one_hot(gt_val_label, self.num_classes)
                             test_data_a, test_data_b = self.fetch_parties_data(gt_val_data)
@@ -442,13 +445,15 @@ class VFLDefenceExperimentBase(object):
 
                             # enc_predict_label = torch.argmax(enc_predict_prob, dim=-1)
                             actual_label = torch.argmax(gt_val_one_hot_label, dim=-1)
-                            sample_cnt += predict_label.shape[0]
-                            suc_cnt += torch.sum(predict_label == actual_label).item()
-                        test_acc = suc_cnt / float(sample_cnt)
+                            # sample_cnt += predict_label.shape[0]
+                            # suc_cnt += torch.sum(predict_label == actual_label).item()
+                            actual_labels = np.append(actual_labels,actual_label.cpu().numpy())
+                            predict_labels = np.append(predict_labels, predict_label.cpu().numpy())
+                        test_auc = roc_auc_score(y_true=actual_labels, y_score=predict_labels)
                         postfix['train_loss'] = loss
-                        postfix['train_acc'] = '{:.2f}%'.format(train_acc * 100)
-                        postfix['test_acc'] = '{:.2f}%'.format(test_acc * 100)
+                        postfix['train_auc'] = '{:.2f}%'.format(train_auc * 100)
+                        postfix['test_auc'] = '{:.2f}%'.format(test_auc * 100)
                         tqdm_train.set_postfix(postfix)
-                        print('Epoch {}% \t train_loss:{:.2f} train_acc:{:.2f} test_acc:{:.2f}'.format(
-                            i_epoch, loss, train_acc, test_acc))
-        return test_acc, test_acc_topk
+                        print('Epoch {}% \t train_loss:{:.2f} train_auc:{:.2f} test_auc:{:.2f}'.format(
+                            i_epoch, loss, train_auc, test_auc))
+        return test_auc

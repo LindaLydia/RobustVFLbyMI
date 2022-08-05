@@ -11,6 +11,14 @@ import numpy as np
 from models.vision import *
 from utils import *
 
+from marvell_model import (
+    update_all_norm_leak_auc,
+    update_all_cosine_leak_auc,
+    KL_gradient_perturb
+)
+import marvell_shared_values as shared_var
+
+
 tf.compat.v1.enable_eager_execution() 
 
 
@@ -33,11 +41,11 @@ class LabelLeakage(object):
         self.exp_res_dir = args.exp_res_dir
         self.exp_res_path = args.exp_res_path
         self.apply_trainable_layer = args.apply_trainable_layer
-        # self.apply_laplace = args.apply_laplace
-        # self.apply_gaussian = args.apply_gaussian
-        # self.dp_strength = args.dp_strength
-        # self.apply_grad_spar = args.apply_grad_spar
-        # self.grad_spars = args.grad_spars
+        self.apply_laplace = args.apply_laplace
+        self.apply_gaussian = args.apply_gaussian
+        self.dp_strength = args.dp_strength
+        self.apply_grad_spar = args.apply_grad_spar
+        self.grad_spars = args.grad_spars
         self.apply_encoder = args.apply_encoder
         # self.apply_random_encoder = args.apply_random_encoder
         # self.apply_adversarial_encoder = args.apply_adversarial_encoder
@@ -51,9 +59,9 @@ class LabelLeakage(object):
         # self.gc_preserved_percent = args.gc_preserved_percent
         # self.apply_lap_noise = args.apply_lap_noise
         # self.noise_scale = args.noise_scale
-        # self.apply_discrete_gradients = args.apply_discrete_gradients
-        # self.discrete_gradients_bins = args.discrete_gradients_bins
-        # self.discrete_gradients_bound = args.discrete_gradients_bound
+        self.apply_discrete_gradients = args.apply_discrete_gradients
+        self.discrete_gradients_bins = args.discrete_gradients_bins
+        self.discrete_gradients_bound = args.discrete_gradients_bound
         self.apply_mi = args.apply_mi
         self.mi_loss_lambda = args.mi_loss_lambda
         self.apply_mid = args.apply_mid
@@ -103,7 +111,7 @@ class LabelLeakage(object):
         print(f"Running on %s{torch.cuda.current_device()}" % self.device)
         if self.dataset == 'nuswide':
             all_nuswide_labels = []
-            for line in os.listdir('./data/NUS_WIDE/Groundtruth/AllLabels'):
+            for line in os.listdir('../../../share_dataset/NUS_WIDE/Groundtruth/AllLabels'):
                 all_nuswide_labels.append(line.split('_')[1][:-4])
         for batch_size in self.batch_size_list:
             for num_classes in self.num_class_list:
@@ -119,14 +127,14 @@ class LabelLeakage(object):
                     #     classes = [i for i in range(num_classes)]
                     # else:
                     #     classes = random.sample(list(range(100)), num_classes)
-                    classes = random.sample(list(range(100)), num_classes)
+                    classes = random.sample(list(range(20)), num_classes)
                     all_data, all_label = get_class_i(self.dst, classes)
                 elif self.dataset == 'mnist':
                     classes = random.sample(list(range(10)), num_classes)
                     all_data, all_label = get_class_i(self.dst, classes)
                 elif self.dataset == 'nuswide':
                     classes = random.sample(all_nuswide_labels, num_classes)
-                    x_image, x_text, Y = get_labeled_data('./data/NUS_WIDE', classes, None, 'Train')
+                    x_image, x_text, Y = get_labeled_data('../../../share_dataset/NUS_WIDE', classes, None, 'Train')
                 elif self.dataset == 'cifar10':
                     classes = random.sample(list(range(10)), num_classes)
                     all_data, all_label = get_class_i(self.dst, classes)
@@ -160,7 +168,7 @@ class LabelLeakage(object):
                         gt_label = torch.stack(gt_label).to(self.device)
                         gt_onehot_label = gt_label  # label_to_onehot(gt_label)
                     if self.apply_encoder:
-                        _, gt_onehot_label = self.get_random_softmax_onehot_label(gt_onehot_label)
+                        _, gt_onehot_label = self.encoder(gt_onehot_label)
                     # if self.apply_encoder:
                     #     if not self.apply_random_encoder:
                     #         _, gt_onehot_label = self.encoder(gt_onehot_label) # get the result given by AutoEncoder.forward
@@ -194,7 +202,7 @@ class LabelLeakage(object):
                     dummy_active_aggregate_model = dummy_active_aggregate_model.to(self.device)
                     pred = active_aggregate_model(pred_a, pred_b)
                     loss = criterion(pred, gt_onehot_label)
-                    ######################## defense3: mid ############################
+                    ######################## defense3: mutual information defense ############################
                     if self.apply_mid:
                         epsilon = torch.empty(pred_a.size())
                         
@@ -226,9 +234,66 @@ class LabelLeakage(object):
                     ######################## defense4: distance correlation ############################
                     if self.apply_distance_correlation:
                         loss = criterion(pred, gt_onehot_label) + self.distance_correlation_lambda * torch.mean(torch.cdist(pred_a, gt_onehot_label, p=2))
-                    ######################## defense end ############################
+                    ######################## defense with loss change end ############################
                     pred_a_gradients = torch.autograd.grad(loss, pred_a, retain_graph=True)
+                    # print("pred_a_gradients:", pred_a_gradients)
                     pred_a_gradients_clone = pred_a_gradients[0].detach().clone()
+                    ######################## defense2: dp ############################
+                    if self.apply_laplace and self.dp_strength != 0 or self.apply_gaussian and self.dp_strength != 0:
+                        location = 0.0
+                        threshold = 0.2  # 1e9
+                        if self.apply_laplace:
+                            with torch.no_grad():
+                                scale = self.dp_strength
+                                # clip 2-norm per sample
+                                norm_factor_a = torch.div(torch.max(torch.norm(pred_a_gradients_clone, dim=1)),threshold + 1e-6).clamp(min=1.0)
+                                # add laplace noise
+                                dist_a = torch.distributions.laplace.Laplace(location, scale)
+                                pred_a_gradients_clone = torch.div(pred_a_gradients_clone, norm_factor_a) + \
+                                           dist_a.sample(pred_a_gradients_clone.shape).to(self.device)
+                        elif self.apply_gaussian:
+                            with torch.no_grad():
+                                scale = self.dp_strength
+                                norm_factor_a = torch.div(torch.max(torch.norm(pred_a_gradients_clone, dim=1)),
+                                                           threshold + 1e-6).clamp(min=1.0)
+                                pred_a_gradients_clone = torch.div(pred_a_gradients_clone, norm_factor_a) + \
+                                                       torch.normal(location, scale, pred_a_gradients_clone.shape).to(self.device)
+                    ######################## defense3: gradient sparsification ############################
+                    elif self.apply_grad_spar and self.grad_spars != 0:
+                        with torch.no_grad():
+                            percent = self.grad_spars / 100.0
+                            up_thr = torch.quantile(torch.abs(pred_a_gradients_clone), percent)
+                            active_up_gradients_res = torch.where(
+                                torch.abs(pred_a_gradients_clone).double() < up_thr.item(),
+                                pred_a_gradients_clone.double(), float(0.)).to(self.device)
+                            pred_a_gradients_clone = pred_a_gradients_clone - active_up_gradients_res
+                    # ######################## defense4: marvell ############################
+                    # elif self.apply_marvell and self.marvell_s != 0 and num_classes == 2:
+                    #     # for marvell, change label to [0,1]
+                    #     marvell_y = []
+                    #     for i in range(len(gt_label)):
+                    #         marvell_y.append(int(gt_label[i][1]))
+                    #     marvell_y = np.array(marvell_y)
+                    #     shared_var.batch_y = np.asarray(marvell_y)
+                    #     logdir = 'marvell_logs/dlg_task/{}_logs/{}'.format(self.dataset, time.strftime("%Y%m%d-%H%M%S"))
+                    #     writer = tf.summary.create_file_writer(logdir)
+                    #     shared_var.writer = writer
+                    #     with torch.no_grad():
+                    #         pred_a_gradients_clone = KL_gradient_perturb(pred_a_gradients_clone, classes, self.marvell_s)
+                    #         pred_a_gradients_clone = pred_a_gradients_clone.to(self.device)
+                    ######################## defense5: ppdl, GradientCompression, laplace_noise, DiscreteSGD ############################
+                    # elif self.apply_ppdl:
+                    #     dp_gc_ppdl(epsilon=1.8, sensitivity=1, layer_grad_list=[pred_a_gradients_clone], theta_u=self.ppdl_theta_u, gamma=0.001, tau=0.0001)
+                    # elif self.apply_gc:
+                    #     tensor_pruner = TensorPruner(zip_percent=self.gc_preserved_percent)
+                    #     tensor_pruner.update_thresh_hold(pred_a_gradients_clone)
+                    #     pred_a_gradients_clone = tensor_pruner.prune_tensor(pred_a_gradients_clone)
+                    # elif self.apply_lap_noise:
+                    #     dp = DPLaplacianNoiseApplyer(beta=self.noise_scale)
+                    #     pred_a_gradients_clone = dp.laplace_mech(pred_a_gradients_clone)
+                    elif self.apply_discrete_gradients:
+                        pred_a_gradients_clone = multistep_gradient(pred_a_gradients_clone, bins_num=self.discrete_gradients_bins, bound_abs=self.discrete_gradients_bound)
+                    ######################## defense end #################################################### defense3: mid ############################
                     original_dy_dx = torch.autograd.grad(pred_a, net_a.parameters(), grad_outputs=pred_a_gradients_clone)
 
                     dummy_pred_b = torch.randn(pred_b.size()).to(self.device).requires_grad_(True)
@@ -278,15 +343,12 @@ class LabelLeakage(object):
                     recovery_rate_history.append(rec_rate)
                     end_time = time.time()
                     # output the rec_info of this exp
-                    # if self.apply_laplace or self.apply_gaussian:
-                    #     print(f'batch_size=%d,class_num=%d,exp_id=%d,dp_strength=%lf,recovery_rate=%lf,time_used=%lf'
-                    #           % (batch_size, num_classes, i_run, self.dp_strength,rec_rate, end_time - start_time))
-                    # elif self.apply_grad_spar:
-                    #     print(f'batch_size=%d,class_num=%d,exp_id=%d,grad_spars=%lf,recovery_rate=%lf,time_used=%lf'
-                    #           % (batch_size, num_classes, i_run, self.grad_spars,rec_rate, end_time - start_time))
-                    # elif self.apply_marvell:
-                    #     print(f'batch_size=%d,class_num=%d,exp_id=%d,marvel_s=%lf,recovery_rate=%lf,time_used=%lf'
-                    #           % (batch_size, num_classes, i_run, self.marvell_s,rec_rate, end_time - start_time))
+                    if self.apply_laplace or self.apply_gaussian:
+                        print(f'batch_size=%d,class_num=%d,exp_id=%d,dp_strength=%lf,recovery_rate=%lf,time_used=%lf'
+                              % (batch_size, num_classes, i_run, self.dp_strength,rec_rate, end_time - start_time))
+                    elif self.apply_grad_spar:
+                        print(f'batch_size=%d,class_num=%d,exp_id=%d,grad_spars=%lf,recovery_rate=%lf,time_used=%lf'
+                              % (batch_size, num_classes, i_run, self.grad_spars,rec_rate, end_time - start_time))
                     if self.apply_mid:
                         print(f'MID: batch_size=%d,class_num=%d,exp_id=%d,recovery_rate=%lf,time_used=%lf'
                               % (batch_size, num_classes, i_run, rec_rate, end_time - start_time))
@@ -296,6 +358,9 @@ class LabelLeakage(object):
                     elif self.apply_distance_correlation:
                         print(f'batch_size=%d,class_num=%d,exp_id=%d,distance_correlationlambda=%lf,recovery_rate=%lf,time_used=%lf'
                               % (batch_size, num_classes, i_run, self.distance_correlation_lambda,rec_rate, end_time - start_time))
+                    elif self.apply_discrete_gradients:
+                        print(f'batch_size=%d,class_num=%d,exp_id=%d,ae_lambda=%s,recovery_rate=%lf,time_used=%lf'
+                              % (batch_size, num_classes, i_run, self.ae_lambda,rec_rate, end_time - start_time))
                     elif self.apply_encoder:
                         print(f'batch_size=%d,class_num=%d,exp_id=%d,ae_lambda=%s,recovery_rate=%lf,time_used=%lf'
                               % (batch_size, num_classes, i_run, self.ae_lambda,rec_rate, end_time - start_time))
@@ -306,34 +371,32 @@ class LabelLeakage(object):
                         print(f'batch_size=%d,class_num=%d,exp_id=%d,recovery_rate=%lf,time_used=%lf'
                               % (batch_size, num_classes, i_run, rec_rate, end_time - start_time))
                 avg_rec_rate = np.mean(recovery_rate_history)
-                # if self.apply_laplace or self.apply_gaussian:
-                #     exp_result = str(self.dp_strength) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
-                # elif self.apply_grad_spar:
-                #     exp_result = str(self.grad_spars) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
+                if self.apply_laplace or self.apply_gaussian:
+                    exp_result = str(self.dp_strength) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
+                elif self.apply_grad_spar:
+                    exp_result = str(self.grad_spars) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
                 # elif self.apply_encoder or self.apply_adversarial_encoder:
                 #     exp_result = str(self.ae_lambda) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
-                # elif self.apply_marvell:
-                #     exp_result = str(self.marvell_s) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
                 # elif self.apply_ppdl:
                 #     exp_result = str(self.ppdl_theta_u) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
                 # elif self.apply_gc:
                 #     exp_result = str(self.gc_preserved_percent) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
                 # elif self.apply_lap_noise:
                 #     exp_result = str(self.noise_scale) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
-                # elif self.apply_discrete_gradients:
-                #     exp_result = str(self.discrete_gradients_bins) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
-                if self.apply_mid:
+                elif self.apply_discrete_gradients:
+                    exp_result = str(self.discrete_gradients_bins) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
+                elif self.apply_mid:
                     exp_result = str(self.mid_loss_lambda) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history)) + 'MID'
                 elif self.apply_mi:
                     exp_result = str(self.mi_loss_lambda) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
                 elif self.apply_distance_correlation:
                     exp_result = str(self.distance_correlation_lambda) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
-                elif self.apply_encoder or self.apply_adversarial_encoder:
+                elif self.apply_encoder:
                     exp_result = str(self.ae_lambda) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
                 elif self.apply_marvell:
                     exp_result = str(self.marvell_s) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
                 else:
-                    exp_result = f"bs|num_class|recovery_rate,%d|%d|%lf|%s|%lf" % (batch_size, num_classes, avg_rec_rate, str(recovery_rate_history), np.max(recovery_rate_history))
+                    exp_result = f"bs|num_class|recovery_rate,%d|%d| %lf %s %lf" % (batch_size, num_classes, avg_rec_rate, str(recovery_rate_history), np.max(recovery_rate_history))
 
                 append_exp_res(self.exp_res_path, exp_result)
                 print(exp_result)

@@ -145,7 +145,7 @@ def draw_label_leakage_defense(path, dataset):
                     label_y=label_y, path=path)
 
 def draw_defense_on_main_and_dlg_task(dir, defense):
-    file_name_list = ['dlg_task_rec.txt', 'main_task_acc.txt']
+    file_name_list = ['attack_task_acc.txt', 'main_task_acc.txt']
     name = ['batch label inference attack task', 'main task']
     x = []
     y = []
@@ -175,182 +175,213 @@ def draw_defense_on_main_and_dlg_task(dir, defense):
     draw_line_chart(title=title, note_list=name, x=x, y=y, x_scale=x_scale, y_scale=y_scale, label_x=label_x,
                     label_y=label_y, path=res_path)
 
-def draw_defense_on_main_and_dlg_task_using_scatter(dir):
+def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_major_locator, mark):
+    # plt.style.use('ggplot')
     fig, ax = plt.subplots()
 
     # defense_name_list = ['gaussian', 'laplace', 'grad_spars', 'marvell', 'ppdl', 'laplace_noise', 'gradient_compression', 'discrete_gradients', 'autoencoder', 'autoencoder/discreteGradients', 'autoencoder/random', 'no defense']
-    defense_name_list = ['gaussian', 'laplace', 'grad_spars', 'marvell', 'ppdl', 'discrete_gradients', 'autoencoder', 'autoencoder/discreteGradients', 'no defense']
+    defense_name_list = ['Gaussian', 'Laplace', 'GradientSparsification', 'CAE', 'DCAE', 'MARVELL', 'MID', 'no defense']
     # defense_list = ['DP-G', 'DP-L', 'GS', 'Marvell', 'PPDL', 'LN', 'GC', 'DG', 'CAE', 'CAE+DG', 'RCAE', 'w/o defense']
-    defense_list = ['DP-G', 'DP-L', 'GS', 'Marvell', 'PPDL', 'DG','CAE', 'CAE+DG', 'w/o defense']
-    file_name_list = ['dlg_task_rec.txt', 'main_task_acc.txt']
+    defense_list = ['DP-G', 'DP-L', 'GS', 'CAE', 'DCAE', 'MARVELL', 'MID', 'w/o defense']
+    file_name_list = ['attack_task_acc.txt', 'main_task_acc.txt']
     rec_rate_list = []
     acc_list = []
     param_list = []
     label_x = 'Main task accuracy'
     label_y = 'Label recovery accuracy'
-    for defense in defense_name_list[:-1]:
-        if defense != 'marvell' and defense != 'autoencoder':
+
+    for defense in defense_name_list:
+        if defense != 'MARVELL' and defense != 'CAE' and defense != 'MID' and defense != 'no defense':
+        # if defense == 'MARVELL':
             rec_rate_list.append([])
             acc_list.append([])
             param_list.append([])
             continue
-        dir1 = os.path.join(dir, defense)
+        if defense != defense_name_list[-1]:
+            dir1 = os.path.join(dir, defense)
+        else:
+            dir1 = dir
         attack_path = os.path.join(dir1, file_name_list[0])
         main_path = os.path.join(dir1, file_name_list[1])
         _rec_rate_list, _acc_list, _param_list = [], [], []
         with open(attack_path, 'r') as f:
             with open(main_path, 'r') as f1:
-                for line, line1 in zip(f.readlines(), f1.readlines()):
+                for line in f.readlines():
                     line_split = line.strip('\n').split(' ')
+                    if len(line_split) == 1:
+                        continue
                     param = line_split[0]
                     rec_rate = line_split[1]
-                    if param in ['2e-4', '3e-4', '5e-4']:
-                        continue
                     rec_rate = float(rec_rate) * 100
                     _param_list.append(param)
                     _rec_rate_list.append(rec_rate)
+                print("[debug]: parameter_list =", _param_list)
+                _counter = 0
+                for line1 in f1.readlines():
                     line1_split = line1.strip('\n').split(' ')
+                    if len(line1_split) == 1:
+                        continue
                     param = line1_split[0]
+                    if defense != defense_name_list[-1]:
+                        print(param, _param_list[_counter])
+                        assert param == _param_list[_counter]
+                        _counter += 1
                     acc = line1_split[1]
                     acc = float(acc) * 100
                     _acc_list.append(acc)
         rec_rate_list.append(_rec_rate_list)
         acc_list.append(_acc_list)
         param_list.append(_param_list)
-    if dataset == 'cifar100':
-        # acc_list.append([0.5917 * 100])
-        # acc_list.append([0.8500 * 100]) # cifar100
-        acc_list.append([0.9122 * 100]) # cifar10
-        # rec_rate_list.append([0.954638671875 * 100])
-        # rec_rate_list.append([0.802637 * 100]) # cifar100
-        rec_rate_list.append([0.708398 * 100]) # cifar10
-    elif dataset == 'mnist':
-        # acc_list.append([0.9595800000000001 * 100])
-        acc_list.append([0.9995271867612293* 100])
-        # rec_rate_list.append([0.936279296875 * 100])
-        rec_rate_list.append([0.851335 * 100])
-    elif dataset == 'nuswide':
-        # acc_list.append([0.8881 * 100])
-        acc_list.append([0.8184834242340463 * 100])
-        # rec_rate_list.append([0.993896484375 * 100])
-        rec_rate_list.append([0.881982 * 100])
+        if defense == defense_name_list[-1]: # without defese result should be unique
+            assert len(param_list[-1])==1 and len(rec_rate_list[-1])==1 and len(acc_list[-1])==1
+        print(defense, _rec_rate_list,_acc_list,_param_list)
+
+
+
+    # print(acc_list)
+    # print(rec_rate_list)
+    # print(param_list)
+
     # fontsize
     # tick
     # legend
     # labelsize
     # linewidth
     # linemarker_size
-    print(acc_list)
-    print(rec_rate_list)
-    marker_list = ['o', 'v', '^', 'x', '*', 's']
-    # color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'] # the same as the default colors
-    # color_list = ['#1f77b4'(DP-G), '#ff7f0e'(DP-L), '#2ca02c'(GS), '#9467bd'(Marvell-Cerfitfy), || '#d62728'(CAE), '#8c564b'(RCAE), '#e377c2'(PPDL), '#7f7f7f'(DG), '#bcbd22'(CAE+DG), '#17becf'] # the same as the default colors
-    color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#9467bd', '#d62728', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'] # the same as the default colors
+
+
+    # defense ['DP-G', 'DP-L', 'GS', 'Marvell',|| 'PPDL', 'LN(DP-L)', 'GC(GS)', 'DG', 'CAE', 'CAE+DG', 'RCAE', 'w/o defense']
+    # marker_list = ['o', 'v', '^', 'x',|| 'h'(PPDL), 'D'(DG), '+'(CAE+DG), '*'(CAE), 's'(w/o defense), '1'(RCAE), '2', '3', '4'(MID)]
+    # marker_list = ['o', 'v', '^', 'x', '*', '+', 's', '1', '2', '3', '4']
+    marker_list = ['o', 'v', '^', '*', '+', 'x', '4', 's']
+    # color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728'(CAE),|| '#9467bd'(Marvell), '#8c564b'(RCAE), '#e377c2'(PPDL), '#7f7f7f'(DG), '#bcbd22'(CAE+DG), '#17becf'(MID)] # the same as the default colors
+    # color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#9467bd', '#d62728', '#bcbd22', '#8c564b', '#e377c2', '#7f7f7f', '#17becf'] # the same as the default colors
+    color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#bcbd22', '#9467bd', '#17becf'] # the same as the default colors
     # offset = [0, -0.08, 0, 0, 0, 0, 0, 0, 0] #cifar10--2
-    offset = [0, -3, 0, 0, 0, 0, 0, 0, 0]
+    # offset = [0, -3, 0, 0, 0, 0, 0, 0, 0]
+    offset = [-0.3, -0.3, 0, 0, 0, 0, 0, 0, 0, 0]
     for i in range(len(defense_list)):
         # print(param_list[i])
-        if i == 5:
+        if i == len(defense_list)-1:
             ax.scatter(acc_list[i], rec_rate_list[i], label=defense_list[i], marker=marker_list[i], s=60, color='black')
         elif len(acc_list[i])>0:
             ax.scatter(acc_list[i], rec_rate_list[i], label=defense_list[i], marker=marker_list[i], s=60, color=color_list[i])
-            for j, txt in enumerate(param_list[i]):
-                print(i,j,txt)
-                if dataset == 'cifar100':
-                    ax.annotate(txt, (acc_list[i][j] + offset[j], rec_rate_list[i][j] + offset[j]), fontsize=9)
-                elif dataset == 'mnist':
-                    # ax.annotate(txt, (acc_list[i][j] + offset[i], rec_rate_list[i][j] + offset[i]), fontsize=9)
-                    if i == 0:
-                        ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j] - 5), fontsize=9)
-                    elif i == 1:
-                        ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j] + 5), fontsize=9)
-                    elif i == 3:
-                        ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]+(3-j*4)), fontsize=9)
-                    elif i == 4:
-                        ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]+(2-j*3)), fontsize=9)
-                    else:
-                        ax.annotate(txt, (acc_list[i][j] + offset[i], rec_rate_list[i][j] + offset[i]), fontsize=9)
-                elif dataset == 'nuswide':
-                    if i == 4:
-                        ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j] + offset[j]), fontsize=9)
-                    else:
+            if mark:
+                for j, txt in enumerate(param_list[i]):
+                    print(i,j,txt)
+                    if dataset == 'cifar100': # and float(txt)>0.4
+                        # # ax.annotate(txt, (acc_list[i][j] + offset[j], rec_rate_list[i][j] + offset[j]), fontsize=9)
+                        # if j == len(param_list[i])-2 and (i==4 or i==5):
+                        #     ax.annotate(txt, (acc_list[i][j]-0.3, rec_rate_list[i][j]), fontsize=9)
+                        # else:
+                        #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
                         ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
-        if len(acc_list) > 0:
+                    elif dataset == 'mnist':
+                        # # ax.annotate(txt, (acc_list[i][j] + offset[i], rec_rate_list[i][j] + offset[i]), fontsize=9)
+                        # # if i == 0:
+                        # #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j] - 5), fontsize=9)
+                        # # elif i == 1:
+                        # #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j] + 5), fontsize=9)
+                        # # elif i == 3:
+                        # #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]+(3-j*4)), fontsize=9)
+                        # # elif i == 4:
+                        # #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]+(2-j*3), fontsize=9)
+                        # if i == 0:
+                        #     ax.annotate(txt, (acc_list[i][j]-0.5, rec_rate_list[i][j]), fontsize=9)
+                        # elif i < 4:
+                        #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]+(-2*(int)(j%2==0))), fontsize=9)
+                        # else:
+                        #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
+                        ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
+                    elif dataset == 'nuswide':
+                        # if i == 4 and j == 0:
+                        #     ax.annotate(txt, (acc_list[i][j] + offset[j], rec_rate_list[i][j]), fontsize=9)
+                        # elif i == 5:
+                        #     ax.annotate(txt, (acc_list[i][j] , rec_rate_list[i][j] + offset[j]), fontsize=9)
+                        # # if i == 5:
+                        # #     ax.annotate(txt, (acc_list[i][j] , rec_rate_list[i][j] + offset[j]), fontsize=9)
+                        # else:
+                        #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
+                        ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
+        if len(acc_list[i]) > 1:
             ax.plot(acc_list[i], rec_rate_list[i], '--', linewidth=2, color=color_list[i])
             # ax.plot(rec_rate_list[i], acc_list[i], '--',  mec='r', mfc='w', label=defense_list[i])
 
-    # # error bar
-    # for defense in defense_name_list[:-1]:
-    #     dir1 = os.path.join(dir, defense)
-    #     attack_path = os.path.join(dir1, file_name_list[0])
-    #     main_path = os.path.join(dir1, file_name_list[1])
-    #     with open(attack_path, 'r') as f:
-    #         with open(main_path, 'r') as f1:
-    #             for line, line1 in zip(f.readlines(), f1.readlines()):
-    #                 line_split = line.strip('\n').split(' ')
-    #                 line1_split = line1.strip('\n').split(' ')
-    #                 if len(line1_split) > 2:
-    #                     # l = [line_split[i].strip("[],") for i in range(2,len(line_split),1)]
-    #                     # attack_list = [float(l[i]) for i in range(len(l))]
-    #                     # attack_list = np.asarray(attack_list)
-    #                     l = [line1_split[i].strip("[],") for i in range(2,len(line1_split),1)]
-    #                     main_list = [float(l[i]) for i in range(len(l))]
-    #                     main_list = np.asarray(main_list)
-    #                     # print("attack_list and main_list", attack_list,main_list)
-    #                     # print("x:",np.mean(main_list)*100, np.std(main_list)*100, "y:", np.mean(attack_list)*100, np.std(attack_list)*100)
-    #                     # print("x:",np.mean(main_list)*100, "y:", float(line_split[1])*100)
-    #                     print(defense, line_split[0], ":", np.std(main_list)/np.sqrt(len(main_list)), np.std(main_list[:5])/np.sqrt(5))
-    #                     # ax.errorbar(x=np.mean(main_list)*100,y=np.mean(attack_list)*100,xerr=0.95*np.std(main_list)*100,yerr=0.95*np.std(attack_list)*100,capthick=0.1, ecolor='black',elinewidth=1)
-    #                     ax.errorbar(x=np.mean(main_list)*100,y=float(line_split[1])*100,xerr=0.95*np.std(main_list)*100,capthick=0.1, ecolor='black',elinewidth=1)
-
     ax.set_xlabel(label_x, fontsize=16)
     ax.set_ylabel(label_y, fontsize=16)
+    # ax.set_xlabel(label_x, fontsize=16, fontdict={'family' : 'SimSun', 'weight':800})
+    # ax.set_ylabel(label_y, fontsize=16, fontdict={'family' : 'SimSun', 'weight':800})
     ax.tick_params(axis='x', labelsize=14)
     ax.tick_params(axis='y', labelsize=14)
-    ax.legend(fontsize=12)  # 让图例生�?
-    if dataset == 'nuswide':
-        left, right = [77, 85]
-    elif dataset == 'cifar100':
-        left, right = [85,95] #cifar100:[70,90]
-    elif dataset == 'mnist':
-        left, right = [99.9, 100]
-        # my_x_ticks = np.arange(99.9, 100.01, 0.05)
-        # print(my_x_ticks)
-        # ax.set_xticks(my_x_ticks)
-    ax.set_xlim([left, right])
-    ax.set_ylim([-1, 101])
-    x_major_locator = mtick.MultipleLocator(2)
+    ax.legend(fontsize=12)  
+    ax.set_xlim(x_limit)
+    ax.set_ylim(y_limit)
+    x_major_locator = mtick.MultipleLocator(x_major_locator)
     y_major_locator = mtick.MultipleLocator(20)
     ax.xaxis.set_major_locator(x_major_locator)
     ax.yaxis.set_major_locator(y_major_locator)
-    if dataset == 'mnist':
-        # my_x_ticks = np.arange(99.9, 100.01, 0.02)
-        # print(my_x_ticks)
-        # ax.set_xticks(my_x_ticks)
-        ax.xaxis.set_major_locator(mtick.MultipleLocator(0.02))
+    
+    fig.patch.set_facecolor('white')
+    # fig.patch.set_alpha(0)
+    
     plt.tight_layout()
-    plt.savefig(dir + 'defense_on_attack_and_main_task.png', dpi = 200)
+    if mark:
+        plt.savefig(dir + 'defense_on_attack_and_main_task.png', dpi = 200)
+    else:
+        plt.savefig(dir + 'defense_on_attack_and_main_task_nomarker.png', dpi = 200)
     plt.show()
 
 
 dataset = 'nuswide'
-# dataset = 'cifar100'
-# dataset = 'mnist'
+dataset = 'cifar100'
+dataset = 'mnist'
+
+# exp_type = 'multi_no_top_model'
+# exp_type = 'multi_top_model'
+exp_type = 'binary_no_top_model'
+# exp_type = 'binary_top_model'
+
 if __name__ == '__main__':
 
-    if dataset == 'cifar100':
-        max_num_classes = 2 # 100
-    elif dataset == 'mnist':
-        max_num_classes = 2 # 10
-    else:
-        max_num_classes = 2 # 81
-    label_leakage_cifar20_path = 'exp_result/cifar100/dataset=cifar100,model=resnet18,lr=0.05,num_exp=10,epochs=200,early_stop=False.txt'
-    label_leakage_mnist_path = 'exp_result/mnist/dataset=mnist,model=MLP2,lr=0.05,num_exp=30,epochs=10000,early_stop=False.txt'
-    label_leakage_nuswide_path = 'exp_result/nuswide/dataset=nuswide,model=MLP2,lr=0.05,num_exp=20,epochs=20000,early_stop=False.txt'
+    # if dataset == 'cifar100':
+    #     max_num_classes = 2 # 100
+    # elif dataset == 'mnist':
+    #     max_num_classes = 2 # 10
+    # else:
+    #     max_num_classes = 2 # 81
+    # label_leakage_cifar20_path = 'exp_result/cifar100/dataset=cifar100,model=resnet18,lr=0.05,num_exp=10,epochs=200,early_stop=False.txt'
+    # label_leakage_mnist_path = 'exp_result/mnist/dataset=mnist,model=MLP2,lr=0.05,num_exp=30,epochs=10000,early_stop=False.txt'
+    # label_leakage_nuswide_path = 'exp_result/nuswide/dataset=nuswide,model=MLP2,lr=0.05,num_exp=20,epochs=20000,early_stop=False.txt'
 
     # draw_recovery_rate(label_leakage_nuswide_path, dataset)
     # draw_rec_rate_change(f'exp_result/{dataset}/exp_on_{dataset}_rec_rate_change.txt', dataset, 81, 20000)
     # draw_rec_rate_vs_numclass_div_batchsize(f'exp_result/nuswide/rec_rate_vs_numclass_div_batchsize.txt', nuswide)
     # draw_label_leakage_defense('exp_result/nuswide/dataset=nuswide,defense=gradient_sparsification,model=MLP2,num_exp=10,epochs=5000.txt', dataset)
     # draw_defense_on_main_and_dlg_task('exp_result/cifar100', 'laplace')
-    draw_defense_on_main_and_dlg_task_using_scatter(f'./exp_result/{dataset}/')
+
+    main_task_x_limit_dict = {
+        'cifar100':{'multi_no_top_model':[34,60],'multi_top_model':[-1,101],'binary_no_top_model':[85,95],'binary_top_model':[-1,101]},
+        'mnist':{'multi_no_top_model':[82,98],'multi_top_model':[63,98],'binary_no_top_model':[99.84,100],'binary_top_model':[-1,101]},
+        'nuswide':{'multi_no_top_model':[82,90],'multi_top_model':[63,98],'binary_no_top_model':[77,90],'binary_top_model':[-1,101]}
+    }
+    attack_task_y_limit_dict = {
+        'cifar100':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[-1,101],'binary_top_model':[-1,101]},
+        'mnist':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[-1,101],'binary_top_model':[-1,101]},
+        'nuswide':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[-1,101],'binary_top_model':[-1,101]}
+    }
+    x_major_locator_dict = {
+        'cifar100':{'multi_no_top_model':2,'binary_no_top_model':2,'binary_top_model':2},
+        'mnist':{'multi_no_top_model':3,'multi_top_model':5,'binary_no_top_model':0.02,'binary_top_model':2},
+        'nuswide':{'multi_no_top_model':2,'binary_no_top_model':2,'binary_top_model':2}
+    }
+
+    exp_dir = f'./exp_result/{dataset}/'
+    exp_dir = f'./exp_result_2048/{dataset}/'
+    exp_dir = f'./exp_result_binary/{dataset}/'
+    if not ('_no_top_model' in exp_type):
+        exp_dir += '_top_model/'
+    x_limit = main_task_x_limit_dict[dataset][exp_type]
+    y_limit = attack_task_y_limit_dict[dataset][exp_type]
+    x_major_locator = x_major_locator_dict[dataset][exp_type]
+    draw_defense_on_main_and_dlg_task_using_scatter(exp_dir, x_limit, y_limit, x_major_locator, True)
+    draw_defense_on_main_and_dlg_task_using_scatter(exp_dir, x_limit, y_limit, x_major_locator, False)
