@@ -392,6 +392,9 @@ class ScoringAttack(object):
                 # elif self.apply_lap_noise:
                 #     exp_result = str(self.noise_scale) + ' ' + str(np.mean(norm_leak_auc_history)) + ' ' + str(norm_leak_auc_history) + ' ' + str(np.max(norm_leak_auc_history))
                 #     exp_result1 = str(self.noise_scale) + ' ' + str(np.mean(cosine_leak_auc_history)) + ' ' + str(cosine_leak_auc_history) + ' ' + str(np.max(cosine_leak_auc_history))
+                elif self.apply_encoder:
+                    exp_result = str(self.ae_lambda) + ' ' + str(np.mean(norm_leak_auc_history)) + ' ' + str(norm_leak_auc_history) + ' ' + str(np.max(norm_leak_auc_history))
+                    exp_result1 = str(self.ae_lambda) + ' ' + str(np.mean(cosine_leak_auc_history)) + ' ' + str(cosine_leak_auc_history) + ' ' + str(np.max(cosine_leak_auc_history))
                 elif self.apply_discrete_gradients:
                     exp_result = str(self.discrete_gradients_bins) + ' ' + str(np.mean(norm_leak_auc_history)) + ' ' + str(norm_leak_auc_history) + ' ' + str(np.max(norm_leak_auc_history))
                     exp_result1 = str(self.discrete_gradients_bins) + ' ' + str(np.mean(cosine_leak_auc_history)) + ' ' + str(cosine_leak_auc_history) + ' ' + str(np.max(cosine_leak_auc_history))
@@ -404,9 +407,6 @@ class ScoringAttack(object):
                 elif self.apply_distance_correlation:
                     exp_result = str(self.distance_correlation_lambda) + ' ' + str(np.mean(norm_leak_auc_history)) + ' ' + str(norm_leak_auc_history) + ' ' + str(np.max(norm_leak_auc_history))
                     exp_result1 = str(self.distance_correlation_lambda) + ' ' + str(np.mean(cosine_leak_auc_history)) + ' ' + str(cosine_leak_auc_history) + ' ' + str(np.max(cosine_leak_auc_history))
-                elif self.apply_encoder:
-                    exp_result = str(self.ae_lambda) + ' ' + str(np.mean(norm_leak_auc_history)) + ' ' + str(norm_leak_auc_history) + ' ' + str(np.max(norm_leak_auc_history))
-                    exp_result1 = str(self.ae_lambda) + ' ' + str(np.mean(cosine_leak_auc_history)) + ' ' + str(cosine_leak_auc_history) + ' ' + str(np.max(cosine_leak_auc_history))
                 elif self.apply_marvell:
                     exp_result = str(self.marvell_s) + ' ' + str(np.mean(norm_leak_auc_history)) + ' ' + str(norm_leak_auc_history) + ' ' + str(np.max(norm_leak_auc_history))
                     exp_result1 = str(self.marvell_s) + ' ' + str(np.mean(cosine_leak_auc_history)) + ' ' + str(cosine_leak_auc_history) + ' ' + str(np.max(cosine_leak_auc_history))

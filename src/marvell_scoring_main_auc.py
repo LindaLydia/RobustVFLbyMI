@@ -29,7 +29,7 @@ class VFLmodel_AUC(object):
 
     def __init__(self, args):
         self.device = args.device
-        self.dataset_name = args.dataset_name
+        self.dataset = args.dataset
         self.train_dataset = args.train_dataset
         self.val_dataset = args.val_dataset
         self.half_dim = args.half_dim
@@ -75,7 +75,7 @@ class VFLmodel_AUC(object):
         self.distance_correlation_lambda = args.distance_correlation_lambda
 
     def fetch_parties_data(self, data):
-        if self.dataset_name == 'nuswide':
+        if self.dataset == 'nuswide':
             data_a = data[0]
             data_b = data[1]
         else:
@@ -84,15 +84,15 @@ class VFLmodel_AUC(object):
         return data_a.to(self.device), data_b.to(self.device)
 
     def build_models(self, num_classes):
-        if self.dataset_name == 'cifar100' or self.dataset_name == 'cifar10':
-            net_a = self.models_dict[self.dataset_name](num_classes).to(self.device)
-            net_b = self.models_dict[self.dataset_name](num_classes).to(self.device)
-        elif self.dataset_name == 'mnist':
-            net_a = self.models_dict[self.dataset_name](self.half_dim * self.half_dim * 2, num_classes).to(self.device)
-            net_b = self.models_dict[self.dataset_name](self.half_dim * self.half_dim * 2, num_classes).to(self.device)
-        elif self.dataset_name == 'nuswide':
-            net_a = self.models_dict[self.dataset_name](self.half_dim[0], num_classes).to(self.device)
-            net_b = self.models_dict[self.dataset_name](self.half_dim[1], num_classes).to(self.device)
+        if self.dataset == 'cifar100' or self.dataset == 'cifar10':
+            net_a = self.models_dict[self.dataset](num_classes).to(self.device)
+            net_b = self.models_dict[self.dataset](num_classes).to(self.device)
+        elif self.dataset == 'mnist':
+            net_a = self.models_dict[self.dataset](self.half_dim * self.half_dim * 2, num_classes).to(self.device)
+            net_b = self.models_dict[self.dataset](self.half_dim * self.half_dim * 2, num_classes).to(self.device)
+        elif self.dataset == 'nuswide':
+            net_a = self.models_dict[self.dataset](self.half_dim[0], num_classes).to(self.device)
+            net_b = self.models_dict[self.dataset](self.half_dim[1], num_classes).to(self.device)
         return net_a, net_b
 
     def label_to_one_hot(self, target, num_classes=10):
@@ -273,11 +273,11 @@ class VFLmodel_AUC(object):
                 marvell_y.append(int(gt_one_hot_label[i][1]))
             marvell_y = np.array(marvell_y)
             shared_var.batch_y = np.asarray(marvell_y)
-            logdir = 'marvell_logs/main_task/{}_logs/{}'.format(self.dataset_name, time.strftime("%Y%m%d-%H%M%S"))
+            logdir = 'marvell_logs/main_task/{}_logs/{}'.format(self.dataset, time.strftime("%Y%m%d-%H%M%S"))
             writer = tf.summary.create_file_writer(logdir)
             shared_var.writer = writer
             with torch.no_grad():
-                pred_a_gradients_clone = KL_gradient_perturb(pred_a_gradients_clone, self.marvell_s)
+                pred_a_gradients_clone = KL_gradient_perturb(pred_a_gradients_clone, [0,1], self.marvell_s)
                 pred_a_gradients_clone = pred_a_gradients_clone.to(self.device)
         # ######################## defense5: ppdl, GradientCompression, laplace_noise, DiscreteSGD ############################
         # elif self.apply_ppdl:
@@ -342,11 +342,11 @@ class VFLmodel_AUC(object):
 
         # for num_classes in self.num_class_list:
         # n_minibatches = len(train_loader)
-        if self.dataset_name == 'cifar100' or self.dataset_name == 'cifar10':
+        if self.dataset == 'cifar100' or self.dataset == 'cifar10':
             print_every = 1
-        elif self.dataset_name == 'mnist':
+        elif self.dataset == 'mnist':
             print_every = 1
-        elif self.dataset_name == 'nuswide':
+        elif self.dataset == 'nuswide':
             print_every = 1
         # net_a refers to passive model, net_b refers to active model
         net_a, net_b = self.build_models(self.num_classes)

@@ -191,12 +191,12 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
     label_y = 'Label recovery accuracy'
 
     for defense in defense_name_list:
-        if defense != 'MARVELL' and defense != 'CAE' and defense != 'MID' and defense != 'no defense':
+        # # if defense != 'MARVELL' and defense != 'CAE' and defense != 'MID' and defense != 'no defense':
         # if defense == 'MARVELL':
-            rec_rate_list.append([])
-            acc_list.append([])
-            param_list.append([])
-            continue
+        #     rec_rate_list.append([])
+        #     acc_list.append([])
+        #     param_list.append([])
+        #     continue
         if defense != defense_name_list[-1]:
             dir1 = os.path.join(dir, defense)
         else:
@@ -317,7 +317,7 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
     ax.set_xlim(x_limit)
     ax.set_ylim(y_limit)
     x_major_locator = mtick.MultipleLocator(x_major_locator)
-    y_major_locator = mtick.MultipleLocator(20)
+    y_major_locator = mtick.MultipleLocator(5)
     ax.xaxis.set_major_locator(x_major_locator)
     ax.yaxis.set_major_locator(y_major_locator)
     
@@ -366,7 +366,7 @@ if __name__ == '__main__':
     }
     attack_task_y_limit_dict = {
         'cifar100':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[-1,101],'binary_top_model':[-1,101]},
-        'mnist':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[-1,101],'binary_top_model':[-1,101]},
+        'mnist':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[30,70],'binary_top_model':[30,70]},
         'nuswide':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[-1,101],'binary_top_model':[-1,101]}
     }
     x_major_locator_dict = {
@@ -379,7 +379,7 @@ if __name__ == '__main__':
     exp_dir = f'./exp_result_2048/{dataset}/'
     exp_dir = f'./exp_result_binary/{dataset}/'
     exp_dir = f'./exp_result_direction_scoring/{dataset}/'
-    # exp_dir = f'./exp_result_norm_scoring/{dataset}/'
+    exp_dir = f'./exp_result_norm_scoring/{dataset}/'
     if not ('_no_top_model' in exp_type):
         exp_dir += '_top_model/'
     x_limit = main_task_x_limit_dict[dataset][exp_type]

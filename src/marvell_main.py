@@ -72,56 +72,56 @@ def fetch_data_and_label(dataset, num_classes):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_type', default='attack', type=str, help='exp_type should be "attack" or "main_task"')
+    parser.add_argument('--dataset', default='mnist', type=str, help='the dataset which the experiment is based on')
+    parser.add_argument('--num_exp', default=10, type=int , help='the number of random experiments')
+    parser.add_argument('--lr', default=0.05, type=float, help='learning rate')
+    parser.add_argument('--epochs', default=100, type=int, help='')
+    parser.add_argument('--batch_size', default=2048, type=int, help='')
+    parser.add_argument('--early_stop', default=False, type=bool, help='whether to use early stop')
+    parser.add_argument('--early_stop_param', default=0.0001, type=float, help='stop training when the loss <= early_stop_param')
+    parser.add_argument('--seed', default=100, type=int, help='random seed')
+    parser.add_argument('--device', default='cuda', type=str)
+    parser.add_argument('--gpu', default=0, type=int, help='gpu id')
+    # defense
+    parser.add_argument('--apply_trainable_layer', default=False, type=bool, help='whether to use trainable layer in active party')
+    parser.add_argument('--apply_laplace', default=False, type=bool, help='whether to use dp-laplace')
+    parser.add_argument('--apply_gaussian', default=False, type=bool, help='whether to use dp-gaussian')
+    parser.add_argument('--dp_strength', default=0, type=float, help='the parameter of dp defense')
+    parser.add_argument('--apply_grad_spar', default=False, type=bool, help='whether to use gradient sparsification')
+    parser.add_argument('--grad_spars', default=0, type=float, help='the parameter of gradient sparsification')
+    parser.add_argument('--apply_encoder', default=False, type=bool, help='whether to use CoAE')
+    # parser.add_argument('--apply_random_encoder', default=False, type=bool, help='whether to use CoAE')
+    # parser.add_argument('--apply_adversarial_encoder', default=False, type=bool, help='whether to use AAE')
+
+    # parser.add_argument('--apply_certify', default=0, type=int, help='whether to use certify')
+    # parser.add_argument('--certify_M', default=1000, type=int, help='number of voters in CertifyFL')
+    # parser.add_argument('--certify_start_epoch', default=0, type=int, help='number of epoch that start certify process')
+
+    parser.add_argument('--apply_marvell', default=False, type=bool, help='whether to use marvell(optimal gaussian noise)')
+    parser.add_argument('--marvell_s', default=1, type=int, help='scaler of bound in MARVELL')
+
+    # # defense methods given in MC
+    # parser.add_argument('--apply_ppdl', help='turn_on_privacy_preserving_deep_learning', type=bool, default=False)
+    # parser.add_argument('--ppdl_theta_u', help='theta-u parameter for defense privacy-preserving deep learning', type=float, default=0.5)
+    # # parser.add_argument('--apply_gc', help='turn_on_gradient_compression', type=bool, default=False)
+    # parser.add_argument('--gc_preserved_percent', help='preserved-percent parameter for defense gradient compression', type=float, default=0.1)
+    # parser.add_argument('--apply_lap_noise', help='turn_on_lap_noise', type=bool, default=False)
+    # parser.add_argument('--noise_scale', help='noise-scale parameter for defense noisy gradients', type=float, default=1e-3)
+    parser.add_argument('--apply_discrete_gradients', default=False, type=bool, help='whether to use Discrete Gradients')
+    parser.add_argument('--discrete_gradients_bins', default=12, type=int, help='number of bins for discrete gradients')
+    parser.add_argument('--discrete_gradients_bound', default=3e-4, type=float, help='value of bound for discrete gradients')
+    
+    parser.add_argument('--apply_mi', default=False, type=bool, help='wheather to use MutualInformation-loss instead of CrossEntropy-loss')
+    parser.add_argument('--mi_loss_lambda', default=1.0, type=float, help='the parameter for MutualInformation-loss')
+    parser.add_argument('--apply_mid', default=False, type=bool, help='wheather to use MID for protection')
+    parser.add_argument('--mid_tau', default=0.1, type=float, help='the parameter for MID')
+    parser.add_argument('--mid_loss_lambda', default=0.003, type=float, help='the parameter for MID')
+    parser.add_argument('--apply_distance_correlation', default=False, type=bool, help='wheather to use Distance Correlation for protection')
+    parser.add_argument('--distance_correlation_lambda', default=0.003, type=float, help='the parameter for Distance Correlation')
+
     args = parser.parse_args()
     if args.exp_type == 'attack':
         print("attack type")
-        parser.add_argument('--dataset', default='mnist', type=str, help='the dataset which the experiment is based on')
-        parser.add_argument('--num_exp', default=10, type=int , help='the number of random experiments')
-        parser.add_argument('--lr', default=0.05, type=float, help='learning rate')
-        parser.add_argument('--early_stop', default=False, type=bool, help='whether to use early stop')
-        parser.add_argument('--early_stop_param', default=0.0001, type=float, help='stop training when the loss <= early_stop_param')
-        parser.add_argument('--seed', default=100, type=int, help='random seed')
-        parser.add_argument('--device', default='cuda', type=str)
-        parser.add_argument('--gpu', default=0, type=int, help='gpu id')
-        # defense
-        parser.add_argument('--apply_trainable_layer', default=False, type=bool, help='whether to use trainable layer in active party')
-        parser.add_argument('--apply_laplace', default=False, type=bool, help='whether to use dp-laplace')
-        parser.add_argument('--apply_gaussian', default=False, type=bool, help='whether to use dp-gaussian')
-        parser.add_argument('--dp_strength', default=0, type=float, help='the parameter of dp defense')
-        parser.add_argument('--apply_grad_spar', default=False, type=bool, help='whether to use gradient sparsification')
-        parser.add_argument('--grad_spars', default=0, type=float, help='the parameter of gradient sparsification')
-        parser.add_argument('--apply_encoder', default=False, type=bool, help='whether to use CoAE')
-        # parser.add_argument('--apply_random_encoder', default=False, type=bool, help='whether to use CoAE')
-        # parser.add_argument('--apply_adversarial_encoder', default=False, type=bool, help='whether to use AAE')
-
-        # parser.add_argument('--apply_certify', default=0, type=int, help='whether to use certify')
-        # parser.add_argument('--certify_M', default=1000, type=int, help='number of voters in CertifyFL')
-        # parser.add_argument('--certify_start_epoch', default=0, type=int, help='number of epoch that start certify process')
-
-        parser.add_argument('--apply_marvell', default=False, type=bool, help='whether to use marvell(optimal gaussian noise)')
-        parser.add_argument('--marvell_s', default=1, type=int, help='scaler of bound in MARVELL')
-
-        # # defense methods given in MC
-        # parser.add_argument('--apply_ppdl', help='turn_on_privacy_preserving_deep_learning', type=bool, default=False)
-        # parser.add_argument('--ppdl_theta_u', help='theta-u parameter for defense privacy-preserving deep learning', type=float, default=0.5)
-        # # parser.add_argument('--apply_gc', help='turn_on_gradient_compression', type=bool, default=False)
-        # parser.add_argument('--gc_preserved_percent', help='preserved-percent parameter for defense gradient compression', type=float, default=0.1)
-        # parser.add_argument('--apply_lap_noise', help='turn_on_lap_noise', type=bool, default=False)
-        # parser.add_argument('--noise_scale', help='noise-scale parameter for defense noisy gradients', type=float, default=1e-3)
-        parser.add_argument('--apply_discrete_gradients', default=False, type=bool, help='whether to use Discrete Gradients')
-        parser.add_argument('--discrete_gradients_bins', default=12, type=int, help='number of bins for discrete gradients')
-        parser.add_argument('--discrete_gradients_bound', default=3e-4, type=float, help='value of bound for discrete gradients')
-        
-        parser.add_argument('--apply_mi', default=False, type=bool, help='wheather to use MutualInformation-loss instead of CrossEntropy-loss')
-        parser.add_argument('--mi_loss_lambda', default=1.0, type=float, help='the parameter for MutualInformation-loss')
-        parser.add_argument('--apply_mid', default=False, type=bool, help='wheather to use MID for protection')
-        parser.add_argument('--mid_tau', default=0.1, type=float, help='the parameter for MID')
-        parser.add_argument('--mid_loss_lambda', default=0.003, type=float, help='the parameter for MID')
-        parser.add_argument('--apply_distance_correlation', default=False, type=bool, help='wheather to use Distance Correlation for protection')
-        parser.add_argument('--distance_correlation_lambda', default=0.003, type=float, help='the parameter for Distance Correlation')
-
-
-        args = parser.parse_args()
         set_seed(args.seed)
         args.model = models_dict[args.dataset]
         args.epochs = epochs_dict[args.dataset]
@@ -177,9 +177,13 @@ if __name__ == '__main__':
             args.exp_res_dir += 'GradientSparsification/'
             temp += 'GradientSparsification/'
         if args.apply_encoder:
-            args.exp_res_dir += 'CAE/'
-            temp += 'CAE/'
-        if args.apply_discrete_gradients:
+            if args.apply_discrete_gradients:
+                args.exp_res_dir += 'DCAE/'
+                temp += 'DCAE/'
+            else:
+                args.exp_res_dir += 'CAE/'
+                temp += 'CAE/'
+        elif args.apply_discrete_gradients:
             args.exp_res_dir += 'DiscreteGradients/'
             temp += 'DiscreteGradients/'
         if args.apply_marvell:
@@ -238,49 +242,9 @@ if __name__ == '__main__':
             else:
                 label_leakage = marvell_scoring_attack.ScoringAttack(args)
                 label_leakage.train()
+    
     elif args.exp_type == 'main_task':
         print("main_task type")
-        parser.add_argument('--device', default='cuda', type=str, help='')
-        parser.add_argument('--gpu', default=0, type=int, help='gpu id')
-        parser.add_argument('--seed', default=100, type=int, help='')
-        parser.add_argument('--dataset_name', default='mnist', type=str, help='the dataset which the experiments are based on')
-        parser.add_argument('--apply_trainable_layer', default=False, type=bool, help='whether to use trainable layer in active party')
-        parser.add_argument('--apply_laplace', default=False, type=bool, help='whether to use dp-laplace')
-        parser.add_argument('--apply_gaussian', default=False, type=bool, help='whether to use dp-gaussian')
-        parser.add_argument('--dp_strength', default=0, type=float, help='the parameter of dp defense')
-        parser.add_argument('--apply_grad_spar', default=False, type=bool, help='whether to use gradient sparsification')
-        parser.add_argument('--grad_spars', default=0, type=float, help='the parameter of gradient sparsification')
-        parser.add_argument('--apply_encoder', default=False, type=bool, help='whether to use CoAE')
-        # parser.add_argument('--apply_random_encoder', default=False, type=bool, help='whether to use CoAE')
-        parser.add_argument('--apply_marvell', default=False, type=bool, help='whether to use Marvell')
-        parser.add_argument('--marvell_s', default=1, type=int, help='scaler of bound in MARVELL')
-        # parser.add_argument('--apply_adversarial_encoder', default=False, type=bool, help='whether to use AAE')
-        
-        # # defense methods given in MC
-        # parser.add_argument('--apply_ppdl', help='turn_on_privacy_preserving_deep_learning', type=bool, default=False)
-        # parser.add_argument('--ppdl_theta_u', help='theta-u parameter for defense privacy-preserving deep learning', type=float, default=0.5)
-        # parser.add_argument('--apply_gc', help='turn_on_gradient_compression', type=bool, default=False)
-        # parser.add_argument('--gc_preserved_percent', help='preserved-percent parameter for defense gradient compression', type=float, default=0.9)
-        # parser.add_argument('--apply_lap_noise', help='turn_on_lap_noise', type=bool, default=False)
-        # parser.add_argument('--noise_scale', help='noise-scale parameter for defense noisy gradients', type=float, default=1e-3)
-        parser.add_argument('--apply_discrete_gradients', default=False, type=bool, help='whether to use Discrete Gradients')
-        parser.add_argument('--discrete_gradients_bins', default=12, type=int, help='number of bins for discrete gradients')
-        parser.add_argument('--discrete_gradients_bound', default=3e-4, type=float, help='value of bound for discrete gradients')
-        
-        parser.add_argument('--epochs', default=100, type=int, help='')
-        parser.add_argument('--lr', default=0.001, type=float, help='learning rate')
-        parser.add_argument('--batch_size', default=2048, type=int, help='')
-        parser.add_argument('--acc_top_k', default=5, type=int, help='')
-        parser.add_argument('--apply_mi', default=False, type=bool, help='wheather to use MutualInformation-loss instead of CrossEntropy-loss')
-        parser.add_argument('--mi_loss_lambda', default=1.0, type=float, help='the parameter for MutualInformation-loss')
-        parser.add_argument('--apply_mid', default=False, type=bool, help='wheather to use MID for protection')
-        parser.add_argument('--mid_tau', default=0.1, type=float, help='the parameter for MID')
-        parser.add_argument('--mid_loss_lambda', default=1.0, type=float, help='the parameter for MID')
-        parser.add_argument('--apply_distance_correlation', default=False, type=bool, help='wheather to use Distance Correlation for protection')
-        parser.add_argument('--distance_correlation_lambda', default=0.003, type=float, help='the parameter for Distance Correlation')
-
-
-        args = parser.parse_args()
         set_seed(args.seed)
 
         if args.device == 'cuda':
@@ -288,7 +252,7 @@ if __name__ == '__main__':
             torch.cuda.set_device(cuda_id)
         print(f'running on cuda{torch.cuda.current_device()}')
 
-        if args.dataset_name == "cifar100":
+        if args.dataset == "cifar100":
             half_dim = 16
             num_classes = 2
             train_dst = datasets.CIFAR100("../../../share_dataset/", download=True, train=True, transform=transform)
@@ -297,7 +261,7 @@ if __name__ == '__main__':
             test_dst = datasets.CIFAR100("../../../share_dataset/", download=True, train=False, transform=transform)
             data, label = fetch_data_and_label(test_dst, num_classes)
             test_dst = SimpleDataset(data, label)
-        elif args.dataset_name == "cifar10":
+        elif args.dataset == "cifar10":
             half_dim = 16
             num_classes = 2
             train_dst = datasets.CIFAR10("../../../share_dataset/", download=True, train=True, transform=transform)
@@ -306,7 +270,7 @@ if __name__ == '__main__':
             test_dst = datasets.CIFAR10("../../../share_dataset/", download=True, train=False, transform=transform)
             data, label = fetch_data_and_label(test_dst, num_classes)
             test_dst = SimpleDataset(data, label)
-        elif args.dataset_name == "mnist":
+        elif args.dataset == "mnist":
             half_dim = 14
             num_classes = 2
             train_dst = datasets.MNIST("~/.torch", download=True, train=True, transform=transform_fn)
@@ -315,7 +279,7 @@ if __name__ == '__main__':
             test_dst = datasets.MNIST("~/.torch", download=True, train=False, transform=transform_fn)
             data, label = fetch_data_and_label(test_dst, num_classes)
             test_dst = SimpleDataset(data, label)
-        elif args.dataset_name == 'nuswide':
+        elif args.dataset == 'nuswide':
             half_dim = [634, 1000]
             num_classes = 2
             train_dst = NUSWIDEDataset('../../../share_dataset/NUS_WIDE', 'train')
@@ -337,8 +301,8 @@ if __name__ == '__main__':
         ae_name_list = ['autoencoder_2_1.0_1636175704','autoencoder_2_0.5_1636175420',\
                         'autoencoder_2_0.1_1636175237','autoencoder_2_0.0_1636174878']
 
-        path = f'exp_result_norm_scoring/{args.dataset_name}/'
-        temp = f'exp_result_direction_scoring/{args.dataset_name}/'
+        path = f'exp_result_norm_scoring/{args.dataset}/'
+        temp = f'exp_result_direction_scoring/{args.dataset}/'
         if args.apply_trainable_layer:
             path += '_top_model/'
             temp += '_top_model/'
@@ -361,9 +325,13 @@ if __name__ == '__main__':
             path += 'GradientSparsification/'
             temp += 'GradientSparsification/'
         if args.apply_encoder:
-            path += 'CAE/'
-            temp += 'CAE/'
-        if args.apply_discrete_gradients:
+            if args.apply_discrete_gradients:
+                path += 'DCAE/'
+                temp += 'DCAE/'
+            else:
+                path += 'CAE/'
+                temp += 'CAE/'
+        elif args.apply_discrete_gradients:
             path += 'DiscreteGradients/'
             temp += 'DiscreteGradients/'
         if args.apply_marvell:
@@ -426,7 +394,7 @@ if __name__ == '__main__':
                 append_exp_res(path[1], str(grad_spars) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
         elif args.apply_mid:
             mid_lambda_list = [1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
-            mid_lambda_list = [1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
+            # mid_lambda_list = [1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
             for mid_loss_lambda in mid_lambda_list:
                 test_auc_list = []
                 for i in range(num_exp):
@@ -442,11 +410,11 @@ if __name__ == '__main__':
                 test_auc_list = []
                 for i in range(num_exp):
                     args.marvell_s = marvell_s
-                    marvell_vfl = marvell_scoring_attack.ScoringAttack(args)
+                    marvell_vfl = marvell_scoring_main_auc.VFLmodel_AUC(args)
                     test_auc = marvell_vfl.train()
                     test_auc_list.append(test_auc)
-                append_exp_res(path[0], str(args.mid_loss_lambda) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
-                append_exp_res(path[1], str(args.mid_loss_lambda) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[0], str(args.marvell_s) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[1], str(args.marvell_s) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
         else:
             test_auc_list = []
             for _ in range(num_exp):
