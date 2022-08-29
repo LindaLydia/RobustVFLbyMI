@@ -7,7 +7,7 @@ from .nus_wide_data_util import get_labeled_data
 
 class NUSWIDEDatasetVFL():
 
-    def __init__(self, data_dir, data_type, target_number=10, target_label=0, backdoor_scale=1.0):
+    def __init__(self, data_dir, data_type, poison_number, target_number=10, target_label=0, backdoor_scale=1.0):
         self.data_dir = data_dir
         self.target_label = target_label
         self.selected_labels = ['buildings', 'grass', 'animal', 'water', 'person']

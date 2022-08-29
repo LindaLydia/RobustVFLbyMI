@@ -15,10 +15,10 @@ models_dict = {"mnist": 'MLP2',
                "cifar100": 'resnet18',
                "nuswide": 'MLP2',
                "classifier": None}
-epochs_dict = {"mnist": 10000,
-              "cifar10": 200,
-              "cifar100": 200,
-              "nuswide": 20000}
+epochs_dict = {"mnist": 200,
+              "cifar10": 100,
+              "cifar100": 100,
+              "nuswide": 200}
 
 def set_seed(seed=0):
     random.seed(seed)
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     # # attention, change to binary classification
     # args.num_class_list = [2]
 
-    args.batch_size_list = [2048]
+    args.batch_size_list = [256]
     # args.batch_size_list = [1]
     
     if args.num_class_list[0] == 2:

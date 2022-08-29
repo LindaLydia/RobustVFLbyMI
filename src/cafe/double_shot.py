@@ -5,8 +5,8 @@
 In this file we construct double shot
 """
 
-from config import *
-from utils import *
+from cafe.config import *
+from cafe.utils import *
 
 def cafe_middle_input(
         optimizer, dummy_middle_output_gradient, dummy_middle_input, random_lists, true_gradient, real_middle_input,

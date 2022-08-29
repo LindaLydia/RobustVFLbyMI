@@ -14,8 +14,8 @@ from tensorflow.compat.v1 import InteractiveSession
 config = ConfigProto()
 config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
-from config import *
-from utils import *
+from cafe.config import *
+from cafe.utils import *
 
 
 def cafe_middle_output_gradient(optimizer, dummy_middle_output_gradient,random_lists, true_gradient):

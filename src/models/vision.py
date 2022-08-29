@@ -44,6 +44,17 @@ class MID_enlarge_layer(nn.Module):
         return x
 
 
+class ActivePartySplitNN(nn.Module):
+
+    def __init__(self, dim):
+        super().__init__()
+        self.fc1 = nn.Linear(dim, dim*2)
+        self.classifier_head = nn.Linear(dim*2, dim)
+
+    def forward(self, x):
+        return self.classifier_head(self.fc1(x))
+
+
 class MLP2(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(MLP2, self).__init__()
@@ -70,7 +81,7 @@ class MLP2(nn.Module):
 
 class MLP2_middle_leak(nn.Module):
     def __init__(self, input_dim, output_dim):
-        super(MLP2, self).__init__()
+        super(MLP2_middle_leak, self).__init__()
         self.layer1 = nn.Sequential(
             nn.Flatten(),
             nn.Linear(input_dim, 32, bias=True),
@@ -240,6 +251,24 @@ class ActivePartyWithTrainableLayer(nn.Module):
     def forward(self, pred_a, pred_b):
         out = torch.cat([pred_a, pred_b], dim=1) # out = [dim0, dim1_a+dim1_b], dim0 is number of samples
         return self.classifier_head(out)
+
+    # def get_prediction(self, z0, z_list):
+    #     if z_list is not None:
+    #         out = torch.cat([z0] + z_list, dim=1)
+    #     else:
+    #         out = z0
+    #     return self.classifier_head(out)
+
+
+class ActivePartyWithTrainableLayer_catinated(nn.Module):
+
+    def __init__(self, hidden_dim, output_dim):
+        super().__init__()
+        self.classifier_head = nn.Linear(hidden_dim, output_dim)
+
+    def forward(self, x):
+        # out = torch.cat([pred_a, pred_b], dim=1) # out = [dim0, dim1_a+dim1_b], dim0 is number of samples
+        return self.classifier_head(x)
 
     # def get_prediction(self, z0, z_list):
     #     if z_list is not None:

@@ -1,3 +1,4 @@
+from operator import pos
 import time
 from sklearn.metrics import roc_auc_score
 import numpy as np
@@ -618,13 +619,20 @@ def inner_product(A, B):
     return tf.linalg.matmul(A, B, adjoint_b=True)
 
 def update_auc(y, predicted_value, m_auc):
+    # print("update_auc called")
+    # print("y:", y)
+    # print("predicted_value", predicted_value)
+    torch_predict_value = torch.from_numpy(predicted_value.numpy())
+    # print(f"[have nan, have inf] = [{torch.isnan(torch_predict_value).any()},{torch.isinf(torch_predict_value).any()}]")
     auc = compute_auc(y, predicted_value)
+    # print("computed result", auc)
     # if auc:
     #     m_auc.update_state(auc)
     return auc
 
 
 def compute_auc(y, predicted_value):
+    # print("comput_auc called")
     # get rid of the 2nd dimension in  [n, 1]
     predicted_value = tf.reshape(predicted_value, shape=(-1))
     if tf.reduce_sum(y) == 0: # no positive examples in this batch
@@ -632,6 +640,7 @@ def compute_auc(y, predicted_value):
     # m_auc.update_state(0.5) # currently set as 0.5 in some sense this is not well defined
     val_max = tf.math.reduce_max(predicted_value)
     val_min = tf.math.reduce_min(predicted_value)
+    # print(f"[val_max, val_min] = [{val_max}, {val_min}]")
     pred = (predicted_value - val_min + 1e-16) / (val_max - val_min + 1e-16)
     # create this is to avoid putting all different batches of examples in the same epoch together
     # auc_calculator = tf.keras.metrics.AUC()
@@ -639,6 +648,7 @@ def compute_auc(y, predicted_value):
     # auc_calculator.update_state(y, pred)
     # auc = auc_calculator.result()
     auc = roc_auc_score(y_true=y.numpy(), y_score=pred.numpy())
+    # print("keras.roc_auc_score is", auc)
     # if display and auc > 0.0:
     #     print('Alert')
     #     print(tf.reduce_max(predicted_value[y==1]))
@@ -693,6 +703,7 @@ def update_all_ip_leak_auc(ip_leak_auc_dict, grad_list, pos_grad_list, y):
 
 def update_all_cosine_leak_auc(cosine_leak_auc_dict, grad_list, pos_grad_list, y):
     for (key, grad, pos_grad) in zip(cosine_leak_auc_dict.keys(), grad_list, pos_grad_list):
+        # print(f"in cosine leak, [key, grad, pos_grad] = [{key}, {grad}, {pos_grad}]")
         # flatten each example's grad to one-dimensional
         grad = tf.reshape(grad, shape=(grad.shape[0], -1))
         # there should only be one positive example's gradient in pos_grad

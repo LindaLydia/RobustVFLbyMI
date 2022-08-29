@@ -58,7 +58,7 @@
 # python vfl_dlg_no_defense.py --dataset mnist --apply_mid True
 # python vfl_main_task_no_defense.py --dataset_name mnist --apply_mid True --epochs 30
 # python vfl_dlg_no_defense.py --dataset nuswide --apply_mid True
-python vfl_main_task_no_defense.py --dataset_name nuswide --apply_mid True --epochs 30
+# python vfl_main_task_no_defense.py --dataset_name nuswide --apply_mid True --epochs 30
 # python vfl_dlg_no_defense.py --dataset cifar100 --apply_mid True
 # python vfl_main_task_no_defense.py --dataset_name cifar100 --apply_mid True --epochs 160
 
@@ -96,3 +96,15 @@ python vfl_main_task_no_defense.py --dataset_name nuswide --apply_mid True --epo
 # python vfl_dlg_no_defense.py --apply_discrete_gradients True --discrete_gradients_bins 12 --apply_trainable_layer True
 # python vfl_main_task_no_defense.py --apply_discrete_gradients True --discrete_gradients_bins 12 --epochs 30 --apply_trainable_layer True
 # python vfl_dlg_no_defense.py --apply_discrete_gradients True --discrete_gradients_bins 12 --apply_trainable_layer True
+
+python vfl_main_splitNN.py --dataset_name mnist --exp_type main_task --apply_trainable_layer True
+python vfl_main_splitNN.py --dataset_name mnist --exp_type main_task --apply_marvell True --apply_trainable_layer True
+python vfl_main_splitNN.py --dataset_name mnist --exp_type main_task --apply_mid True --apply_trainable_layer True
+python vfl_main_splitNN.py --dataset_name mnist --exp_type main_task --apply_encoder True --apply_trainable_layer True
+python vfl_main_splitNN.py --dataset_name mnist --exp_type main_task --apply_encoder True --apply_discrete_gradients True --discrete_gradients_bins 12 --apply_trainable_layer True
+python vfl_main_splitNN.py --dataset_name mnist --exp_type main_task --apply_laplace True --apply_trainable_layer True
+python vfl_main_splitNN.py --dataset_name mnist --exp_type main_task --apply_gaussian True --apply_trainable_layer True
+python vfl_main_splitNN.py --dataset_name mnist --exp_type main_task --apply_grad_spar True --apply_trainable_layer True
+python vfl_main_splitNN.py --dataset_name mnist --exp_type main_task --apply_discrete_gradients True --discrete_gradients_bins 6 --apply_trainable_layer True
+python vfl_main_splitNN.py --dataset_name mnist --exp_type main_task --apply_discrete_gradients True --discrete_gradients_bins 12 --apply_trainable_layer True
+python vfl_main_splitNN.py --dataset_name mnist --exp_type main_task --apply_discrete_gradients True --discrete_gradients_bins 18 --apply_trainable_layer True

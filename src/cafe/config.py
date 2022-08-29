@@ -6,16 +6,20 @@ in this file we put all the parameters here
 # import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = '0' # device setting
 max_iters = 20000
+# learning_rate_first_shot = 5e-3
+# learning_rate_double_shot = 1e-2
+# cafe_learning_rate = 0.01
 learning_rate_first_shot = 5e-3
-learning_rate_double_shot = 1e-2
-cafe_learning_rate = 0.01
+learning_rate_double_shot = 1e-1
+cafe_learning_rate = 1e-1
 max_cafe_iters = 5
-learning_rate_fl = 1e-6
+learning_rate_fl = 1e-5
 beta1 = 0.9
 beta2 = 0.999
 epsilon = 1e-7
 filename = 'VFL_cafe_cifar10_'+str(cafe_learning_rate)
-number_of_workers = 4
+number_of_workers = 2
+# number_of_workers = 4
 data_number = 800 # 40
 test_data_number = 100
 # img_size = 32

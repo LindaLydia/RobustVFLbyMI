@@ -12,6 +12,8 @@ import marvell_scoring_attack, marvell_scoring_main_auc
 from models.vision import *
 from utils import *
 
+import wandb
+
 from dataset.NuswideDataset import NUSWIDEDataset
 from dataset.nuswide_dataset import SimpleDataset
 
@@ -30,9 +32,9 @@ models_dict = {"mnist": 'MLP2',
                "cifar100": 'resnet18',
                "nuswide": 'MLP2',
                "classifier": None}
-epochs_dict = {"mnist": 10000,
-              "cifar10": 200,
-              "cifar100": 200,
+epochs_dict = {"mnist": 100000,
+              "cifar10": 2000,
+              "cifar100": 2000,
               "nuswide": 20000}
 
 def set_seed(seed=0):
@@ -225,6 +227,7 @@ if __name__ == '__main__':
                 label_leakage.train()
         elif args.apply_mid:
             mid_lambda_list = [1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
+            mid_lambda_list = [1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1,2,5,10,20,20,10,5,2,1,1e-1,1e-2,1e-3,1e-4,1e-5,1e-6,1e-7,1e-8,1e-9]
             for mid_loss_lambda in mid_lambda_list:
                 args.mid_loss_lambda = mid_loss_lambda
                 label_leakage = marvell_scoring_attack.ScoringAttack(args)
@@ -339,8 +342,8 @@ if __name__ == '__main__':
             temp += 'MARVELL/'
         if not os.path.exists(path):
             os.makedirs(path)
-        if not os.path.exists(path):
-            os.makedirs(path)
+        if not os.path.exists(temp):
+            os.makedirs(temp)
         path += 'main_task_acc.txt'
         temp += 'main_task_acc.txt'
         path = [path, temp]
@@ -393,9 +396,12 @@ if __name__ == '__main__':
                 append_exp_res(path[0], str(grad_spars) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
                 append_exp_res(path[1], str(grad_spars) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
         elif args.apply_mid:
-            mid_lambda_list = [1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
+            # mid_lambda_list = [1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
             # mid_lambda_list = [1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
+            mid_lambda_list = [1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1,2,5,10,20]
+            mid_lambda_list = [1e-1,1,2,5,10,20]
             for mid_loss_lambda in mid_lambda_list:
+                print("mid_loss_lambda", mid_loss_lambda)
                 test_auc_list = []
                 for i in range(num_exp):
                     args.mid_loss_lambda = mid_loss_lambda
@@ -427,6 +433,10 @@ if __name__ == '__main__':
             elif args.apply_distance_correlation:
                 append_exp_res(path[0], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
                 append_exp_res(path[1], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+            elif args.apply_discrete_gradients:
+                append_exp_res(path[0], str(args.discrete_gradients_bins) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[1], str(args.discrete_gradients_bins) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
             else:
                 append_exp_res(path[0], "bs|num_class|recovery_rate," + str(args.batch_size) + '|' + str(num_classes) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
                 append_exp_res(path[1], "bs|num_class|recovery_rate," + str(args.batch_size) + '|' + str(num_classes) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                

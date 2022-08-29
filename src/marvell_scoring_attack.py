@@ -17,6 +17,7 @@ from marvell_model import (
     KL_gradient_perturb
 )
 import marvell_shared_values as shared_var
+from scipy.stats import norm
 
 
 tf.compat.v1.enable_eager_execution() 
@@ -197,7 +198,7 @@ class ScoringAttack(object):
                     while torch.argmax(gt_label[pos_idx]) != torch.tensor(1):
                         pos_idx += 1
                         if pos_idx >= len(gt_label):
-                            pos_idx -= gt_label
+                            pos_idx -= len(gt_label)
                     # print(pos_idx)
                     # pos_pred_a = net_a(gt_data_a[pos_idx:pos_idx+1]) # for passive party: H_p, Z
                     # pos_pred_b = net_b(gt_data_b[pos_idx:pos_idx+1]) # for active party
@@ -207,34 +208,59 @@ class ScoringAttack(object):
 
                     ######################## defense3: mutual information defense ############################
                     if self.apply_mid:
-                        epsilon = torch.empty(pred_a.size())
+                        # epsilon = torch.empty(pred_a.size())
                         
-                        # # discrete form of reparameterization
-                        # torch.nn.init.uniform(epsilon) # epsilon is initialized
-                        # epsilon = - torch.log(epsilon + torch.tensor(1e-07))
-                        # epsilon = - torch.log(epsilon + torch.tensor(1e-07)) # prevent if epsilon=0.0
-                        # pred_Z = F.softmax(pred_a) + epsilon.to(self.device)
-                        # pred_Z = F.softmax(pred_Z / torch.tensor(self.mid_tau).to(self.device), -1)
+                        # # # discrete form of reparameterization
+                        # # torch.nn.init.uniform(epsilon) # epsilon is initialized
+                        # # epsilon = - torch.log(epsilon + torch.tensor(1e-07))
+                        # # epsilon = - torch.log(epsilon + torch.tensor(1e-07)) # prevent if epsilon=0.0
+                        # # pred_Z = F.softmax(pred_a,dim=-1) + epsilon.to(self.device)
+                        # # pred_Z = F.softmax(pred_Z / torch.tensor(self.mid_tau).to(self.device), ,dim=-1)
                         
-                        # continuous form of reparameterization
-                        torch.nn.init.normal(epsilon, mean=0, std=1) # epsilon is initialized
+                        # # continuous form of reparameterization
+                        # torch.nn.init.normal_(epsilon, mean=0, std=1) # epsilon is initialized
+                        # epsilon = epsilon.to(self.device)
+                        # # # pred_a.size() = (batch_size, class_num)
+                        # pred_a_double = self.mid_enlarge_model(pred_a)
+                        # mu, std = pred_a_double[:,:num_classes], pred_a_double[:,num_classes:]
+                        # std = F.softplus(std-0.5) # ? F.softplus(std-5)
+                        # # print("mu, std: ", mu.size(), std.size())
+                        # pred_Z = mu+std*epsilon
+                        # assert(pred_Z.size()==pred_a.size())
+                        # pred_Z = pred_Z.to(self.device)
+                        
+                        # pred_Z = self.mid_model(pred_Z)
+                        # pred = active_aggregate_model(pred_Z, F.softmax(pred_b,dim=-1))
+                        # # # loss for discrete form of reparameterization
+                        # # loss = criterion(pred, gt_onehot_label) + self.mid_loss_lambda * entropy_for_probability_vector(pred_a)
+                        # # loss for continuous form of reparameterization
+                        # loss = criterion(pred, gt_onehot_label) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
+                        # # pos_loss = criterion(pred[pos_idx:pos_idx+1], gt_onehot_label[pos_idx:pos_idx+1]) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1)) / pred_Z.size()[0]
+
+                        # ########################### v2 #############################################
+                        # t_samples = self.mid_model(pred_a)
+                        # positdive = torch.zeros_like(t_samples)
+                        # prediction_1 = t_samples.unsqueeze(1)  # [nsample,1,dim]
+                        # t_samples_1 = t_samples.unsqueeze(0)  # [1,nsample,dim]
+                        # negative = - ((t_samples_1 - prediction_1) ** 2).mean(dim=1) / 2.   # [nsample, dim]
+                        # pred = active_aggregate_model(t_samples, F.softmax(pred_b,dim=-1))
+                        # loss = criterion(pred, gt_onehot_label) + self.mid_loss_lambda * (positive.sum(dim=-1) - negative.sum(dim=-1)).mean()
+                        ########################### v3 #############################################
+                        epsilon = torch.empty((pred_a.size()[0],pred_a.size()[1]))
+                        torch.nn.init.normal_(epsilon, mean=0, std=1) # epsilon is initialized
                         epsilon = epsilon.to(self.device)
-                        # # pred_a.size() = (batch_size, class_num)
-                        pred_a_double = self.mid_enlarge_model(pred_a)
-                        mu, std = pred_a_double[:,:num_classes], pred_a_double[:,num_classes:]
-                        std = F.softplus(std-0.5) # ? F.softplus(std-5)
-                        # print("mu, std: ", mu.size(), std.size())
-                        pred_Z = mu+std*epsilon
-                        assert(pred_Z.size()==pred_a.size())
-                        pred_Z = pred_Z.to(self.device)
-                        
-                        pred_Z = self.mid_model(pred_Z)
-                        pred = active_aggregate_model(pred_Z, F.softmax(pred_b))
-                        # # loss for discrete form of reparameterization
-                        # loss = criterion(pred, gt_onehot_label) + self.mid_loss_lambda * entropy_for_probability_vector(pred_a)
-                        # loss for continuous form of reparameterization
-                        loss = criterion(pred, gt_onehot_label) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
-                        # pos_loss = criterion(pred[pos_idx:pos_idx+1], gt_onehot_label[pos_idx:pos_idx+1]) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1)) / pred_Z.size()[0]
+                        mu = torch.mean(pred_a)
+                        std = torch.std(pred_a, unbiased=False)
+                        # mu, std = norm.fit(pred_a.cpu().detach().numpy())
+                        _samples = mu + std * epsilon
+                        _samples = _samples.to(self.device)
+                        t_samples = self.mid_model(_samples)
+                        pred = active_aggregate_model(t_samples, pred_b)
+                        # mu = torch.tensor(mu)
+                        # std = torch.tensor(std)
+                        loss = criterion(pred, gt_onehot_label) + self.mid_loss_lambda * (-0.5)*(1+2*torch.log(std)-mu**2 - std**2)
+                        # loss = criterion(pred, gt_onehot_label) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
+
                     ######################## defense4: distance correlation ############################
                     if self.apply_distance_correlation:
                         loss = criterion(pred, gt_onehot_label) + self.distance_correlation_lambda * torch.mean(torch.cdist(pred_a, gt_onehot_label, p=2))
@@ -272,11 +298,11 @@ class ScoringAttack(object):
                                 norm_factor_a = torch.div(torch.max(torch.norm(pred_a_gradients_clone, dim=1)),
                                                         threshold + 1e-6).clamp(min=1.0)
                                 pred_a_gradients_clone = torch.div(pred_a_gradients_clone, norm_factor_a) + \
-                                                    torch.normal(location, scale, pred_a_gradients_clone.shape).to(self.device)
+                                                    torch.normal_(location, scale, pred_a_gradients_clone.shape).to(self.device)
                                 # pos_norm_factor_a = torch.div(torch.max(torch.norm(pos_pred_a_gradients_clone, dim=1)),
                                 #                            threshold + 1e-6).clamp(min=1.0)
                                 # pos_pred_a_gradients_clone = torch.div(pos_pred_a_gradients_clone, pos_norm_factor_a) + \
-                                #                        torch.normal(location, scale, pos_pred_a_gradients_clone.shape).to(self.device)
+                                #                        torch.normal_(location, scale, pos_pred_a_gradients_clone.shape).to(self.device)
                     ######################## defense3: gradient sparsification ############################
                     elif self.apply_grad_spar and self.grad_spars != 0:
                         with torch.no_grad():
@@ -326,6 +352,23 @@ class ScoringAttack(object):
                     tf_pred_a_gradients_clone = tf.convert_to_tensor(pred_a_gradients_clone.cpu().numpy())
                     tf_gt_label = tf.convert_to_tensor([tf.convert_to_tensor(torch.argmax(gt_label[i]).cpu().numpy()) for i in range(len(gt_label))])
                     print(tf_pred_a_gradients_clone[0], tf_gt_label[0], type(tf_pred_a_gradients_clone))
+
+                    # gradient_norm = tf.norm(tf_pred_a_gradients_clone, axis=-1, keepdims=False)
+                    # numpy_gradients_norm = gradient_norm.numpy()
+                    # numpy_label = tf_gt_label.numpy()
+                    # negative_gradients_norm = []
+                    # positive_gradients_norm = []
+                    # for i in range(len(numpy_label)):
+                    #     if float(numpy_label[i]) == 0.0:
+                    #         negative_gradients_norm.append(gradient_norm[i].numpy())
+                    #     else:
+                    #         positive_gradients_norm.append(gradient_norm[i].numpy())
+                    # print(negative_gradients_norm[0],positive_gradients_norm[0])
+                    # import matplotlib.pyplot as plt
+                    # plt.cla()
+                    # plt.hist(negative_gradients_norm, color='b', bins = 20, alpha=0.5, label='negative')
+                    # plt.hist(positive_gradients_norm, color='r', bins = 20, alpha=0.5, label='positive')
+                    # plt.savefig(f'images_bins/{i_run}_bins.png')
 
                     norm_leak_auc = update_all_norm_leak_auc(
                         norm_leak_auc_dict={'only':''},
@@ -399,8 +442,8 @@ class ScoringAttack(object):
                     exp_result = str(self.discrete_gradients_bins) + ' ' + str(np.mean(norm_leak_auc_history)) + ' ' + str(norm_leak_auc_history) + ' ' + str(np.max(norm_leak_auc_history))
                     exp_result1 = str(self.discrete_gradients_bins) + ' ' + str(np.mean(cosine_leak_auc_history)) + ' ' + str(cosine_leak_auc_history) + ' ' + str(np.max(cosine_leak_auc_history))
                 elif self.apply_mid:
-                    exp_result = str(self.mid_loss_lambda) + ' ' + str(np.mean(norm_leak_auc_history)) + ' ' + str(norm_leak_auc_history) + ' ' + str(np.max(norm_leak_auc_history)) + ' MID'
-                    exp_result1 = str(self.mid_loss_lambda) + ' ' + str(np.mean(cosine_leak_auc_history)) + ' ' + str(cosine_leak_auc_history) + ' ' + str(np.max(cosine_leak_auc_history)) + ' MID'
+                    exp_result = str(self.mid_loss_lambda) + ' ' + str(np.mean(norm_leak_auc_history)) + ' ' + str(norm_leak_auc_history) + ' ' + str(np.max(norm_leak_auc_history))
+                    exp_result1 = str(self.mid_loss_lambda) + ' ' + str(np.mean(cosine_leak_auc_history)) + ' ' + str(cosine_leak_auc_history) + ' ' + str(np.max(cosine_leak_auc_history))
                 elif self.apply_mi:
                     exp_result = str(self.mi_loss_lambda) + ' ' + str(np.mean(norm_leak_auc_history)) + ' ' + str(norm_leak_auc_history) + ' ' + str(np.max(norm_leak_auc_history))
                     exp_result1 = str(self.mi_loss_lambda) + ' ' + str(np.mean(cosine_leak_auc_history)) + ' ' + str(cosine_leak_auc_history) + ' ' + str(np.max(cosine_leak_auc_history))

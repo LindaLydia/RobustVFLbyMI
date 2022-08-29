@@ -16,12 +16,12 @@ config = ConfigProto()
 config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 
-from config import *
-from data_preprocess import train_datasets as train_ds
-from model import local_embedding, server
-from first_shot import cafe_middle_output_gradient
-from double_shot import cafe_middle_input
-from utils import *
+from cafe.config import *
+from cafe.data_preprocess import train_datasets as train_ds
+from cafe.model import local_embedding, server
+from cafe.first_shot import cafe_middle_output_gradient
+from cafe.double_shot import cafe_middle_input
+from cafe.utils import *
 import gc
 import matplotlib.pyplot as plt
 import numpy as np

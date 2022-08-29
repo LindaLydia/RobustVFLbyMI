@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from random import sample
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
@@ -12,6 +13,7 @@ from utils import *
 
 import tensorflow as tf
 import math
+# import wandb
 from sklearn.metrics import roc_auc_score
 
 from marvell_model import (
@@ -73,6 +75,18 @@ class VFLmodel_AUC(object):
         self.mid_enlarge_model = args.mid_enlarge_model
         self.apply_distance_correlation = args.apply_distance_correlation
         self.distance_correlation_lambda = args.distance_correlation_lambda
+
+        # wandb_project_name = f'arvell_main_project_{time.strftime("%Y%m%d-%H%M%S")}'
+        # wandb.init(project=wandb_project_name)
+
+        # wandb.config = {
+        #     "dataset": self.dataset,
+        #     "learning_rate":  self.lr,
+        #     "epochs": self.epochs,
+        #     "batch_size": self.batch_size,
+        #     "apply_mi": self.apply_mi,
+        #     "mid_lambda": self.mid_loss_lambda
+        # }
 
     def fetch_parties_data(self, data):
         if self.dataset == 'nuswide':
@@ -184,40 +198,67 @@ class VFLmodel_AUC(object):
             # loss = criterion(pred, gt_onehot_label) + 
         ######################## defense3: mid ############################
         elif self.apply_mid:
-            # pred_Z = Somefunction(pred_a)
-            # print("pred_a.size(): ",pred_a.size())
+            # # pred_Z = Somefunction(pred_a)
+            # # print("pred_a.size(): ",pred_a.size())
+            # epsilon = torch.empty((pred_a.size()[0],pred_a.size()[1]))
+
+            # # # discrete form of reparameterization
+            # # torch.nn.init.uniform(epsilon) # epsilon is initialized
+            # # epsilon = - torch.log(epsilon + torch.tensor(1e-07))
+            # # epsilon = - torch.log(epsilon + torch.tensor(1e-07)) # prevent if epsilon=0.0
+            # # pred_Z = F.softmax(pred_a,dim=-1) + epsilon.to(self.device)
+            # # pred_Z = F.softmax(pred_Z / torch.tensor(self.mid_tau).to(self.device), ,dim=-1)
+
+            # # continuous form of reparameterization
+            # torch.nn.init.normal_(epsilon, mean=0, std=1) # epsilon is initialized
+            # epsilon = epsilon.to(self.device)
+            # # # pred_a.size() = (batch_size, class_num)
+            # pred_a_double = self.mid_enlarge_model(pred_a)
+            # # mu, std = norm.fit(pred_a.cpu().detach().numpy())
+            # mu, std = pred_a_double[:,:self.num_classes], pred_a_double[:,self.num_classes:]
+            # std = F.softplus(std-0.5) # ? F.softplus(std-5)
+            # print("mu, std: ", mu.size(), std.size())
+            # pred_Z = mu+std*epsilon
+            # assert(pred_Z.size()==pred_a.size())
+            # pred_Z = pred_Z.to(self.device)
+
+            # pred_Z = self.mid_model(pred_Z)
+            # pred = self.active_aggregate_model(pred_Z, F.softmax(pred_b,dim=-1))
+            # # # loss for discrete form of reparameterization
+            # # loss = criterion(pred, gt_one_hot_label) + self.mid_loss_lambda * entropy_for_probability_vector(pred_a)
+            # # loss for continuous form of reparameterization
+            # loss = criterion(pred, gt_one_hot_label) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
+            # print("loss: ", loss)
+            ########################### v2 #############################################
+            # t_samples = self.mid_model(pred_a)
+            # positive = torch.zeros_like(t_samples)
+            # prediction_1 = t_samples.unsqueeze(1)  # [nsample,1,dim]
+            # t_samples_1 = t_samples.unsqueeze(0)  # [1,nsample,dim]
+            # negative = - ((t_samples_1 - prediction_1) ** 2).mean(dim=1) / 2.   # [nsample, dim]
+            # pred = self.active_aggregate_model(t_samples, pred_b)
+            # loss = criterion(pred, gt_one_hot_label) + self.mid_loss_lambda * (positive.sum(dim=-1) - negative.sum(dim=-1)).mean()
+            ########################### v3 #############################################
             epsilon = torch.empty((pred_a.size()[0],pred_a.size()[1]))
-
-            # # discrete form of reparameterization
-            # torch.nn.init.uniform(epsilon) # epsilon is initialized
-            # epsilon = - torch.log(epsilon + torch.tensor(1e-07))
-            # epsilon = - torch.log(epsilon + torch.tensor(1e-07)) # prevent if epsilon=0.0
-            # pred_Z = F.softmax(pred_a) + epsilon.to(self.device)
-            # pred_Z = F.softmax(pred_Z / torch.tensor(self.mid_tau).to(self.device), -1)
-
-            # continuous form of reparameterization
-            torch.nn.init.normal(epsilon, mean=0, std=1) # epsilon is initialized
+            torch.nn.init.normal_(epsilon, mean=0, std=1) # epsilon is initialized
             epsilon = epsilon.to(self.device)
-            # # pred_a.size() = (batch_size, class_num)
-            pred_a_double = self.mid_enlarge_model(pred_a)
+            mu = torch.mean(pred_a)
+            std = torch.std(pred_a, unbiased=False)
             # mu, std = norm.fit(pred_a.cpu().detach().numpy())
-            mu, std = pred_a_double[:,:self.num_classes], pred_a_double[:,self.num_classes:]
-            std = F.softplus(std-0.5) # ? F.softplus(std-5)
-            print("mu, std: ", mu.size(), std.size())
-            pred_Z = mu+std*epsilon
-            assert(pred_Z.size()==pred_a.size())
-            pred_Z = pred_Z.to(self.device)
+            _samples = mu + std * epsilon
+            _samples = _samples.to(self.device)
+            t_samples = self.mid_model(_samples)
+            # pred = self.active_aggregate_model(t_samples, F.softmax(pred_b,dim=-1))
+            pred = self.active_aggregate_model(t_samples, pred_b)
+            # loss = criterion(pred, gt_one_hot_label) + self.mid_lodss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
+            loss = criterion(pred, gt_one_hot_label) + self.mid_loss_lambda * ((-0.5)*(1+2*torch.log(std)-mu**2 - std**2))
 
-            pred_Z = self.mid_model(pred_Z)
-            pred = self.active_aggregate_model(pred_Z, F.softmax(pred_b))
-            # # loss for discrete form of reparameterization
-            # loss = criterion(pred, gt_one_hot_label) + self.mid_loss_lambda * entropy_for_probability_vector(pred_a)
-            # loss for continuous form of reparameterization
-            loss = criterion(pred, gt_one_hot_label) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
-            print("loss: ", loss)
         ######################## defense4: distance correlation ############################
         elif self.apply_distance_correlation:
             loss = criterion(pred, gt_one_hot_label) + self.distance_correlation_lambda * torch.mean(torch.cdist(pred_a, gt_one_hot_label, p=2))
+        
+        # # Optional
+        # wandb.watch(model)
+        
         ######################## defense with loss change end ############################
         pred_a_gradients = torch.autograd.grad(loss, pred_a, retain_graph=True)
         pred_a_gradients_clone = pred_a_gradients[0].detach().clone()
@@ -225,10 +266,6 @@ class VFLmodel_AUC(object):
         pred_b_gradients_clone = pred_b_gradients[0].detach().clone()
 
         ######################## defense2: dp ############################
-        pred_a_gradients = torch.autograd.grad(loss, pred_a, retain_graph=True)
-        pred_a_gradients_clone = pred_a_gradients[0].detach().clone()
-        pred_b_gradients = torch.autograd.grad(loss, pred_b, retain_graph=True)
-        pred_b_gradients_clone = pred_b_gradients[0].detach().clone()
         if self.apply_laplace and self.dp_strength != 0.0 or self.apply_gaussian and self.dp_strength != 0.0:
             location = 0.0
             threshold = 0.2  # 1e9
@@ -298,14 +335,15 @@ class VFLmodel_AUC(object):
             pred_a_gradients_clone = multistep_gradient(pred_a_gradients_clone, bins_num=self.discrete_gradients_bins, bound_abs=self.discrete_gradients_bound)
             pred_b_gradients_clone = multistep_gradient(pred_b_gradients_clone, bins_num=self.discrete_gradients_bins, bound_abs=self.discrete_gradients_bound)
         ######################## defense end ############################
-
         if self.apply_mid:
-            pred_Z_gradients = torch.autograd.grad(loss, pred_Z, retain_graph=True)
-            pred_Z_gradients_clone = pred_Z_gradients[0].detach().clone()
-            weights_grad_enlarge_a = torch.autograd.grad(loss, pred_a_double, retain_graph=True)
-            weights_grad_enlarge_a_clone = weights_grad_enlarge_a[0].detach().clone()
-        model_optimizer.zero_grad()
+            # pred_Z_gradients = torch.autograd.grad(loss, pred_Z, retain_graph=True)
+            # pred_Z_gradients_clone = pred_Z_gradients[0].detach().clone()
+            # weights_grad_enlarge_a = torch.autograd.grad(loss, pred_a_double, retain_graph=True)
+            # weights_grad_enlarge_a_clone = weights_grad_enlarge_a[0].detach().clone()
+            t_samples_gradients = torch.autograd.grad(loss, t_samples, retain_graph=True)
+            t_samples_gradients_clone = t_samples_gradients[0].detach().clone()
 
+        model_optimizer.zero_grad()
         # update passive party(attacker) model
         weights_grad_a = torch.autograd.grad(pred_a, net_a.parameters(), grad_outputs=pred_a_gradients_clone)
         for w, g in zip(net_a.parameters(), weights_grad_a):
@@ -318,15 +356,19 @@ class VFLmodel_AUC(object):
                 w.grad = g.detach()
         # print("weights_grad_a,b:",weights_grad_a,weights_grad_b)
         if self.apply_mid:
-            weights_grad_Z = torch.autograd.grad(pred_Z, self.mid_model.parameters(), grad_outputs=pred_Z_gradients_clone)
-            for w, g in zip(self.mid_model.parameters(), weights_grad_Z):
+            # weights_grad_Z = torch.autograd.grad(pred_Z, self.mid_model.parameters(), grad_outputs=pred_Z_gradients_clone)
+            # for w, g in zip(self.mid_model.parameters(), weights_grad_Z):
+            #     if w.requires_grad:
+            #         w.grad = g.detach()
+            # weights_grad_enlarge_a = torch.autograd.grad(pred_a_double, self.mid_enlarge_model.parameters(), grad_outputs=weights_grad_enlarge_a_clone)
+            # for w, g in zip(self.mid_enlarge_model.parameters(), weights_grad_enlarge_a):
+            #     if w.requires_grad:
+            #         w.grad = g.detach()
+            # # print("weights_grad_Z:",weights_grad_Z)
+            weights_grad_t_samples = torch.autograd.grad(t_samples, self.mid_model.parameters(), grad_outputs=t_samples_gradients_clone)
+            for w, g in zip(self.mid_model.parameters(), weights_grad_t_samples):
                 if w.requires_grad:
                     w.grad = g.detach()
-            weights_grad_enlarge_a = torch.autograd.grad(pred_a_double, self.mid_enlarge_model.parameters(), grad_outputs=weights_grad_enlarge_a_clone)
-            for w, g in zip(self.mid_enlarge_model.parameters(), weights_grad_enlarge_a):
-                if w.requires_grad:
-                    w.grad = g.detach()
-            # print("weights_grad_Z:",weights_grad_Z)
         model_optimizer.step()
 
         predict_prob = F.softmax(pred, dim=-1)
@@ -361,15 +403,18 @@ class VFLmodel_AUC(object):
             self.mid_enlarge_model = self.mid_enlarge_model.to(self.device)
         if self.apply_trainable_layer:
             if self.apply_mid:
-                model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()) + list(self.active_aggregate_model.parameters()) + list(self.mid_model.parameters()) + list(self.mid_enlarge_model.parameters()), lr=self.lr)
+                # model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()) + list(self.active_aggregate_model.parameters()) + list(self.mid_model.parameters()) + list(self.mid_enlarge_model.parameters()), lr=self.lr)
+                model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()) + list(self.active_aggregate_model.parameters()) + list(self.mid_model.parameters()), lr=self.lr)
             else:
                 model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()) + list(self.active_aggregate_model.parameters()), lr=self.lr)
         else:
             if self.apply_mid:
-                model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()) + list(self.mid_model.parameters()) + list(self.mid_enlarge_model.parameters()), lr=self.lr)
+                # model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()) + list(self.mid_model.parameters()) + list(self.mid_enlarge_model.parameters()), lr=self.lr)
+                model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()) + list(self.mid_model.parameters()), lr=self.lr)
             else:
                 model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()), lr=self.lr)
         criterion = cross_entropy_for_onehot
+        # criterion = torch.nn.BCELoss()
 
         test_auc = 0.0
         for i_epoch in range(self.epochs):
@@ -388,6 +433,8 @@ class VFLmodel_AUC(object):
                 # ====== train batch ======
                 loss, train_auc = self.train_batch(gt_data_a, gt_data_b, gt_one_hot_label,
                                               net_a, net_b, self.encoder, model_optimizer, criterion)
+                
+                # wandb.log({"loss":loss, "train_auc":train_auc*100})
                 # validation
                 if (i + 1) % print_every == 0:
                     # print("validate and test")
@@ -413,28 +460,50 @@ class VFLmodel_AUC(object):
                             test_logit = self.active_aggregate_model(test_logit_a, test_logit_b)
 
                             if self.apply_mid:
+                                # epsilon = torch.empty((test_logit_a.size()[0],test_logit_a.size()[1]))
+                                # # # discrete form of reparameterization
+                                # # torch.nn.init.uniform(epsilon) # epsilon is initialized
+                                # # epsilon = - torch.log(epsilon + torch.tensor(1e-07))
+                                # # epsilon = - torch.log(epsilon + torch.tensor(1e-07)) # prevent if epsilon=0.0
+                                # # test_logit_Z = F.softmax(test_logit_a,dim=-1) + epsilon.to(self.device)
+                                # # test_logit_Z = F.softmax(test_logit_Z / torch.tensor(self.mid_tau).to(self.device), ,dim=-1)
+
+                                # # continuous form of reparameterization
+                                # torch.nn.init.normal_(epsilon, mean=0, std=1) # epsilon is initialized
+                                # epsilon = epsilon.to(self.device)
+                                # # mu, std = norm.fit(test_logit_a.cpu().detach().numpy())
+                                # test_logit_a_double = self.mid_enlarge_model(test_logit_a)
+                                # mu, std = test_logit_a_double[:,:self.num_classes], test_logit_a_double[:,self.num_classes:]
+                                # std = F.softplus(std-0.5) # ? F.softplus(std-5)
+                                # # print("mu, std: ", mu, std)
+                                # test_logit_Z = mu+std*epsilon
+                                # assert(test_logit_Z.size()==test_logit_a.size())
+                                # test_logit_Z = test_logit_Z.to(self.device)
+
+                                # test_logit_Z = self.mid_model(test_logit_Z)
+                                # test_logit = self.active_aggregate_model(test_logit_Z, test_logit_b)
+
+                                ########################### v2 #############################################
+                                # t_samples = self.mid_model(test_logit_a)
+                                # positive = torch.zeros_like(t_samples)
+                                # prediction_1 = t_samples.unsqueeze(1)  # [nsample,1,dim]
+                                # t_samples_1 = t_samples.unsqueeze(0)  # [1,nsample,dim]
+                                # negative = - ((t_samples_1 - prediction_1) ** 2).mean(dim=1) / 2.   # [nsample, dim]
+                                # test_logit = self.active_aggregate_model(t_samples, test_logit_b)
+                                # test_loss = criterion(test_logit, gt_one_hot_label) + self.mid_loss_lambda * (positive.sum(dim=-1) - negative.sum(dim=-1)).mean()
+                                
+                                ########################### v3 #############################################
                                 epsilon = torch.empty((test_logit_a.size()[0],test_logit_a.size()[1]))
-                                # # discrete form of reparameterization
-                                # torch.nn.init.uniform(epsilon) # epsilon is initialized
-                                # epsilon = - torch.log(epsilon + torch.tensor(1e-07))
-                                # epsilon = - torch.log(epsilon + torch.tensor(1e-07)) # prevent if epsilon=0.0
-                                # test_logit_Z = F.softmax(test_logit_a) + epsilon.to(self.device)
-                                # test_logit_Z = F.softmax(test_logit_Z / torch.tensor(self.mid_tau).to(self.device), -1)
-
-                                # continuous form of reparameterization
-                                torch.nn.init.normal(epsilon, mean=0, std=1) # epsilon is initialized
+                                torch.nn.init.normal_(epsilon, mean=0, std=1) # epsilon is initialized
                                 epsilon = epsilon.to(self.device)
-                                # mu, std = norm.fit(test_logit_a.cpu().detach().numpy())
-                                test_logit_a_double = self.mid_enlarge_model(test_logit_a)
-                                mu, std = test_logit_a_double[:,:self.num_classes], test_logit_a_double[:,self.num_classes:]
-                                std = F.softplus(std-0.5) # ? F.softplus(std-5)
-                                # print("mu, std: ", mu, std)
-                                test_logit_Z = mu+std*epsilon
-                                assert(test_logit_Z.size()==test_logit_a.size())
-                                test_logit_Z = test_logit_Z.to(self.device)
+                                mu, std = norm.fit(test_logit_a.cpu().detach().numpy())
+                                _samples = mu + std * epsilon
+                                _samples = _samples.to(self.device)
+                                t_samples = self.mid_model(_samples)
+                                # test_logit = self.active_aggregate_model(t_samples, F.softmax(test_logit_b,dim=-1))
+                                test_logit = self.active_aggregate_model(t_samples, test_logit_b)
+                                # loss = criterion(test_logit, gt_one_hot_label) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
 
-                                test_logit_Z = self.mid_model(test_logit_Z)
-                                test_logit = self.active_aggregate_model(test_logit_Z, test_logit_b)
 
                             enc_predict_prob = F.softmax(test_logit, dim=-1)
                             if self.apply_encoder:
@@ -450,6 +519,7 @@ class VFLmodel_AUC(object):
                             actual_labels = np.append(actual_labels,actual_label.cpu().numpy())
                             predict_labels = np.append(predict_labels, predict_label.cpu().numpy())
                         test_auc = roc_auc_score(y_true=actual_labels, y_score=predict_labels)
+                        # wandb.log({"test_auc": test_auc * 100})
                         postfix['train_loss'] = loss
                         postfix['train_auc'] = '{:.2f}%'.format(train_auc * 100)
                         postfix['test_auc'] = '{:.2f}%'.format(test_auc * 100)

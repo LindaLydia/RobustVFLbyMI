@@ -1,6 +1,7 @@
 import logging
 import pprint
 import time
+import copy
 
 import tensorflow as tf
 
@@ -19,14 +20,17 @@ import marvell_shared_values as shared_var
 # set gpu growth
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
+import pytorch2keras
 
 config = ConfigProto()
 config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 
-from cafe.config import *
-from cafe.data_preprocess import train_datasets as train_ds
-from cafe.data_preprocess import test_datasets as test_ds
+import cafe
+from cafe.config import max_iters,learning_rate_first_shot,learning_rate_double_shot,max_cafe_iters,learning_rate_fl,beta1,beta2,epsilon,filename,number_of_workers,data_number,test_data_number,iter_decay,iter_warm_up,decay_ratio
+from cafe.config import cafe_learning_rate
+# from cafe.data_preprocess import train_datasets as train_ds
+# from cafe.data_preprocess import test_datasets as test_ds
 from cafe.model import local_embedding, server
 from cafe.first_shot import cafe_middle_output_gradient
 from cafe.double_shot import cafe_middle_input
@@ -87,14 +91,16 @@ class CAFEattacker(object):
         self.distance_correlation_lambda = args.distance_correlation_lambda
         # self.show_param()
 
+        self.apply_trainable_layer = True
+
     def show_param(self):
         print(f'********** config dict **********')
         pprint.pprint(self.__dict__)
 
-    def calc_label_recovery_rate(self, dummy_label, gt_label):
-        success = torch.sum(torch.argmax(dummy_label, dim=-1) == torch.argmax(gt_label, dim=-1)).item()
-        total = dummy_label.shape[0]
-        return success / total
+    # def calc_label_recovery_rate(self, dummy_label, gt_label):
+    #     success = torch.sum(torch.argmax(dummy_label, dim=-1) == torch.argmax(gt_label, dim=-1)).item()
+    #     total = dummy_label.shape[0]
+    #     return success / total
 
     def get_random_softmax_onehot_label(self, gt_onehot_label):
         _random = torch.randn(gt_onehot_label.size()).to(self.device)
@@ -153,6 +159,8 @@ class CAFEattacker(object):
                     classes = random.sample(list(range(10)), num_classes)
                     all_data, all_label = get_class_i(self.dst, classes)
 
+                import cafe
+                cafe_learning_rate = cafe.config.cafe_learning_rate
                 # set optimizers
                 optimizer_server = tf.keras.optimizers.Adam(learning_rate=learning_rate_fl)
                 optimizers = []
@@ -163,22 +171,26 @@ class CAFEattacker(object):
                 # set optimizer1
                 optimizer1 = tf.keras.optimizers.SGD(learning_rate=learning_rate_first_shot)
                 """Initialization middle output gradient"""
-                dummy_middle_output_gradient = dummy_middle_output_gradient_init(number_of_workers, data_number, feature_space=256)
+                # dummy_middle_output_gradient = dummy_middle_output_gradient_init(number_of_workers, data_number, feature_space=256)
+                dummy_middle_output_gradient = dummy_middle_output_gradient_init(number_of_workers, data_number, feature_space=num_classes)
                 # set optimizer2
-                optimizer2 = Optimizer_for_middle_input(number_of_workers, data_number, learning_rate_double_shot, 2048)
-                """Initialization middle input"""
-                dummy_middle_input = dummy_middle_input_init(number_of_workers, data_number, feature_space=2048)
-                '''collect all the real data'''
-                real_data, real_labels = list_real_data(number_of_workers, train_ds, data_number)
-                test_data, test_labels = list_real_data(number_of_workers, test_ds, test_data_number)
+                if self.dataset == 'mnist' or self.dataset == 'nuswide':
+                    optimizer2 = Optimizer_for_middle_input(number_of_workers, data_number, learning_rate_double_shot, 32, dataset_name=self.dataset)
+                    """Initialization middle input"""
+                    dummy_middle_input = dummy_middle_input_init(number_of_workers, data_number, feature_space=32)
+                else:
+                    optimizer2 = Optimizer_for_middle_input(number_of_workers, data_number, learning_rate_double_shot, 512, dataset_name=self.dataset)
+                    """Initialization middle input"""
+                    dummy_middle_input = dummy_middle_input_init(number_of_workers, data_number, feature_space=512)
+                # '''collect all the real data'''
+                # real_data, real_labels = list_real_data(number_of_workers, train_ds, data_number)
+                # test_data, test_labels = list_real_data(number_of_workers, test_ds, test_data_number)
                 """Initialization dummy data & labels"""
-                dummy_data, dummy_labels = dummy_data_init(number_of_workers, data_number, pretrain=False, true_label=None)
-                # clean the text file
-                file = open(filename + '.txt', 'w')
-                file.close()
+                dummy_data, dummy_labels = dummy_data_init(number_of_workers, data_number, pretrain=False, true_label=None, dataset_name=self.dataset)
 
 
-                recovery_rate_history = []
+                # for iter in range(max_iters):
+                psnr_history = []
                 for i_run in range(1, self.num_exp + 1):
                     start_time = time.time()
                     # randomly sample
@@ -227,19 +239,22 @@ class CAFEattacker(object):
                     #     .....
 
                     criterion = cross_entropy_for_onehot
-                    middle_a, pred_a = net_a(gt_data_a) # for passive party: H_p, Z
-                    middle_b, pred_b = net_b(gt_data_b) # for active party
+                    middle_input_a, pred_a = net_a(gt_data_a) # for passive party: H_p, Z
+                    middle_input_b, pred_b = net_b(gt_data_b) # for active party
+                    middle_output_a = pred_a.clone()
+                    middle_output_b = pred_b.clone()
+                    real_middle_input = [middle_input_a.clone(),middle_input_b.clone()]
                     ######################## defense start ############################
                     ######################## defense1: trainable layer ############################
                     if self.apply_trainable_layer:
-                        active_aggregate_model = ActivePartyWithTrainableLayer(hidden_dim=num_classes * 2, output_dim=num_classes)
-                        dummy_active_aggregate_model = ActivePartyWithTrainableLayer(hidden_dim=num_classes * 2, output_dim=num_classes)
-                    else:
-                        active_aggregate_model = ActivePartyWithoutTrainableLayer()
-                        dummy_active_aggregate_model = ActivePartyWithoutTrainableLayer()
+                        active_aggregate_model = ActivePartyWithTrainableLayer_catinated(hidden_dim=num_classes * 2, output_dim=num_classes)
+                        # dummy_active_aggregate_model = ActivePartyWithTrainableLayer(hidden_dim=num_classes * 2, output_dim=num_classes)
+                    # else:
+                    #     active_aggregate_model = ActivePartyWithoutTrainableLayer()
+                    #     dummy_active_aggregate_model = ActivePartyWithoutTrainableLayer()
                     active_aggregate_model = active_aggregate_model.to(self.device)
-                    dummy_active_aggregate_model = dummy_active_aggregate_model.to(self.device)
-                    pred = active_aggregate_model(pred_a, pred_b)
+                    # dummy_active_aggregate_model = dummy_active_aggregate_model.to(self.device)
+                    pred = active_aggregate_model(torch.cat([pred_a, pred_b], dim=1))
                     loss = criterion(pred, gt_onehot_label)
                     ######################## defense3: mutual information defense ############################
                     if self.apply_mid:
@@ -274,9 +289,18 @@ class CAFEattacker(object):
                     if self.apply_distance_correlation:
                         loss = criterion(pred, gt_onehot_label) + self.distance_correlation_lambda * torch.mean(torch.cdist(pred_a, gt_onehot_label, p=2))
                     ######################## defense with loss change end ############################
+                    
+                    active_aggregate_gradients = torch.autograd.grad(loss, pred, retain_graph = True)
                     pred_a_gradients = torch.autograd.grad(loss, pred_a, retain_graph=True)
+                    pred_b_gradients = torch.autograd.grad(loss, pred_b, retain_graph=True)
                     # print("pred_a_gradients:", pred_a_gradients)
+                    active_aggregate_gradients_clone = active_aggregate_gradients[0].detach().clone()
                     pred_a_gradients_clone = pred_a_gradients[0].detach().clone()
+                    pred_b_gradients_clone = pred_b_gradients[0].detach().clone()
+                    
+                    true_gradient = [active_aggregate_gradients_clone.clone(), pred_a_gradients_clone.clone(), pred_b_gradients_clone.clone()]
+                    # middle_output_gradients = [pred_a_gradients_clone.clone(), pred_b_gradients_clone.clone()]
+                    
                     ######################## defense2: dp ############################
                     if self.apply_laplace and self.dp_strength != 0 or self.apply_gaussian and self.dp_strength != 0:
                         location = 0.0
@@ -333,112 +357,165 @@ class CAFEattacker(object):
                     elif self.apply_discrete_gradients:
                         pred_a_gradients_clone = multistep_gradient(pred_a_gradients_clone, bins_num=self.discrete_gradients_bins, bound_abs=self.discrete_gradients_bound)
                     ######################## defense end #################################################### defense3: mid ############################
-                    original_dy_dx = torch.autograd.grad(pred_a, net_a.parameters(), grad_outputs=pred_a_gradients_clone)
+                    # original_dy_dx = torch.autograd.grad(pred_a, net_a.parameters(), grad_outputs=pred_a_gradients_clone)
 
-                    dummy_pred_b = torch.randn(pred_b.size()).to(self.device).requires_grad_(True)
-                    dummy_label = torch.randn(gt_onehot_label.size()).to(self.device).requires_grad_(True)
+                    # dummy_pred_b = torch.randn(pred_b.size()).to(self.device).requires_grad_(True)
+                    # dummy_label = torch.randn(gt_onehot_label.size()).to(self.device).requires_grad_(True)
 
-                    optimizer1 = torch.otim.SGD()
+                    # if self.apply_trainable_layer:
+                    #     optimizer = torch.optim.Adam([dummy_pred_b, dummy_label] + list(dummy_active_aggregate_model.parameters()), lr=self.lr)
+                    # else:
+                    #     optimizer = torch.optim.Adam([dummy_pred_b, dummy_label], lr=self.lr)
 
+                    random_lists = [i for i in range(batch_size)]
 
-                    if self.apply_trainable_layer:
-                        optimizer = torch.optim.Adam([dummy_pred_b, dummy_label] + list(dummy_active_aggregate_model.parameters()), lr=self.lr)
-                    else:
-                        optimizer = torch.optim.Adam([dummy_pred_b, dummy_label], lr=self.lr)
+                    # convert net_a and net_b into keras model for tensorflow
+                    local_net = []
+                    input_np = np.random.uniform(0, 1, gt_data_a.size())
+                    # input_var = tf.Variable(torch.FloatTensor(input_np))
+                    input_var = torch.FloatTensor(input_np).to(self.device)
+                    local_net.append(pytorch2keras.pytorch_to_keras(net_a, input_var))
+                    input_np = np.random.uniform(0, 1, gt_data_b.size())
+                    # input_var = tf.Variable(torch.FloatTensor(input_np))
+                    input_var = torch.FloatTensor(input_np).to(self.device)
+                    local_net.append(pytorch2keras.pytorch_to_keras(net_b, input_var))
+                    input_np = np.random.uniform(0, 1, (batch_size,num_classes*2))
+                    # input_var = tf.Variable(torch.FloatTensor(input_np))
+                    input_var = torch.FloatTensor(input_np).to(self.device)
+                    tf_active_model = pytorch2keras.pytorch_to_keras(active_aggregate_model, input_var)
 
+                    # convert torch tensors to tensorflow tensors
+                    true_gradient = [tf.convert_to_tensor(true_gradient[i].cpu().numpy()) for i in range(len(true_gradient))]
+                    real_middle_input = [tf.convert_to_tensor(real_middle_input[i].detach().cpu().numpy()) for i in range(len(real_middle_input))]
+                    # Server = server()
+                    batch_real_data = [tf.convert_to_tensor(gt_data_a.cpu().numpy()),tf.convert_to_tensor(gt_data_b.cpu().numpy())]
+                    train_loss = tf.convert_to_tensor(loss.cpu().item())
+                    train_acc = cafe.utils.compute_accuracy(tf.convert_to_tensor(gt_onehot_label.cpu().numpy()), tf.convert_to_tensor(pred.detach().cpu().numpy()))
+                    
                     for iters in range(1, self.epochs + 1):
-                        def closure():
-                            optimizer.zero_grad()
-                            dummy_pred = dummy_active_aggregate_model(net_a(gt_data_a), dummy_pred_b)
+                        # def closure():
+                        '''Inner loop: CAFE'''
+                        # clear memory
+                        tf.keras.backend.clear_session()
+                        # first shot
+                        dummy_middle_output_gradient = cafe_middle_output_gradient(
+                            optimizer1, dummy_middle_output_gradient, random_lists, true_gradient)
+                        # second shot
+                        dummy_middle_input = cafe_middle_input(
+                            optimizer2, dummy_middle_output_gradient, dummy_middle_input, random_lists, true_gradient,
+                            real_middle_input, iters)
+                        # third shot
+                        # take batch dummy data
+                        batch_dummy_data, batch_dummy_label = take_batch_data(number_of_workers, dummy_data, dummy_labels,random_lists)
+                        # take recovered batch
+                        batch_recovered_middle_input = tf.concat(take_batch(number_of_workers, dummy_middle_input, random_lists),axis=1)
+                        # compute gradient
+                        D, cafe_gradient_x, cafe_gradient_y = cafe.utils.cafe(number_of_workers, batch_dummy_data, batch_dummy_label,
+                                                                local_net, tf_active_model, true_gradient, batch_recovered_middle_input)
+                        # optimize dummy data & label
+                        batch_dummy_data = optimizer_cafe.apply_gradients_data(iters, random_lists, cafe_gradient_x, batch_dummy_data)
+                        batch_dummy_label = optimizer_cafe.apply_gradients_label(iters, random_lists, cafe_gradient_y, batch_dummy_label)
+                        # assign dummy data
+                        dummy_data = assign_data(number_of_workers, batch_size, dummy_data, batch_dummy_data, random_lists)
+                        dummy_labels = assign_label(batch_size, dummy_labels, batch_dummy_label, random_lists)
+                        psnr = PSNR(batch_real_data, batch_dummy_data)
+                        from PIL import Image
+                        # print(batch_real_data[0].get_shape(),batch_real_data[1].get_shape())
+                        # print(batch_dummy_data[0].get_shape(),batch_dummy_data[1].get_shape())
+                        # # print(batch_real_data[0][0].numpy())
+                        # temp = np.concatenate((batch_real_data[0][0].numpy(),batch_real_data[1][0].numpy()), axis=1)
+                        # print(type(temp),temp.shape)
+                        for ii in range(10):
+                            temp = np.concatenate((batch_real_data[0][ii].numpy(),batch_real_data[1][ii].numpy()), axis=1)
+                            print(type(temp),temp.shape)
+                            temp = np.squeeze(temp)
+                            im = Image.fromarray(temp*256)
+                            im = im.convert("RGB")
+                            im.save('./images_cafe_recover/{'+str(ii)+'}_real_data.png','PNG')
+                            temp = np.concatenate((batch_dummy_data[0][ii].numpy(),batch_dummy_data[1][ii].numpy()), axis=1)
+                            print(type(temp),temp.shape)
+                            temp = np.squeeze(temp)
+                            im = Image.fromarray(temp*256)
+                            im = im.convert("RGB")
+                            im.save('./images_cafe_recover/{'+str(ii)+'}_dummy_data.png','PNG')
+                        # print results
+                        print(D, iters, cafe_learning_rate, train_loss.numpy(), train_acc.numpy())
+                        # write down results
+                        if iters % 100 == 0:
+                            # test accuracy
+                            # loss, test_acc = test(number_of_workers, test_data, test_labels, local_net, tf_active_model)
+                            loss, test_acc = train_loss, train_acc
+                            record(filename, [D, psnr, iters, train_loss.numpy(), test_acc.numpy()])
 
-                            dummy_onehot_label = F.softmax(dummy_label, dim=-1)
-                            dummy_loss = criterion(dummy_pred, dummy_onehot_label)
-                            dummy_dy_dx_a = torch.autograd.grad(dummy_loss, net_a.parameters(), create_graph=True)
-                            grad_diff = 0
-                            for (gx, gy) in zip(dummy_dy_dx_a, original_dy_dx):
-                                grad_diff += ((gx - gy) ** 2).sum()
-                            grad_diff.backward()
-                            return grad_diff
+                        # learning rate decay
+                        if iters % iter_decay == iter_decay - 1:
+                            cafe_learning_rate = cafe_learning_rate * decay_ratio
+                            # change the learning rate in the optimizer
+                            optimizer_cafe.lr = cafe_learning_rate
 
-                        rec_rate = self.calc_label_recovery_rate(dummy_label, gt_label)
-                        # if iters == 1:
-                        #     append_exp_res(f'exp_result/{self.dataset}/exp_on_{self.dataset}_rec_rate_change.txt',
-                        #                    f'{batch_size} 0 {rec_rate} {closure()}')
-                        optimizer.step(closure)
-                        # if self.calc_label_recovery_rate(dummy_label, gt_label) >= 99.99:
-                        #     break
+                        # optimizer_server.apply_gradients(zip(true_gradient[0], Server.trainable_variables))
+                        # for worker_index in range(number_of_workers):
+                        #     optimizers[worker_index].apply_gradients(zip(true_gradient[worker_index+1],
+                        #                                                 local_net[worker_index].trainable_variables))
+                        # end INNER LOOP
 
-                        # append_exp_res(f'exp_result/{self.dataset}/exp_on_{self.dataset}_rec_rate_change.txt',
-                        #                f'{batch_size} {iters} {rec_rate} {closure()}')
-                        # if rec_rate >= 0.999:
-                        #     break
-                        # print(iters, "%.4f" % closure().item())
-                        # if iters % 10 == 0:
-                        #     print(iters, torch.sum(torch.argmax(dummy_label, dim=-1) == torch.argmax(gt_label, dim=-1)).item() / batch_size)
-                        #     print(f'iters:{iters}, loss:{closure().item()}')
-                        #     append_exp_res(f'exp_result/exp_on_{self.dataset}_loss.txt', f'{iters} {closure().item()}')
-                        if self.early_stop == True:
-                            if closure().item() < self.early_stop_param:
-                                break
-
-                    rec_rate = self.calc_label_recovery_rate(dummy_label, gt_label)
-                    recovery_rate_history.append(rec_rate)
+                    psnr_history.append(psnr)
                     end_time = time.time()
                     # output the rec_info of this exp
                     if self.apply_laplace or self.apply_gaussian:
-                        print(f'batch_size=%d,class_num=%d,exp_id=%d,dp_strength=%lf,recovery_rate=%lf,time_used=%lf'
-                              % (batch_size, num_classes, i_run, self.dp_strength,rec_rate, end_time - start_time))
+                        print(f'batch_size=%d,class_num=%d,exp_id=%d,dp_strength=%lf,psnr=%lf,time_used=%lf'
+                              % (batch_size, num_classes, i_run, self.dp_strength,psnr, end_time - start_time))
                     elif self.apply_grad_spar:
-                        print(f'batch_size=%d,class_num=%d,exp_id=%d,grad_spars=%lf,recovery_rate=%lf,time_used=%lf'
-                              % (batch_size, num_classes, i_run, self.grad_spars,rec_rate, end_time - start_time))
+                        print(f'batch_size=%d,class_num=%d,exp_id=%d,grad_spars=%lf,psnr=%lf,time_used=%lf'
+                              % (batch_size, num_classes, i_run, self.grad_spars,psnr, end_time - start_time))
                     if self.apply_mid:
-                        print(f'MID: batch_size=%d,class_num=%d,exp_id=%d,recovery_rate=%lf,time_used=%lf'
-                              % (batch_size, num_classes, i_run, rec_rate, end_time - start_time))
+                        print(f'MID: batch_size=%d,class_num=%d,exp_id=%d,psnr=%lf,time_used=%lf'
+                              % (batch_size, num_classes, i_run, psnr, end_time - start_time))
                     elif self.apply_mi:
-                        print(f'batch_size=%d,class_num=%d,exp_id=%d,mi_loss_lambda=%lf,recovery_rate=%lf,time_used=%lf'
-                              % (batch_size, num_classes, i_run, self.mi_loss_lambda,rec_rate, end_time - start_time))
+                        print(f'batch_size=%d,class_num=%d,exp_id=%d,mi_loss_lambda=%lf,psnr=%lf,time_used=%lf'
+                              % (batch_size, num_classes, i_run, self.mi_loss_lambda,psnr, end_time - start_time))
                     elif self.apply_distance_correlation:
-                        print(f'batch_size=%d,class_num=%d,exp_id=%d,distance_correlationlambda=%lf,recovery_rate=%lf,time_used=%lf'
-                              % (batch_size, num_classes, i_run, self.distance_correlation_lambda,rec_rate, end_time - start_time))
+                        print(f'batch_size=%d,class_num=%d,exp_id=%d,distance_correlationlambda=%lf,psnr=%lf,time_used=%lf'
+                              % (batch_size, num_classes, i_run, self.distance_correlation_lambda,psnr, end_time - start_time))
                     elif self.apply_encoder:
-                        print(f'batch_size=%d,class_num=%d,exp_id=%d,ae_lambda=%s,recovery_rate=%lf,time_used=%lf'
-                              % (batch_size, num_classes, i_run, self.ae_lambda,rec_rate, end_time - start_time))
+                        print(f'batch_size=%d,class_num=%d,exp_id=%d,ae_lambda=%s,psnr=%lf,time_used=%lf'
+                              % (batch_size, num_classes, i_run, self.ae_lambda,psnr, end_time - start_time))
                     elif self.apply_discrete_gradients:
-                        print(f'batch_size=%d,class_num=%d,exp_id=%d,ae_lambda=%s,recovery_rate=%lf,time_used=%lf'
-                              % (batch_size, num_classes, i_run, self.ae_lambda,rec_rate, end_time - start_time))
+                        print(f'batch_size=%d,class_num=%d,exp_id=%d,ae_lambda=%s,psnr=%lf,time_used=%lf'
+                              % (batch_size, num_classes, i_run, self.ae_lambda,psnr, end_time - start_time))
                     elif self.apply_marvell:
-                        print(f'batch_size=%d,class_num=%d,exp_id=%d,marvel_s=%lf,recovery_rate=%lf,time_used=%lf'
-                              % (batch_size, num_classes, i_run, self.marvell_s,rec_rate, end_time - start_time))
+                        print(f'batch_size=%d,class_num=%d,exp_id=%d,marvel_s=%lf,psnr=%lf,time_used=%lf'
+                              % (batch_size, num_classes, i_run, self.marvell_s,psnr, end_time - start_time))
                     else:
-                        print(f'batch_size=%d,class_num=%d,exp_id=%d,recovery_rate=%lf,time_used=%lf'
-                              % (batch_size, num_classes, i_run, rec_rate, end_time - start_time))
-                avg_rec_rate = np.mean(recovery_rate_history)
+                        print(f'batch_size=%d,class_num=%d,exp_id=%d,psnr=%lf,time_used=%lf'
+                              % (batch_size, num_classes, i_run, psnr, end_time - start_time))
+                avg_psnr = np.mean(psnr_history)
                 if self.apply_laplace or self.apply_gaussian:
-                    exp_result = str(self.dp_strength) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
+                    exp_result = str(self.dp_strength) + ' ' + str(avg_psnr) + ' ' + str(psnr_history) + ' ' + str(np.max(psnr_history))
                 elif self.apply_grad_spar:
-                    exp_result = str(self.grad_spars) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
+                    exp_result = str(self.grad_spars) + ' ' + str(avg_psnr) + ' ' + str(psnr_history) + ' ' + str(np.max(psnr_history))
                 # elif self.apply_encoder or self.apply_adversarial_encoder:
-                #     exp_result = str(self.ae_lambda) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
+                #     exp_result = str(self.ae_lambda) + ' ' + str(avg_psnr) + ' ' + str(psnr_history) + ' ' + str(np.max(psnr_history))
                 # elif self.apply_ppdl:
-                #     exp_result = str(self.ppdl_theta_u) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
+                #     exp_result = str(self.ppdl_theta_u) + ' ' + str(avg_psnr) + ' ' + str(psnr_history) + ' ' + str(np.max(psnr_history))
                 # elif self.apply_gc:
-                #     exp_result = str(self.gc_preserved_percent) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
+                #     exp_result = str(self.gc_preserved_percent) + ' ' + str(avg_psnr) + ' ' + str(psnr_history) + ' ' + str(np.max(psnr_history))
                 # elif self.apply_lap_noise:
-                #     exp_result = str(self.noise_scale) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
+                #     exp_result = str(self.noise_scale) + ' ' + str(avg_psnr) + ' ' + str(psnr_history) + ' ' + str(np.max(psnr_history))
                 elif self.apply_encoder:
-                    exp_result = str(self.ae_lambda) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
+                    exp_result = str(self.ae_lambda) + ' ' + str(avg_psnr) + ' ' + str(psnr_history) + ' ' + str(np.max(psnr_history))
                 elif self.apply_discrete_gradients:
-                    exp_result = str(self.discrete_gradients_bins) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
+                    exp_result = str(self.discrete_gradients_bins) + ' ' + str(avg_psnr) + ' ' + str(psnr_history) + ' ' + str(np.max(psnr_history))
                 elif self.apply_mid:
-                    exp_result = str(self.mid_loss_lambda) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history)) + 'MID'
+                    exp_result = str(self.mid_loss_lambda) + ' ' + str(avg_psnr) + ' ' + str(psnr_history) + ' ' + str(np.max(psnr_history)) + 'MID'
                 elif self.apply_mi:
-                    exp_result = str(self.mi_loss_lambda) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
+                    exp_result = str(self.mi_loss_lambda) + ' ' + str(avg_psnr) + ' ' + str(psnr_history) + ' ' + str(np.max(psnr_history))
                 elif self.apply_distance_correlation:
-                    exp_result = str(self.distance_correlation_lambda) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
+                    exp_result = str(self.distance_correlation_lambda) + ' ' + str(avg_psnr) + ' ' + str(psnr_history) + ' ' + str(np.max(psnr_history))
                 elif self.apply_marvell:
-                    exp_result = str(self.marvell_s) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
+                    exp_result = str(self.marvell_s) + ' ' + str(avg_psnr) + ' ' + str(psnr_history) + ' ' + str(np.max(psnr_history))
                 else:
-                    exp_result = f"bs|num_class|recovery_rate,%d|%d| %lf %s %lf" % (batch_size, num_classes, avg_rec_rate, str(recovery_rate_history), np.max(recovery_rate_history))
+                    exp_result = f"bs|num_class|psnr,%d|%d| %lf %s %lf" % (batch_size, num_classes, avg_psnr, str(psnr_history), np.max(psnr_history))
 
                 append_exp_res(self.exp_res_path, exp_result)
                 print(exp_result)

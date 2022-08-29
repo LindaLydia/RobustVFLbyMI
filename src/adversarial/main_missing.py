@@ -1,5 +1,6 @@
 import os
 import sys
+from zlib import Z_SYNC_FLUSH
 import numpy as np
 import time
 
@@ -30,6 +31,9 @@ from models.model_templates import ClassificationModelGuest, ClassificationModel
 from models.resnet_torch import resnet18, resnet50
 from models.vision import MID_enlarge_layer, MID_layer
 
+# the denominator of the ratio, not the numerator
+MISSING_RATE = 1
+# MISSING_RATE = 16
 
 def main():
     parser = argparse.ArgumentParser("backdoor")
@@ -79,10 +83,17 @@ def main():
 
     args = parser.parse_args()
 
-    args.name = 'experiment_{}/{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}'.format(
-        args.name, args.epochs, args.dataset, args.model, args.batch_size, args.name,args.backdoor, args.amplify_rate,
-        args.amplify_rate_output, args.dp_type, args.dp_strength, args.gradient_sparsification, args.certify, args.sigma, args.autoencoder, args.lba, args.mid, args.mid_lambda, args.seed,
-        args.use_project_head, args.random_output, args.learning_rate, time.strftime("%Y%m%d-%H%M%S"))
+    if MISSING_RATE == 16:
+        args.name = 'experiment_missing_{}/{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}'.format(
+            args.name, args.epochs, args.dataset, args.model, args.batch_size, args.name,args.backdoor, args.amplify_rate,
+            args.amplify_rate_output, args.dp_type, args.dp_strength, args.gradient_sparsification, args.certify, args.sigma, args.autoencoder, args.lba, args.mid, args.mid_lambda, args.apply_discrete_gradients, args.discrete_gradients_bins, args.seed,
+            args.use_project_head, args.random_output, args.learning_rate, time.strftime("%Y%m%d-%H%M%S"))
+    else:
+        args.name = 'experiment_missing_{}_{}/{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}'.format(
+            MISSING_RATE,
+            args.name, args.epochs, args.dataset, args.model, args.batch_size, args.name,args.backdoor, args.amplify_rate,
+            args.amplify_rate_output, args.dp_type, args.dp_strength, args.gradient_sparsification, args.certify, args.sigma, args.autoencoder, args.lba, args.mid, args.mid_lambda, args.apply_discrete_gradients, args.discrete_gradients_bins, args.seed,
+            args.use_project_head, args.random_output, args.learning_rate, time.strftime("%Y%m%d-%H%M%S"))
     utils.create_exp_dir(args.name)
 
     log_format = '%(asctime)s %(message)s'
@@ -140,8 +151,8 @@ def main():
         target_label = 5
         logging.info('target label: {}'.format(target_label))
 
-        train_dataset = MNISTDatasetVFL(DATA_DIR, 'train', args.input_size, args.input_size, 600, 10, target_label, args.backdoor_scale)
-        valid_dataset = MNISTDatasetVFL(DATA_DIR, 'test', args.input_size, args.input_size, 100, 10, target_label, args.backdoor_scale)
+        train_dataset = MNISTDatasetVFL(DATA_DIR, 'train', args.input_size, args.input_size, 0, 10, target_label, args.backdoor_scale)
+        valid_dataset = MNISTDatasetVFL(DATA_DIR, 'test', args.input_size, args.input_size, 0, 10, target_label, args.backdoor_scale)
 
         # set poison_check function
         # need_poison_down_check = need_poison_down_check_mnist_vfl
@@ -155,8 +166,8 @@ def main():
 
         logging.info('target label: {}'.format(target_label))
 
-        train_dataset = NUSWIDEDatasetVFL(DATA_DIR, 'train', 600, 10, target_label, args.backdoor_scale)
-        valid_dataset = NUSWIDEDatasetVFL(DATA_DIR, 'test', 400, 10, target_label, args.backdoor_scale)
+        train_dataset = NUSWIDEDatasetVFL(DATA_DIR, 'train', 0, 10, target_label, args.backdoor_scale)
+        valid_dataset = NUSWIDEDatasetVFL(DATA_DIR, 'test', 0, 10, target_label, args.backdoor_scale)
 
         # set poison_check function
         # need_poison_down_check = need_poison_down_check_nuswide_vfl
@@ -173,8 +184,8 @@ def main():
         target_label = random.randint(0, NUM_CLASSES-1)
         logging.info('target label: {}'.format(target_label))
 
-        train_dataset = Cifar10DatasetVFL(DATA_DIR, 'train', args.input_size, args.input_size, 500, 10, target_label, args.backdoor_scale)
-        valid_dataset = Cifar10DatasetVFL(DATA_DIR, 'test', args.input_size, args.input_size, 100, 10, target_label, args.backdoor_scale)
+        train_dataset = Cifar10DatasetVFL(DATA_DIR, 'train', args.input_size, args.input_size, 0, 10, target_label, args.backdoor_scale)
+        valid_dataset = Cifar10DatasetVFL(DATA_DIR, 'test', args.input_size, args.input_size, 0, 10, target_label, args.backdoor_scale)
 
         # set poison_check function
         # need_poison_down_check = need_poison_down_check_cifar10_vfl
@@ -188,8 +199,8 @@ def main():
         target_label = random.randint(0, NUM_CLASSES-1)
         logging.info('target label: {}'.format(target_label))
 
-        train_dataset = Cifar100DatasetVFL(DATA_DIR, 'train', args.input_size, args.input_size, 500, 10, target_label, args.backdoor_scale)
-        valid_dataset = Cifar100DatasetVFL(DATA_DIR, 'test', args.input_size, args.input_size, 100, 10, target_label, args.backdoor_scale)
+        train_dataset = Cifar100DatasetVFL(DATA_DIR, 'train', args.input_size, args.input_size, 0, 10, target_label, args.backdoor_scale)
+        valid_dataset = Cifar100DatasetVFL(DATA_DIR, 'test', args.input_size, args.input_size, 0, 10, target_label, args.backdoor_scale)
 
         # set poison_check function
         # need_poison_down_check = need_poison_down_check_cifar100_vfl
@@ -203,8 +214,8 @@ def main():
         target_label = random.randint(0, NUM_CLASSES-1)
         logging.info('target label: {}'.format(target_label))
 
-        train_dataset = Cifar100DatasetVFL20Classes(DATA_DIR, 'train', args.input_size, args.input_size, 200, 10, target_label, args.backdoor_scale)
-        valid_dataset = Cifar100DatasetVFL20Classes(DATA_DIR, 'test', args.input_size, args.input_size, 20, 10, target_label, args.backdoor_scale)
+        train_dataset = Cifar100DatasetVFL20Classes(DATA_DIR, 'train', args.input_size, args.input_size, 0, 10, target_label, args.backdoor_scale)
+        valid_dataset = Cifar100DatasetVFL20Classes(DATA_DIR, 'test', args.input_size, args.input_size, 0, 10, target_label, args.backdoor_scale)
 
         # set poison_check function
         # need_poison_down_check = need_poison_down_check_cifar100_vfl
@@ -311,7 +322,7 @@ def main():
     best_acc_top1 = 0.
 
     # get train backdoor data
-    train_backdoor_images, train_backdoor_true_labels = train_dataset.get_poison_data()
+    # train_backdoor_images, train_backdoor_true_labels = train_dataset.get_poison_data()
 
     # get train target data
     # train_target_images, train_target_labels = train_dataset.get_target_data()
@@ -319,14 +330,14 @@ def main():
     # print('train poison samples:', sum(need_poison_down_check(train_backdoor_images[1],args.backdoor_scale))) #TODO::QUESTION::should be zero???
 
     # get test backdoor data
-    test_backdoor_images, test_backdoor_true_labels = valid_dataset.get_poison_data()
+    # test_backdoor_images, test_backdoor_true_labels = valid_dataset.get_poison_data()
 
     # set test backdoor label
-    test_backdoor_labels = copy.deepcopy(test_backdoor_true_labels)
+    # test_backdoor_labels = copy.deepcopy(test_backdoor_true_labels)
     # test_backdoor_labels[:] = valid_dataset.target_label
 
-    target_label = train_dataset.target_label
-    print('the label of the sample need copy = ', train_dataset.target_label, valid_dataset.target_label)
+    # target_label = train_dataset.target_label
+    # print('the label of the sample need copy = ', train_dataset.target_label, valid_dataset.target_label)
 
 
     amplify_rate = torch.tensor(args.amplify_rate).float().to(device)
@@ -368,16 +379,6 @@ def main():
 
         for step, (trn_X, trn_y) in enumerate(train_loader):
 
-            # select one backdoor data
-            id = random.randint(0, train_backdoor_images[0].shape[0]-1)
-            backdoor_image_up = train_backdoor_images[0][id]
-            backdoor_image_down = train_backdoor_images[1][id]
-            backdoor_label = train_backdoor_true_labels[id]
-            # # select one target data
-            # id = random.randint(0, train_target_images[0].shape[0]-1)
-            # target_image_up = train_target_images[0][id]
-            # target_image_down = train_target_images[1][id]
-
             # merge normal train data with selected backdoor and target data
             trn_X_up = np.concatenate([trn_X[0].numpy()])
             trn_X_down = np.concatenate([trn_X[1].numpy()])
@@ -400,6 +401,13 @@ def main():
                 z_down = utils.ClipAndPerturb(z_down,device,epoch*0.1+2,args.sigma)
             z_down_clone = z_down.detach().clone()
 
+            if args.backdoor:
+                # print(z_down.size())
+                missing_list = random.sample(range(z_down_clone.size()[0]), (z_down_clone.size()[0]//MISSING_RATE))
+                # print("missing list:", missing_list)
+                z_down_clone[missing_list] = torch.zeros(z_down_clone[0].size()).to(args.device)
+                # print(z_down_clone[missing_list])
+
             z_down_clone = torch.autograd.Variable(z_down_clone, requires_grad=True).to(args.device)
 
             # active party backward
@@ -418,16 +426,7 @@ def main():
                 # pred_Z = args.mid_model(pred_Z)
                 # logits = active_model(z_up_clone, pred_Z)
                 # loss = criterion(logits, target) + args.mid_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
-
-                # # print("before mid")
-                # t_samples = args.mid_model(z_down_clone)
-                # positive = torch.zeros_like(t_samples)
-                # prediction_1 = t_samples.unsqueeze(1)  # [nsample,1,dim]
-                # t_samples_1 = t_samples.unsqueeze(0)  # [1,nsample,dim]
-                # negative = - ((t_samples_1 - prediction_1) ** 2).mean(dim=1) / 2.   # [nsample, dim]
-                # logits = active_model(z_up_clone, t_samples)
-                # loss = criterion(logits, target )+ args.mid_lambda * (positive.sum(dim=-1) - negative.sum(dim=-1)).mean()
-
+                
                 # new version of mid
                 ########################### v3 #############################################
                 epsilon = torch.empty((z_down_clone.size()[0],z_down_clone.size()[1]))
@@ -534,7 +533,7 @@ def main():
                         w.grad = g.detach()
                 args.mid_optimizer.step()
 
-            # update passive model 0
+    # update passive model 0
             optimizer_list[0].zero_grad()
             weights_gradients_up = torch.autograd.grad(z_up, model_list[0].parameters(),
                                                     grad_outputs=z_gradients_up_clone)
@@ -622,43 +621,6 @@ def main():
                     
                     losses_valid.update(loss.item(), N)
                     top1_valid.update(prec1[0].item(), N)
-
-                # backdoor related metrics
-                backdoor_X_up = torch.from_numpy(test_backdoor_images[0]).float().to(args.device)
-                backdoor_X_down = torch.from_numpy(test_backdoor_images[1]).float().to(args.device)
-                backdoor_labels = torch.from_numpy(test_backdoor_labels).long().to(args.device)
-
-                N = backdoor_labels.shape[0]
-                
-                loss_list = []
-                logits_list = []
-                vote_list = []
-                z_up = model_list[0](backdoor_X_up)
-                for m in range(args.M):
-                    z_down = model_list[1](backdoor_X_down)
-                    z_down = utils.ClipAndPerturb(z_down,device,args.epochs*0.1+2,args.sigma)
-
-                    ########## backdoor metric
-                    logits_backdoor = active_model(z_up, z_down)
-                    loss_backdoor = criterion(logits_backdoor, backdoor_labels)
-                    logits_list.append(logits_backdoor)
-                    loss_list.append(loss_backdoor)
-
-                    vote = utils.vote(logits_backdoor,topk=(1,))
-                    vote_list.append(vote.cpu().numpy())
-                #vote_list.shape=(m,N) in cpu as numpy.array
-                # print("N=",N,"vote_list.shape=",(np.asarray(vote_list)).shape) #N=64, vote_list.shape=(m,N)
-                vote_list = np.transpose(np.asarray(vote_list))
-                # print("vote_list.shape =",vote_list.shape, " logits.shape =", logits_backdoor.shape, "N =",N)
-                vote_result = np.apply_along_axis(lambda x: np.bincount(x, minlength=logits.shape[1]), axis=1, arr=vote_list)
-                # print(vote_result.shape) #(N,logits.shape[1]=#class)
-                vote_result = torch.from_numpy(vote_result)
-                vote_result.to(device)
-                
-                prec1 = utils.accuracy2(vote_result, backdoor_labels[0:vote_list.shape[0]], args.M, device, topk=(1,2,))
-
-                losses_backdoor = loss_backdoor.item()
-                top1_backdoor = prec1[0]
         else:
             print("validation withiout voting")
 
@@ -671,6 +633,13 @@ def main():
 
                     z_up = model_list[0](val_X[0])
                     z_down = model_list[1](val_X[1])
+
+                    missing_list = []
+                    if args.backdoor:
+                        missing_list = random.sample(range(z_down.size()[0]), (z_down.size()[0]//MISSING_RATE))
+                        # print("missing list:", missing_list)
+                        z_down[missing_list] = torch.zeros(z_down[0].size()).to(args.device)
+                        # print(z_down[missing_list])
 
                     logits = active_model(z_up, z_down)
                     loss = criterion(logits, target)
@@ -687,16 +656,7 @@ def main():
                         # pred_Z = args.mid_model(pred_Z)
                         # logits = active_model(z_up, pred_Z)
                         # loss = criterion(logits, target) + args.mid_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
-
-                        # # print("before mid")
-                        # t_samples = args.mid_model(z_down)
-                        # positive = torch.zeros_like(t_samples)
-                        # prediction_1 = t_samples.unsqueeze(1)  # [nsample,1,dim]
-                        # t_samples_1 = t_samples.unsqueeze(0)  # [1,nsample,dim]
-                        # negative = - ((t_samples_1 - prediction_1) ** 2).mean(dim=1) / 2.   # [nsample, dim]
-                        # logits = active_model(z_up, t_samples)
-                        # loss = criterion(logits, target) + args.mid_lambda * (positive.sum(dim=-1) - negative.sum(dim=-1)).mean()
-
+                        
                         # new version of mid
                         ########################### v3 #############################################
                         epsilon = torch.empty((z_down.size()[0],z_down.size()[1]))
@@ -710,52 +670,62 @@ def main():
                         t_samples = args.mid_model(_samples)
                         logits = active_model(z_up, t_samples)
                         loss = criterion(logits, target) + args.mid_lambda * (-0.5)*(1+2*torch.log(std)-mu**2 - std**2)
-
-                        
+                    
                     prec1 = utils.accuracy(logits, target, topk=(1,))
 
                     losses_valid.update(loss.item(), N)
                     top1_valid.update(prec1[0].item(), N)
 
-                # backdoor related metrics
-                backdoor_X_up = torch.from_numpy(test_backdoor_images[0]).float().to(args.device)
-                backdoor_X_down = torch.from_numpy(test_backdoor_images[1]).float().to(args.device)
-                backdoor_labels = torch.from_numpy(test_backdoor_labels).long().to(args.device)
 
-                N = backdoor_labels.shape[0]
+                N = len(missing_list)
+                print("missing_list length:", N)
 
-                z_up = model_list[0](backdoor_X_up)
-                z_down = model_list[1](backdoor_X_down)
+                z_up = model_list[0](val_X[0][missing_list])
+                z_down = model_list[1](val_X[1][missing_list])
 
                 ########## backdoor metric
-                logits_backdoor = active_model(z_up, z_down)
-                loss_backdoor = criterion(logits_backdoor, backdoor_labels)
+                logits_missing = active_model(z_up, z_down)
+                loss_missing = criterion(logits_missing, target[missing_list])
 
-                print(logits_backdoor.size(),backdoor_labels.size())
-                prec1 = utils.accuracy(logits_backdoor, backdoor_labels, topk=(1,))
-
-                losses_backdoor = loss_backdoor.item()
-                top1_backdoor = prec1[0]
+                if args.backdoor == 1:
+                    prec1 = utils.accuracy(logits_missing, target[missing_list], topk=(1,))
+                    losses_missing = loss_missing.item()
+                    top1_missing = prec1[0]
+                else:
+                    prec1 = [100.0]
+                    losses_missing = 0.0
+                    top1_missing = prec1[0]                
 
         if args.writer == 1:
             writer.add_scalar('val/loss', losses_valid.avg, cur_step)
             writer.add_scalar('val/top1_valid', top1_valid.avg, cur_step)
-            writer.add_scalar('backdoor/loss', losses_backdoor, cur_step)
-            writer.add_scalar('backdoor/top1_valid', top1_backdoor, cur_step)
+            writer.add_scalar('missing/loss', losses_missing, cur_step)
+            writer.add_scalar('missing/top1_valid', top1_missing, cur_step)
 
 
         template = 'Epoch {}, Poisoned {}/{}, Loss: {:.4f}, Accuracy: {:.2f}, Test Loss: {:.4f}, Test Accuracy: {:.2f}, ' \
                    'Backdoor Loss: {:.4f}, Backdoor Accuracy: {:.2f}\n ' \
 
-        logging.info(template.format(epoch + 1,
-                      output_replace_count,
-                      gradient_replace_count,
-                      losses.avg,
-                      top1.avg,
-                      losses_valid.avg,
-                      top1_valid.avg,
-                      losses_backdoor,
-                      top1_backdoor.item()))
+        if args.backdoor == 1:
+            logging.info(template.format(epoch + 1,
+                        output_replace_count,
+                        gradient_replace_count,
+                        losses.avg,
+                        top1.avg,
+                        losses_valid.avg,
+                        top1_valid.avg,
+                        losses_missing,
+                        top1_missing.item()))
+        else:
+            logging.info(template.format(epoch + 1,
+                        output_replace_count,
+                        gradient_replace_count,
+                        losses.avg,
+                        top1.avg,
+                        losses_valid.avg,
+                        top1_valid.avg,
+                        losses_missing,
+                        top1_missing))
 
         if losses_valid.avg > 1e8 or np.isnan(losses_valid.avg):
             logging.info('********* INSTABLE TRAINING, BREAK **********')

@@ -265,6 +265,7 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
         if i == len(defense_list)-1:
             ax.scatter(acc_list[i], rec_rate_list[i], label=defense_list[i], marker=marker_list[i], s=60, color='black')
         elif len(acc_list[i])>0:
+            print(acc_list[i],rec_rate_list[i],defense_list[i])
             ax.scatter(acc_list[i], rec_rate_list[i], label=defense_list[i], marker=marker_list[i], s=60, color=color_list[i])
             if mark:
                 for j, txt in enumerate(param_list[i]):
@@ -334,12 +335,12 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
 
 dataset = 'nuswide'
 dataset = 'cifar100'
-dataset = 'mnist'
+# dataset = 'mnist'
 
 # exp_type = 'multi_no_top_model'
 # exp_type = 'multi_top_model'
 exp_type = 'binary_no_top_model'
-# exp_type = 'binary_top_model'
+exp_type = 'binary_top_model'
 
 if __name__ == '__main__':
 

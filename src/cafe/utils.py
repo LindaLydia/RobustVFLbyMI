@@ -15,7 +15,7 @@ def compute_loss(labels, logits):
 def compute_accuracy(labels, logits):
     return tf.reduce_mean(tf.keras.metrics.categorical_accuracy(labels, logits))
 
-def dummy_data_init(number_of_workers, data_number, pretrain = False, true_label = None):
+def dummy_data_init(number_of_workers, data_number, pretrain = False, true_label = None, dataset_name='mnist'):
     '''
     In this function we initialize dummy data
     :param number_of_workers:
@@ -34,8 +34,23 @@ def dummy_data_init(number_of_workers, data_number, pretrain = False, true_label
 
     else:
         dummy_images = []
+        if dataset_name == 'mnist':
+            for worker_index in range(number_of_workers):
+                temp_dummy_image = tf.random.uniform(shape=[data_number, 1, 14, 28], seed= worker_index + 1)
+                temp_dummy_image = tf.Variable(temp_dummy_image)
+                dummy_images.append(temp_dummy_image)
+        elif dataset_name == 'nuswide':
+            temp_dummy_image = tf.random.uniform(shape=[data_number, 1, 634], seed= worker_index + 1)
+            temp_dummy_image = tf.Variable(temp_dummy_image)
+            dummy_images.append(temp_dummy_image)
+            temp_dummy_image = tf.random.uniform(shape=[data_number, 1, 1000], seed= worker_index + 1)
+            temp_dummy_image = tf.Variable(temp_dummy_image)
+            dummy_images.append(temp_dummy_image)
         for worker_index in range(number_of_workers):
-            temp_dummy_image = tf.random.uniform(shape=[data_number, 14, 14], seed= worker_index + 1)
+            for worker_index in range(number_of_workers):
+                temp_dummy_image = tf.random.uniform(shape=[data_number, 1, 16, 32, 3], seed= worker_index + 1)
+                temp_dummy_image = tf.Variable(temp_dummy_image)
+                dummy_images.append(temp_dummy_image)
             # temp_dummy_image = tf.random.normal(shape=[data_number, 16, 16, 3], seed= n + 1)
             # temp_dummy_image = tf.zeros([data_number, 16, 16, 3])
             # temp_dummy_image = tf.ones([data_number, 16, 16, 3])
@@ -250,7 +265,8 @@ def cafe(number_of_workers, batch_dummy_image, batch_dummy_label, local_net, ser
         for worker_index in range(number_of_workers):
             t.watch(batch_dummy_image[worker_index])
             # input images
-            temp_middle_input, temp_local_output, temp_middle_output = local_net[worker_index].forward(
+            # temp_middle_input, temp_local_output = local_net[worker_index].forward(
+            temp_middle_input, temp_local_output = local_net[worker_index](
                 batch_dummy_image[worker_index])
             fake_local_output.append(temp_local_output)
             fake_middle_input.append(temp_middle_input)
@@ -262,26 +278,30 @@ def cafe(number_of_workers, batch_dummy_image, batch_dummy_label, local_net, ser
         # dummy_middle_input = tf.reduce_mean(dummy_middle_input, axis = 2)
 
         # server part
-        predict = server.forward(dummy_local_output)
+        predict = server(dummy_local_output)
         # compute loss
         t.watch(batch_dummy_label)
         true = tf.nn.softmax(batch_dummy_label)
         loss = compute_loss(true, predict)
 
         # compute fake gradient
-        temp_server_true_gradient = t.gradient(loss, server.trainable_variables)
+        temp_server_true_gradient = t.gradient(loss, server.trainable_variables[-1])
+        # print("temp_server_fake_gradient.shape:", temp_server_true_gradient.shape)
         fake_gradient.append(temp_server_true_gradient)
         for worker_index in range(number_of_workers):
-            temp_local_fake_gradient = t.gradient(loss, local_net[worker_index].trainable_variables)
+            temp_local_fake_gradient = t.gradient(loss, local_net[worker_index].trainable_variables[-1]) # this returns a list of gradients
+            # print("temp_local_fake_gradient.shape:", temp_local_fake_gradient.shape)
             fake_gradient.append(temp_local_fake_gradient)
         del temp_server_true_gradient
         del temp_local_fake_gradient
         gc.collect()
 
+        # print(len(real_gradient),len(fake_gradient))
         # compute D loss
         D = 0
         for layer in range(len(real_gradient)):
             for gr, gf in zip(real_gradient[layer], fake_gradient[layer]):
+                # print(local_net[0].trainable_variables)
                 gr = tf.reshape(gr, [-1, 1])
                 gf = tf.reshape(gf, [-1, 1])
                 # D_norm = tf.norm(gr - gf) ** 2
@@ -377,7 +397,7 @@ class Optimizer_for_middle_input():
     Optimizer for middle input
     '''
     def __init__(self, number_of_workers, data_number, learning_rate, feature_space=2048, beta1=0.9, beta2=0.999,
-                 epsilon=1e-7):
+                 epsilon=1e-7, dataset_name='mnist'):
         self.lr = learning_rate
         self.beta1 = beta1
         self.beta2 = beta2
@@ -418,7 +438,7 @@ class Optimizer_for_cafe():
     '''
     Adam optimizer
     '''
-    def __init__(self, number_of_workers, data_number, learning_rate, beta1=0.9, beta2=0.999, epsilon=1e-7):
+    def __init__(self, number_of_workers, data_number, learning_rate, beta1=0.9, beta2=0.999, epsilon=1e-7,dataset_name='mnist'):
         self.lr = learning_rate
         self.beta1 = beta1
         self.beta2 = beta2
@@ -428,11 +448,31 @@ class Optimizer_for_cafe():
         self.v_data = []
         self.number_of_workers = number_of_workers
 
-        for worker_index in range(number_of_workers):
-            self.h_data.append(tf.Variable(tf.zeros([data_number, 14, 14])))
-            self.v_data.append(tf.Variable(tf.zeros([data_number, 14, 14])))
-        self.h_label = tf.Variable(tf.zeros([data_number, 10]))
-        self.v_label = tf.Variable(tf.zeros([data_number, 10]))
+        if dataset_name == 'mnist':
+            for worker_index in range(number_of_workers):
+                self.h_data.append(tf.Variable(tf.zeros([data_number, 1, 14, 28])))
+                self.v_data.append(tf.Variable(tf.zeros([data_number, 1, 14, 28])))
+            self.h_label = tf.Variable(tf.zeros([data_number, 10]))
+            self.v_label = tf.Variable(tf.zeros([data_number, 10]))
+        elif dataset_name == 'nuswide':
+            self.h_data.append(tf.Variable(tf.zeros([data_number, 1, 634])))
+            self.v_data.append(tf.Variable(tf.zeros([data_number, 1, 634])))
+            self.h_data.append(tf.Variable(tf.zeros([data_number, 1, 1000])))
+            self.v_data.append(tf.Variable(tf.zeros([data_number, 1, 1000])))
+            self.h_label = tf.Variable(tf.zeros([data_number, 5]))
+            self.v_label = tf.Variable(tf.zeros([data_number, 5]))
+        elif dataset_name == 'cifar100' or dataset_name == 'cifar20':
+            for worker_index in range(number_of_workers):
+                self.h_data.append(tf.Variable(tf.zeros([data_number, 1, 16, 32])))
+                self.v_data.append(tf.Variable(tf.zeros([data_number, 1, 16, 32])))
+            self.h_label = tf.Variable(tf.zeros([data_number, 20]))
+            self.v_label = tf.Variable(tf.zeros([data_number, 20]))
+        else:
+            for worker_index in range(number_of_workers):
+                self.h_data.append(tf.Variable(tf.zeros([data_number, 1, 16, 32])))
+                self.v_data.append(tf.Variable(tf.zeros([data_number, 1, 16, 32])))
+            self.h_label = tf.Variable(tf.zeros([data_number, 10]))
+            self.v_label = tf.Variable(tf.zeros([data_number, 10]))
 
 
     def apply_gradients_data(self, iter, random_lists, gradient, theta):

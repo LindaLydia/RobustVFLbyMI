@@ -4,7 +4,7 @@
 @author: Xiao Jin
 In this file we load CIFAR-100 data
 """
-from config import *
+from cafe.config import *
 import gc
 import pathlib
 import random as r

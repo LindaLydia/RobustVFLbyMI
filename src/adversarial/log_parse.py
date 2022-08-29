@@ -441,7 +441,14 @@ def save_defense_data(target_dataset, target_model, exp_dir):
             sparsification = float(temps[10])
             sigma = float(temps[12])
             autoencoder_coef = float(temps[14])
-            mid_lambda = float(temps[16])
+            mid_lambda = temps[16]
+            if mid_lambda == '1e':
+                mid_lambda = float(temps[16]+'-'+temps[17])
+                deiscrete_bins = int(temps[19])
+            else:
+                mid_lambda = float(temps[16])
+                discrete_bins = int(temps[18])
+
 
             # timestamp_date = int(temps[21])
             # # print(timestamp_date)
@@ -454,8 +461,12 @@ def save_defense_data(target_dataset, target_model, exp_dir):
                 amplify_rate = 0
             if sigma != 0:
                 defense_model = 'certifyFL'
-            if defense_model=='none' and autoencoder_coef != -0.1:
+            if defense_model=='none' and int(temps[13])!=0 and autoencoder_coef != -0.1:
                 defense_model = 'autoencoder'
+                if discrete_bins in [6,12,18] and str(temps[17])=='True':
+                    defense_model = 'autoencoder+dsgd'
+            if defense_model=='none' and discrete_bins in [6,12,18] and str(temps[17])=='True':
+                defense_model = 'dsgd'
             if autoencoder_coef == 0.0 and mid_lambda != 0.0:
                 defense_model = 'mid'
             # else:
@@ -479,8 +490,8 @@ def save_defense_data(target_dataset, target_model, exp_dir):
                 print("sub dir for txt is ", sub_dir)
                 res = read_log_defense(os.path.join(sub_dir, 'log.txt'))
 
-                exp_key = '{}-{}-{}-{}-{}-{}-{}-{}-{}'.format(dataset, model, backdoor, defense_model, dp_strength,
-                                                     sparsification, sigma, autoencoder_coef, mid_lambda) #[4,5,6,7,8]
+                exp_key = '{}-{}-{}-{}-{}-{}-{}-{}-{}-{}'.format(dataset, model, backdoor, defense_model, dp_strength,
+                                                     sparsification, sigma, autoencoder_coef, mid_lambda, discrete_bins) #[4,5,6,7,8,9]
                 # print("exp_key is:", exp_key)
 
                 # remove unstable results
@@ -493,7 +504,7 @@ def save_defense_data(target_dataset, target_model, exp_dir):
                 if exp_key not in res_to_plot:
                     res_to_plot[exp_key] = {'raw': [], 'count': 1, 'backdoor': backdoor, 'defense_model': defense_model,
                                             'dp_strength': dp_strength, 'sparsification': sparsification, 'sigma': sigma,
-                                            'autoencoder_coef': autoencoder_coef, 'mid_lambda': mid_lambda}
+                                            'autoencoder_coef': autoencoder_coef, 'mid_lambda': mid_lambda, 'discrete_bins': discrete_bins}
                     res_to_plot[exp_key]['raw'].append(res)
                     if 'x' not in res_to_plot[exp_key]:
                         res_to_plot[exp_key]['x'] = list(range(len(res[0])))
@@ -528,7 +539,9 @@ def save_defense_data(target_dataset, target_model, exp_dir):
     temp_l = list(dict_to_save.items())
     temp_l.sort(reverse=True)
     dict_to_save = dict(temp_l)
-    with open('{}_{}.json'.format(target_dataset, target_model), 'w') as f:
+    print("dic_to_save",dict_to_save)
+    # print('{}_{}.json'.format(target_dataset, target_model))
+    with open('./images/data/{}_{}.json'.format(target_dataset, target_model), 'w') as f:
         json.dump(dict_to_save, f, indent=4)
 
 
@@ -854,13 +867,13 @@ if __name__ == '__main__':
     # exp_dir = './experiment_plot_model_DSGD_50_experiment_plot_model_new_negativeCoAE_50_defense'
     exp_dir = './experiment_plot_model_DSGD_50_defense'
     exp_dir = './experiment_plot_model_new_negativeCoAE_50_defense'
-    exp_dir = './amplify_attack'
+    # exp_dir = './experiment_defense'
     exp_dir = './experiment_mid_defense'
     # exp_dir = './experiment_plot_50_CoAE_defense'
-    # exp_dir = './experiment_defense'
+    exp_dir = './experiment_defense'
+    # exp_dir = './experiment_test'
     # exp_dir = './experiment_plot_model_right_50_defense'
     # exp_dir = './experiment_plot_nuswide_50_defense'
-    target_dir = 'images_CoAE'
 
     # for dataset, model in zip(['mnist', 'nuswide', 'cifar20'], ['mlp2', 'mlp2', 'resnet18']):
     # # for dataset, model in zip(['mnist', 'nuswide', 'cifar100'], ['mlp2', 'mlp2', 'resnet18']):
@@ -878,6 +891,7 @@ if __name__ == '__main__':
     # for dataset, model in zip(['mnist'], ['mlp2']):
     #     CoAE_distribution(dataset, model, exp_dir)
 
-    for dataset, model in zip(['nuswide'], ['mlp2']):
+    for dataset, model in zip(['mnist', 'nuswide', 'cifar20'], ['mlp2', 'mlp2', 'resnet18']):
+    # for dataset, model in zip(['mnist', 'cifar20'], ['mlp2', 'resnet18']):
         save_defense_data(dataset, model, exp_dir)
 
