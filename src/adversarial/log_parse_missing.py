@@ -444,7 +444,7 @@ def save_defense_data(target_dataset, target_model, exp_dir):
             mid_lambda = temps[16]
             if mid_lambda == '1e':
                 mid_lambda = float(temps[16]+'-'+temps[17])
-                deiscrete_bins = int(temps[19])
+                discrete_bins = int(temps[19])
             else:
                 mid_lambda = float(temps[16])
                 discrete_bins = int(temps[18])
@@ -540,8 +540,10 @@ def save_defense_data(target_dataset, target_model, exp_dir):
     temp_l.sort(reverse=True)
     dict_to_save = dict(temp_l)
     print("dic_to_save",dict_to_save)
-    # print('{}_{}.json'.format(target_dataset, target_model))
-    with open('./images_missing/data/{}_{}.json'.format(target_dataset, target_model), 'w') as f:
+    print('./images_missing/{}/data/{}_{}.json'.format(exp_dir.split('_')[-2], target_dataset, target_model))
+    if not os.path.exists('./images_missing/{}/data/'.format(exp_dir.split('_')[-2])):
+        os.makedirs('./images_missing/{}/data/'.format(exp_dir.split('_')[-2]))
+    with open('./images_missing/{}/data/{}_{}.json'.format(exp_dir.split('_')[-2], target_dataset, target_model), 'w') as f:
         json.dump(dict_to_save, f, indent=4)
 
 
@@ -866,6 +868,14 @@ if __name__ == '__main__':
     # model = 'mlp2'
     exp_dir = './experiment_missing_defense'
     exp_dir = './experiment_missing_test'
+    exp_dir = './experiment_missing_1_defense'
+    exp_dir = './experiment_missing_2_defense'
+    exp_dir = './experiment_missing_4_defense'
+    exp_dir = './experiment_missing_8_defense'
+    # exp_dir = './experiment_missing_16_defense'
+    # exp_dir = './experiment_missing_32_defense'
+    # exp_dir = './experiment_missing_64_defense'
+    # exp_dir = './experiment_missing_no_attack'
     # exp_dir = './exp_temp'
     # exp_dir = './experiment_plot_model_right_50_defense'
     # exp_dir = './experiment_plot_nuswide_50_defense'

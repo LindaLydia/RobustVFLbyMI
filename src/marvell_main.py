@@ -399,7 +399,7 @@ if __name__ == '__main__':
             # mid_lambda_list = [1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
             # mid_lambda_list = [1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
             mid_lambda_list = [1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1,2,5,10,20]
-            mid_lambda_list = [1e-1,1,2,5,10,20]
+            # mid_lambda_list = [1e-1,1,2,5,10,20]
             for mid_loss_lambda in mid_lambda_list:
                 print("mid_loss_lambda", mid_loss_lambda)
                 test_auc_list = []

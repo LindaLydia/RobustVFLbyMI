@@ -151,6 +151,65 @@ class ClassificationModelHostHeadTrainable(nn.Module):
         return self.classifier_head(out)
 
 
+class ClassificationModelHostHead_quarantine(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, z0):
+        out = z0
+        return out
+
+
+class ClassificationModelHostHeadWithSoftmax_quarantine(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.softmax = nn.LogSoftmax()
+
+    def forward(self, z0):
+        out = z0
+        return self.softmax(out)
+
+
+class ClassificationModelHostTrainable_quarantine(nn.Module):
+
+    def __init__(self, local_model, hidden_dim, num_classes):
+        super().__init__()
+        self.local_model = local_model
+        self.classifier_head = nn.Linear(hidden_dim, num_classes)
+
+    def forward(self, input_X):
+        z = self.local_model(input_X).flatten(start_dim=1)
+        return z
+
+    def get_prediction(self, z0):
+        out = torch.cat([z0], dim=1)
+        return self.classifier_head(out)
+
+
+class ClassificationModelHostTrainableHead_quarantine(nn.Module):
+
+    def __init__(self, hidden_dim, num_classes):
+        super().__init__()
+        self.classifier_head = nn.Linear(hidden_dim, num_classes)
+
+    def forward(self, z0):
+        out = torch.cat([z0], dim=1)
+        return self.classifier_head(out)
+
+
+class ClassificationModelHostHeadTrainable_quarantine(nn.Module):
+
+    def __init__(self, hidden_dim, num_classes):
+        super().__init__()
+        self.classifier_head = nn.Linear(hidden_dim, num_classes)
+
+    def forward(self, z0):
+        out = torch.cat([z0], dim=1)
+        return self.classifier_head(out)
+
+
 class ClassificationModelGuest(nn.Module):
 
     def __init__(self, local_model):#), hidden_dim, num_classes):

@@ -9,6 +9,67 @@ import numpy as np
 from datetime import datetime
 import copy
 
+# RVFR
+def l21_rownorm(X):
+    """
+    This function calculates the l21 norm of a matrix X, i.e., \sum ||X[i,:]||_2
+    Input:
+    -----
+    X: {numpy array}
+    Output:
+    ------
+    l21_norm: {float}
+    """
+    return (np.sqrt(np.multiply(X, X).sum(1))).sum()
+
+# RVFR
+def l21_colnorm(X):
+    """
+    This function calculates the l21 norm of a matrix X, i.e., \sum ||X[:,j]||_2
+    Input:
+    -----
+    X: {numpy array}
+    Output:
+    ------
+    l21_norm: {float}
+    """
+    return (np.sqrt(np.multiply(X, X).sum(0))).sum()
+
+# RVFR
+def RAE_purify(args, LocalOutputs, rae_model, low=None, is_train=False):
+    
+    if low==None:
+        L=torch.autograd.Variable(LocalOutputs, requires_grad=True).to(args.device)
+    else:
+        L=torch.autograd.Variable(low, requires_grad=True).to(args.device)
+    
+    # temp_L = L.detach().clone()
+    rae_loss_object = torch.nn.MSELoss().to(args.device)
+
+    # rae_output,layer_output=rae_model(L)
+    # purify_epochs= args.purify_train_epochs  if is_train==True else args.purify_test_epochs 
+    purify_epochs = 10 if is_train==True else 0
+    rae_output,layer_output=rae_model(L)
+    # print(f"[{is_train}] rae_output-L={rae_output-L}")
+    for epoch in range(purify_epochs):
+        # L=torch.autograd.Variable(temp_L, requires_grad=True).to(args.device)
+        L_optimizer = torch.optim.SGD([L], 1)
+        rae_output,layer_output=rae_model(L)
+        loss = torch.sqrt(rae_loss_object(rae_output, LocalOutputs))
+
+        L_optimizer.zero_grad()
+        # L_gradients = torch.autograd.grad(loss, L, retain_graph=True)
+        torch.autograd.backward(loss, inputs=L, retain_graph=True)
+        # original_L = L.detach().clone()
+        # # loss.backward()
+        L_optimizer.step()
+        # new_L = L.detach().clone()
+        # print(f"L difference:{new_L-original_L}")
+        # print(f"L_gradients:{L_gradients}")
+        # temp_L = L - L_gradients[0]
+    # print(f"[logging info]: RAE purify loss{loss.item()}")
+    # assert 0==1
+    return  torch.split(rae_output, rae_output.size()[-1]//2, -1), L
 
 # Multistep gradient
 def multistep_gradient(tensor, bound_abs, bins_num=12):
@@ -150,10 +211,11 @@ class AverageMeter():
 
     def update(self, val, n=1):
         """ Update statistics """
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
+        if n > 0:
+            self.val = val
+            self.sum += val * n
+            self.count += n
+            self.avg = self.sum / self.count
 
 
 def accuracy(output, target, topk=(1,)):

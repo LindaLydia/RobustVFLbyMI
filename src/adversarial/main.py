@@ -72,16 +72,16 @@ def main():
     parser.add_argument('--mid', type=int, default=0, help='whether to use Mutual Information Defense')
     parser.add_argument('--mid_lambda', type=float, default=0)
     parser.add_argument('--apply_discrete_gradients', default=False, type=bool, help='whether to use Discrete Gradients')
-    parser.add_argument('--discrete_gradients_bins', default=12, type=int, help='number of bins for discrete gradients')
+    parser.add_argument('--discrete_gradients_bins', default=0, type=int, help='number of bins for discrete gradients')
     parser.add_argument('--discrete_gradients_bound', default=3e-4, type=float, help='value of bound for discrete gradients')
 
     parser.add_argument('--backdoor_scale', type=float, default=1.0, help="the color of backdoor triger")
 
     args = parser.parse_args()
 
-    args.name = 'experiment_{}/{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}'.format(
+    args.name = 'experiment_{}/{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}'.format(
         args.name, args.epochs, args.dataset, args.model, args.batch_size, args.name,args.backdoor, args.amplify_rate,
-        args.amplify_rate_output, args.dp_type, args.dp_strength, args.gradient_sparsification, args.certify, args.sigma, args.autoencoder, args.lba, args.mid, args.mid_lambda, args.seed,
+        args.amplify_rate_output, args.dp_type, args.dp_strength, args.gradient_sparsification, args.certify, args.sigma, args.autoencoder, args.lba, args.mid, args.mid_lambda, args.apply_discrete_gradients, args.discrete_gradients_bins, args.seed,
         args.use_project_head, args.random_output, args.learning_rate, time.strftime("%Y%m%d-%H%M%S"))
     utils.create_exp_dir(args.name)
 
@@ -339,6 +339,8 @@ def main():
         args.mid_enlarge_model = MID_enlarge_layer(NUM_CLASSES,NUM_CLASSES*2).to(args.device)
         args.mid_optimizer = torch.optim.SGD(args.mid_model.parameters(), args.learning_rate, 
                                     momentum=args.momentum, weight_decay=args.weight_decay)
+        args.mid_enlarge_optimizer = torch.optim.SGD(args.mid_enlarge_model.parameters(), args.learning_rate, 
+                                    momentum=args.momentum, weight_decay=args.weight_decay)
 
     active_up_gradients_res = None
     active_down_gradients_res = None
@@ -406,18 +408,18 @@ def main():
             logits = active_model(z_up_clone, z_down_clone)
             loss = criterion(logits, target)
             if args.mid == 1 and args.mid_lambda > 0.0:
-                # epsilon = torch.empty(z_down_clone.size())
-                # torch.nn.init.normal(epsilon, mean=0, std=1) # epsilon is initialized
-                # epsilon = epsilon.to(args.device)
-                # pred_a_double = args.mid_enlarge_model(z_down_clone)
-                # mu, std = pred_a_double[:,:NUM_CLASSES], pred_a_double[:,NUM_CLASSES:]
-                # std = F.softplus(std-0.5) # ? F.softplus(std-5)
-                # pred_Z = mu+std*epsilon
-                # assert(pred_Z.size()==z_down_clone.size())
-                # pred_Z = pred_Z.to(args.device)
-                # pred_Z = args.mid_model(pred_Z)
-                # logits = active_model(z_up_clone, pred_Z)
-                # loss = criterion(logits, target) + args.mid_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
+                epsilon = torch.empty(z_down_clone.size())
+                torch.nn.init.normal_(epsilon, mean=0, std=1) # epsilon is initialized
+                epsilon = epsilon.to(args.device)
+                pred_a_double = args.mid_enlarge_model(z_down_clone)
+                mu, std = pred_a_double[:,:NUM_CLASSES], pred_a_double[:,NUM_CLASSES:]
+                std = F.softplus(std-5, beta=1) # ? F.softplus(std-5)
+                pred_Z = mu+std*epsilon
+                assert(pred_Z.size()==z_down_clone.size())
+                pred_Z = pred_Z.to(args.device)
+                pred_Z = args.mid_model(pred_Z)
+                logits = active_model(z_up_clone, pred_Z)
+                loss = criterion(logits, target) + args.mid_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
 
                 # # print("before mid")
                 # t_samples = args.mid_model(z_down_clone)
@@ -428,19 +430,20 @@ def main():
                 # logits = active_model(z_up_clone, t_samples)
                 # loss = criterion(logits, target )+ args.mid_lambda * (positive.sum(dim=-1) - negative.sum(dim=-1)).mean()
 
-                # new version of mid
-                ########################### v3 #############################################
-                epsilon = torch.empty((z_down_clone.size()[0],z_down_clone.size()[1]))
-                torch.nn.init.normal_(epsilon, mean=0, std=1) # epsilon is initialized
-                epsilon = epsilon.to(args.device)
-                mu = torch.mean(z_down_clone)
-                std = torch.std(z_down_clone, unbiased=False)
-                # mu, std = norm.fit(z_down_clone.cpu().detach().numpy())
-                _samples = mu + std * epsilon
-                _samples = _samples.to(args.device)
-                t_samples = args.mid_model(_samples)
-                logits = active_model(z_up_clone, t_samples)
-                loss = criterion(logits, target) + args.mid_lambda * (-0.5)*(1+2*torch.log(std)-mu**2 - std**2)
+                # # new version of mid
+                # ########################### v3 #############################################
+                # epsilon = torch.empty((z_down_clone.size()[0],z_down_clone.size()[1]))
+                # torch.nn.init.normal_(epsilon, mean=0, std=1) # epsilon is initialized
+                # epsilon = epsilon.to(args.device)
+                # mu = torch.mean(z_down_clone)
+                # std = torch.std(z_down_clone, unbiased=False)
+                # std = F.softplus(std-5, beta=1)
+                # # mu, std = norm.fit(z_down_clone.cpu().detach().numpy())
+                # _samples = mu + std * epsilon
+                # _samples = _samples.to(args.device)
+                # t_samples = args.mid_model(_samples)
+                # logits = active_model(z_up_clone, t_samples)
+                # loss = criterion(logits, target) + args.mid_lambda * (-0.5)*(1+2*torch.log(std)-mu**2 - std**2)
 
 
             # loss_benign = criterion(logits[:-1],target[:-1])
@@ -449,8 +452,12 @@ def main():
             # print(loss_benign.item(),loss_melicious.item())
 
             if args.mid and args.mid_lambda > 0.0:
-                t_samples_gradients = torch.autograd.grad(loss, t_samples, retain_graph=True)
-                t_samples_gradients_clone = t_samples_gradients[0].detach().clone()
+                pred_a_double_gradients = torch.autograd.grad(loss, pred_a_double, retain_graph=True)
+                pred_a_double_gradients_clone = pred_a_double_gradients[0].detach().clone()
+                pred_Z_gradients = torch.autograd.grad(loss, pred_Z, retain_graph=True)
+                pred_Z_gradients_clone = pred_Z_gradients[0].detach().clone()
+                # t_samples_gradients = torch.autograd.grad(loss, t_samples, retain_graph=True)
+                # t_samples_gradients_clone = t_samples_gradients[0].detach().clone()
 
             z_gradients_up = torch.autograd.grad(loss, z_up_clone, retain_graph=True)
             z_gradients_down = torch.autograd.grad(loss, z_down_clone, retain_graph=True)
@@ -523,16 +530,32 @@ def main():
                 z_gradients_down_clone = utils.multistep_gradient(z_gradients_down_clone, bins_num=args.discrete_gradients_bins, bound_abs=args.discrete_gradients_bound)
             ########### defense end here ##########
 
-            # update mid_model if it exists
+            # update mid_model and mid_enlarge_model if it exists
             if args.mid and args.mid_lambda > 0.0 and args.mid_optimizer != None:
+                args.mid_enlarge_optimizer.zero_grad()
+                weights_gradients_mid = torch.autograd.grad(pred_a_double, args.mid_enlarge_model.parameters(),
+                                                    grad_outputs=pred_a_double_gradients_clone)
+
+                for w, g in zip(args.mid_enlarge_model.parameters(), weights_gradients_mid):
+                    if w.requires_grad:
+                        w.grad = g.detach()
+                args.mid_enlarge_optimizer.step()
                 args.mid_optimizer.zero_grad()
-                weights_gradients_mid = torch.autograd.grad(t_samples, args.mid_model.parameters(),
-                                                    grad_outputs=t_samples_gradients_clone)
+                weights_gradients_mid = torch.autograd.grad(pred_Z, args.mid_model.parameters(),
+                                                    grad_outputs=pred_Z_gradients_clone)
 
                 for w, g in zip(args.mid_model.parameters(), weights_gradients_mid):
                     if w.requires_grad:
                         w.grad = g.detach()
                 args.mid_optimizer.step()
+                # args.mid_optimizer.zero_grad()
+                # weights_gradients_mid = torch.autograd.grad(t_samples, args.mid_model.parameters(),
+                #                                     grad_outputs=t_samples_gradients_clone)
+
+                # for w, g in zip(args.mid_model.parameters(), weights_gradients_mid):
+                #     if w.requires_grad:
+                #         w.grad = g.detach()
+                # args.mid_optimizer.step()
 
             # update passive model 0
             optimizer_list[0].zero_grad()
@@ -675,18 +698,18 @@ def main():
                     logits = active_model(z_up, z_down)
                     loss = criterion(logits, target)
                     if args.mid == 1 and args.mid_lambda > 0.0:
-                        # epsilon = torch.empty(z_down.size())
-                        # torch.nn.init.normal(epsilon, mean=0, std=1) # epsilon is initialized
-                        # epsilon = epsilon.to(args.device)
-                        # pred_a_double = args.mid_enlarge_model(z_down)
-                        # mu, std = pred_a_double[:,:NUM_CLASSES], pred_a_double[:,NUM_CLASSES:]
-                        # std = F.softplus(std-0.5) # ? F.softplus(std-5)
-                        # pred_Z = mu+std*epsilon
-                        # assert(pred_Z.size()==z_down.size())
-                        # pred_Z = pred_Z.to(args.device)
-                        # pred_Z = args.mid_model(pred_Z)
-                        # logits = active_model(z_up, pred_Z)
-                        # loss = criterion(logits, target) + args.mid_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
+                        epsilon = torch.empty(z_down.size())
+                        torch.nn.init.normal_(epsilon, mean=0, std=1) # epsilon is initialized
+                        epsilon = epsilon.to(args.device)
+                        pred_a_double = args.mid_enlarge_model(z_down)
+                        mu, std = pred_a_double[:,:NUM_CLASSES], pred_a_double[:,NUM_CLASSES:]
+                        std = F.softplus(std-5, beta=1) # ? F.softplus(std-5)
+                        pred_Z = mu+std*epsilon
+                        assert(pred_Z.size()==z_down.size())
+                        pred_Z = pred_Z.to(args.device)
+                        pred_Z = args.mid_model(pred_Z)
+                        logits = active_model(z_up, pred_Z)
+                        loss = criterion(logits, target) + args.mid_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
 
                         # # print("before mid")
                         # t_samples = args.mid_model(z_down)
@@ -697,19 +720,20 @@ def main():
                         # logits = active_model(z_up, t_samples)
                         # loss = criterion(logits, target) + args.mid_lambda * (positive.sum(dim=-1) - negative.sum(dim=-1)).mean()
 
-                        # new version of mid
-                        ########################### v3 #############################################
-                        epsilon = torch.empty((z_down.size()[0],z_down.size()[1]))
-                        torch.nn.init.normal_(epsilon, mean=0, std=1) # epsilon is initialized
-                        epsilon = epsilon.to(args.device)
-                        mu = torch.mean(z_down)
-                        std = torch.std(z_down, unbiased=False)
-                        # mu, std = norm.fit(z_down.cpu().detach().numpy())
-                        _samples = mu + std * epsilon
-                        _samples = _samples.to(args.device)
-                        t_samples = args.mid_model(_samples)
-                        logits = active_model(z_up, t_samples)
-                        loss = criterion(logits, target) + args.mid_lambda * (-0.5)*(1+2*torch.log(std)-mu**2 - std**2)
+                        # # new version of mid
+                        # ########################### v3 #############################################
+                        # epsilon = torch.empty((z_down.size()[0],z_down.size()[1]))
+                        # torch.nn.init.normal_(epsilon, mean=0, std=1) # epsilon is initialized
+                        # epsilon = epsilon.to(args.device)
+                        # mu = torch.mean(z_down)
+                        # std = torch.std(z_down, unbiased=False)
+                        # std = F.softplus(std-5, beta=1)
+                        # # mu, std = norm.fit(z_down.cpu().detach().numpy())
+                        # _samples = mu + std * epsilon
+                        # _samples = _samples.to(args.device)
+                        # t_samples = args.mid_model(_samples)
+                        # logits = active_model(z_up, t_samples)
+                        # loss = criterion(logits, target) + args.mid_lambda * (-0.5)*(1+2*torch.log(std)-mu**2 - std**2)
 
                         
                     prec1 = utils.accuracy(logits, target, topk=(1,))

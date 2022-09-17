@@ -670,7 +670,7 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
         if defense_method in ['gaussian', 'laplace']:
             defense_param = temps[4]
             print(defense_param)
-            if defense_param not in ['0.1', '0.01', '0.001']:
+            if defense_param not in ['1.0', '0.5', '0.1', '0.05', '0.01', '0.005', '0.001', '0.0001']:
                 continue
         elif defense_method == 'gradient_sparsification':
             defense_param = temps[5]
@@ -700,6 +700,9 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
         y[defense_method].append(data[key]['backdoor'])
         label[defense_method].append(defense_param)
 
+    none_main = x['none'][0]
+    none_attack = y['none'][0]
+
     x.pop('none', None)
     y.pop('none', None)
     print(x)
@@ -719,15 +722,16 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
                 ax.annotate(txt, (x[key][j], y[key][j]))
 
     # add baseline point
-    if 'mnist' in input_file:
-        ax.scatter([90.6],[100.0], label='w/o defense', marker='s', color='k', s=60)
-    elif 'nuswide' in input_file:
-        ax.scatter([61.8],[54.2], label='w/o defense', marker='s', color='k', s=60)
-    else:
-        if not 'multi_party' in target_dir:
-            ax.scatter([52.5],[71.4], label='w/o defense', marker='s', color='k', s=60)
-        else:
-            ax.scatter([0.5],[5.0], label='w/o defense', marker='s', color='k', s=60)
+    # if 'mnist' in input_file:
+    #     ax.scatter([90.6],[100.0], label='w/o defense', marker='s', color='k', s=60)
+    # elif 'nuswide' in input_file:
+    #     ax.scatter([61.8],[54.2], label='w/o defense', marker='s', color='k', s=60)
+    # else:
+    #     if not 'multi_party' in target_dir:
+    #         ax.scatter([52.5],[71.4], label='w/o defense', marker='s', color='k', s=60)
+    #     else:
+    #         ax.scatter([0.5],[5.0], label='w/o defense', marker='s', color='k', s=60)
+    ax.scatter([none_main],[none_attack], label='w/o defense', marker='s', color='k', s=60)
 
     ax.set_xlabel('Main task accuracy', fontsize=16)
     ax.set_ylabel('Missing sample main task accuracy', fontsize=16)
@@ -742,104 +746,6 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
         plt.savefig(os.path.join(target_dir, input_file.split('/')[-1].split('.')[0] + '_nomarker.png'), dpi=200)
     plt.close()
 
-
-def CoAE_distribution(target_dataset, target_model, exp_dir):
-    # mnist-mlp2-1-autoencoder-0-0.0-0.0-1.0
-    res_to_plot = {}
-    for item in os.listdir(exp_dir):
-        sub_dir = os.path.join(exp_dir, item)
-        if os.path.isdir(sub_dir):
-            temps = item.split('-')
-
-            # epoch - dataset - model - batch_size - name - \
-            # backdoor - amplify_rate - amplify_rate_output - dp_type - dp_strength - \
-            # gradient_sparsification - certify - sigma - autoencoder - lba - \
-            # seed - use_project_head - random_output - learning_rate - timestamp
-
-            epoch = int(temps[0])
-            if epoch != EPOCH_NUM:
-                continue
-            dataset = temps[1]
-            model = temps[2]
-            backdoor = int(temps[5])
-            amplify_rate = float(temps[6])
-            amplify_rate_output = float(temps[7])
-            defense_model = temps[8]
-            dp_strength = temps[9]
-            sparsification = float(temps[10])
-            sigma = float(temps[12])
-            autoencoder_coef = float(temps[14])
-            
-            # timestamp_date = int(temps[19])
-            # # print(timestamp_date)
-            # if timestamp_date != 20211104:
-            #     continue
-
-            if sparsification != 0:
-                defense_model = 'gradient_sparsification'
-            if backdoor == 0:
-                amplify_rate = 0
-            if sigma != 0:
-                defense_model = 'certifyFL'
-            if defense_model=='none' and autoencoder_coef != -0.1:
-                defense_model = 'autoencoder'
-            # else:
-            #     autoencoder_coef = 0
-            if dataset == target_dataset and model == target_model: #?? and amplify_rate==10
-
-                print(os.path.join(sub_dir, 'log.txt'))
-                temp_sub_dir = sub_dir
-                while os.path.isdir(temp_sub_dir):
-                    found_tb = False
-                    for item in os.listdir(temp_sub_dir):
-                        if item == 'tb' or item=='log.txt':
-                            found_tb = True
-                            break
-                        if os.path.isdir(os.path.join(temp_sub_dir, item)):
-                            temp_sub_dir = os.path.join(temp_sub_dir, item)
-                    if found_tb:
-                        break
-                sub_dir = temp_sub_dir
-                res = read_log_defense(os.path.join(sub_dir, 'log.txt'))
-
-                exp_key = '{}-{}-{}-{}-{}-{}-{}-{}'.format(dataset, model, backdoor, defense_model, dp_strength,
-                                                     sparsification, sigma, autoencoder_coef) #[4,5,6,7]
-
-                # remove unstable results
-                valid_flag = True
-                if len(res[3]) != 100:
-                    valid_flag = False
-                if not valid_flag:
-                    continue
-                if exp_key not in res_to_plot:
-                    res_to_plot[exp_key] = {'raw': [], 'count': 1, 'backdoor': backdoor, 'defense_model': defense_model,
-                                            'dp_strength': dp_strength, 'sparsification': sparsification, 'sigma': sigma,
-                                            'autoencoder_coef': autoencoder_coef}
-                    res_to_plot[exp_key]['raw'].append(res)
-                    if 'x' not in res_to_plot[exp_key]:
-                        res_to_plot[exp_key]['x'] = list(range(len(res[0])))
-                else:
-                    res_to_plot[exp_key]['raw'].append(res)
-                    res_to_plot[exp_key]['count'] = res_to_plot[exp_key]['count'] + 1
-
-    for item in res_to_plot:
-        if item == "mnist-mlp2-1-autoencoder-0-0.0-0.0-1.0":
-            ref = res_to_plot[item]['raw']
-            # print(type(ref),len(ref),len(ref[0]))
-            backdoor_acc_list = []
-            main_acc_list = []
-            for j in range(len(ref)):
-                backdoor_acc_list.append(np.asarray(ref[j][4]).mean())
-                main_acc_list.append(np.asarray(ref[j][2]).mean())
-            backdoor_acc_list = np.asarray(backdoor_acc_list)
-            main_acc_list = np.asarray(main_acc_list)
-            # print(backdoor_acc_list.shape, main_acc_list.shape)
-            plt.hist(np.asarray(backdoor_acc_list),bins=20)
-            plt.xlabel='backdoor accuracy'
-            plt.show()
-            plt.savefig(os.path.join(target_dir, 'distribution.png'), dpi=200)
-            plt.close()
-            # break
 
 if __name__ == '__main__':
 
@@ -891,11 +797,13 @@ if __name__ == '__main__':
 
 
     target_dir = 'images_missing'
+    target_dir = 'images_missing/2'
+    # target_dir = 'images_missing/4'
     for dataset, model in zip(['mnist', 'nuswide', 'cifar20'], ['mlp2', 'mlp2', 'resnet18']):
     # for dataset, model in zip(['mnist', 'nuswide', 'cifar20'], ['mlp2', 'mlp2', 'resnet18']):
     # # for dataset, model in zip(['mnist', 'nuswide', 'cifar100'], ['mlp2', 'mlp2', 'resnet18']):
-        plot_scatter_plot_for_paper('images_missing/data_use/{}_{}.json'.format(dataset, model), target_dir, True)
-        plot_scatter_plot_for_paper('images_missing/data_use/{}_{}.json'.format(dataset, model), target_dir, False)
+        plot_scatter_plot_for_paper('{}/data_use/{}_{}.json'.format(target_dir, dataset, model), target_dir, True)
+        plot_scatter_plot_for_paper('{}/data_use/{}_{}.json'.format(target_dir, dataset, model), target_dir, False)
 
     # for dataset, model in zip(['cifar20'], ['resnet18']):
     #     plot_scatter_plot_for_paper('../reviewer paper/plotting/{}_{}.json'.format(dataset, model), target_dir+'/multi_party', True)

@@ -110,6 +110,24 @@ def weights_init(m):
         m.bias.data.uniform_(-0.5, 0.5)
 
 
+class RAE(nn.Module):
+    def __init__(self, input_dim, encode_dim=100):
+        super(RAE, self).__init__()
+        self.output_dim = input_dim
+        self.layer1 = nn.Sequential(
+            nn.Linear(input_dim, encode_dim, bias=True)
+        )
+        self.layer2 = nn.Sequential(
+            nn.Linear(encode_dim, self.output_dim, bias=True)
+        )
+    
+    def forward(self, input_x):
+        encode_x = self.layer1(input_x)
+        decode_x = self.layer2(encode_x)
+        # print(f"in RAE, input_x={input_x}, encode_x={encode_x}, decode_x={decode_x}")
+        return decode_x, encode_x
+
+
 class MID_layer(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(MID_layer, self).__init__()

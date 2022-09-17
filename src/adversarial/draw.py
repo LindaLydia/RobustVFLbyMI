@@ -671,7 +671,7 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
             defense_param = temps[4]
             print(defense_param)
             # if defense_param not in ['0.1', '0.01', '0.001']:
-            if defense_param not in ['0.1', '0.01', '0.001', '0.0001', '0.00001']:
+            if defense_param not in ['1.0', '0.5', '0.1', '0.01', '0.05', '0.001', '0.005', '0.0001', '0.00001']:
                 continue
         elif defense_method == 'gradient_sparsification':
             defense_param = temps[5]
@@ -699,6 +699,7 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
             label[defense_method] = []
         x[defense_method].append(data[key]['main'])
         y[defense_method].append(data[key]['backdoor'])
+        # y[defense_method].append(100-data[key]['backdoor'])
         label[defense_method].append(defense_param)
 
     x.pop('none', None)
@@ -709,25 +710,39 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
     color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#17becf']
     method_name_dict = {'gaussian': 'DP-G', 'laplace': 'DP-L', 'gradient_sparsification': 'GS', 'certifyFL': 'CFL', 'dsgd': 'DG', 'autoencoder': 'CAE', 'autoencoder+dsgd': 'DCAE', 'mid': 'MID'}
     for i, key in enumerate(x):
-        ax.scatter(x[key], y[key], label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=60)
-        ax.plot(x[key], y[key], '--', linewidth=2, color=color_list[i])
+        # ax.scatter(x[key], y[key], label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=60)
+        # ax.plot(x[key], y[key], '--', linewidth=2, color=color_list[i])
+        temp = list(map(lambda a: a[0]-a[1], zip(x[key],y[key])))
+        ax.scatter(x[key], temp, label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=60)
+        ax.plot(x[key], temp, '--', linewidth=2, color=color_list[i])
         if marker:
             for j, txt in enumerate(label[key]):
-                ax.annotate(txt, (x[key][j], y[key][j]))
+                # ax.annotate(txt, (x[key][j], y[key][j]))
+                ax.annotate(txt, (x[key][j], temp[j]))
 
     # add baseline point
     if 'mnist' in input_file:
-        ax.scatter([93.2],[42.6], label='w/o defense', marker='s', color='k', s=60)
+        # ax.scatter([93.2],[42.6], label='w/o defense', marker='s', color='k', s=60)
+        ax.scatter([93.2],[93.2-42.6], label='w/o defense', marker='s', color='k', s=60)
+        # ax.scatter([93.2],[100-42.6], label='w/o defense', marker='s', color='k', s=60)
     elif 'nuswide' in input_file:
-        ax.scatter([61.1],[22.8], label='w/o defense', marker='s', color='k', s=60)
+        # ax.scatter([61.1],[22.8], label='w/o defense', marker='s', color='k', s=60)
+        ax.scatter([61.1],[61.1-22.8], label='w/o defense', marker='s', color='k', s=60)
+        # ax.scatter([61.1],[100-22.8], label='w/o defense', marker='s', color='k', s=60)
     else:
         if not 'multi_party' in target_dir:
-            ax.scatter([55.7],[13.6], label='w/o defense', marker='s', color='k', s=60)
+            # ax.scatter([55.7],[13.6], label='w/o defense', marker='s', color='k', s=60)
+            ax.scatter([55.7],[55.7-13.6], label='w/o defense', marker='s', color='k', s=60)
+            # ax.scatter([55.7],[100-13.6], label='w/o defense', marker='s', color='k', s=60)
         else:
-            ax.scatter([0.5],[5.0], label='w/o defense', marker='s', color='k', s=60)
+            # ax.scatter([0.5],[5.0], label='w/o defense', marker='s', color='k', s=60)
+            ax.scatter([0.5],[0.5-5.0], label='w/o defense', marker='s', color='k', s=60)
+            # ax.scatter([0.5],[100-5.0], label='w/o defense', marker='s', color='k', s=60)
 
     ax.set_xlabel('Main task accuracy', fontsize=16)
-    ax.set_ylabel('Adversarial sample main task accuracy', fontsize=15)
+    # ax.set_ylabel('Adversarial sample main task accuracy', fontsize=15)
+    ax.set_ylabel('Adversarial sample main task difference', fontsize=15)
+    # ax.set_ylabel('Adversarial sample main task error', fontsize=15)
     ax.tick_params(axis='x', labelsize=14)
     ax.tick_params(axis='y', labelsize=14)
     ax.legend(fontsize=14)

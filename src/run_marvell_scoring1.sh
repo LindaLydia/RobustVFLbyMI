@@ -37,7 +37,7 @@ python marvell_main.py --apply_mid True --apply_trainable_layer True
 
 # python marvell_main.py --exp_type main_task --epochs 30 --apply_trainable_layer True
 # python marvell_main.py --exp_type main_task --epochs 30 --apply_marvell True --apply_trainable_layer True
-# python marvell_main.py --exp_type main_task --epochs 30 --apply_mid True --apply_trainable_layer True
+python marvell_main.py --exp_type main_task --epochs 30 --apply_mid True --apply_trainable_layer True
 # python marvell_main.py --exp_type main_task --epochs 30 --apply_encoder True --apply_trainable_layer True
 # python marvell_main.py --exp_type main_task --epochs 30 --apply_encoder True --apply_discrete_gradients True --discrete_gradients_bins 12 --apply_trainable_layer True
 # python marvell_main.py --exp_type main_task --epochs 30 --apply_laplace True --apply_trainable_layer True

@@ -191,8 +191,9 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
     label_y = 'Label recovery accuracy'
 
     for defense in defense_name_list:
-        if defense != 'MARVELL' and defense != 'CAE' and defense != 'MID' and defense != 'no defense':
-        # if defense == 'MARVELL':
+        # if defense != 'MARVELL' and defense != 'CAE' and defense != 'MID' and defense != 'no defense':
+        if defense != 'MARVELL' and defense != 'MID' and defense != 'no defense':
+        # if defense == 'MARVELL' or defense == 'CAE' or defense == 'DCAE':
             rec_rate_list.append([])
             acc_list.append([])
             param_list.append([])
@@ -276,7 +277,9 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
                         #     ax.annotate(txt, (acc_list[i][j]-0.3, rec_rate_list[i][j]), fontsize=9)
                         # else:
                         #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
-                        ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
+                        if i != 6:
+                            ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
+                        # ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
                     elif dataset == 'mnist':
                         # # ax.annotate(txt, (acc_list[i][j] + offset[i], rec_rate_list[i][j] + offset[i]), fontsize=9)
                         # # if i == 0:
@@ -293,7 +296,11 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
                         #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]+(-2*(int)(j%2==0))), fontsize=9)
                         # else:
                         #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
-                        ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
+                        # if i != 6:
+                        #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
+                        if i != 5:
+                            ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
+                        # ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
                     elif dataset == 'nuswide':
                         # if i == 4 and j == 0:
                         #     ax.annotate(txt, (acc_list[i][j] + offset[j], rec_rate_list[i][j]), fontsize=9)
@@ -337,10 +344,10 @@ dataset = 'nuswide'
 dataset = 'cifar100'
 # dataset = 'mnist'
 
-# exp_type = 'multi_no_top_model'
+exp_type = 'multi_no_top_model'
 # exp_type = 'multi_top_model'
 exp_type = 'binary_no_top_model'
-exp_type = 'binary_top_model'
+# exp_type = 'binary_top_model'
 
 if __name__ == '__main__':
 
@@ -379,7 +386,7 @@ if __name__ == '__main__':
     exp_dir = f'./exp_result/{dataset}/'
     exp_dir = f'./exp_result_2048/{dataset}/'
     exp_dir = f'./exp_result_binary/{dataset}/'
-    exp_dir = f'./exp_result_direction_scoring/{dataset}/'
+    # exp_dir = f'./exp_result_direction_scoring/{dataset}/'
     # exp_dir = f'./exp_result_norm_scoring/{dataset}/'
     if not ('_no_top_model' in exp_type):
         exp_dir += '_top_model/'
