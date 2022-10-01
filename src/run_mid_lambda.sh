@@ -32,12 +32,12 @@
 # python vfl_main_task_no_defense.py --dataset_name cifar10 --apply_mid True --mid_loss_lambda 2 --epochs 60
 # python vfl_dlg_no_defense.py --dataset cifar10 --apply_mid True --mid_loss_lambda 2
 
-# python vfl_dlg_no_defense.py --dataset mnist --apply_mid True
+python vfl_dlg_no_defense.py --dataset mnist --apply_mid True
 # python vfl_main_task_no_defense.py --dataset_name mnist --apply_mid True --epochs 30
-# python vfl_dlg_no_defense.py --dataset nuswide --apply_mid True
+python vfl_dlg_no_defense.py --dataset nuswide --apply_mid True
 # python vfl_main_task_no_defense.py --dataset_name nuswide --apply_mid True --epochs 30
 python vfl_dlg_no_defense.py --dataset cifar100 --apply_mid True
-python vfl_main_task_no_defense.py --dataset_name cifar100 --apply_mid True --epochs 160
+# python vfl_main_task_no_defense.py --dataset_name cifar100 --apply_mid True --epochs 160
 
 
 

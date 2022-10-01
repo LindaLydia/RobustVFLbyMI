@@ -192,8 +192,8 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
 
     for defense in defense_name_list:
         # if defense != 'MARVELL' and defense != 'CAE' and defense != 'MID' and defense != 'no defense':
-        if defense != 'MARVELL' and defense != 'MID' and defense != 'no defense':
-        # if defense == 'MARVELL' or defense == 'CAE' or defense == 'DCAE':
+        # if defense != 'MARVELL' and defense != 'MID' and defense != 'no defense':
+        if defense == 'MARVELL' or defense == 'CAE' or defense == 'DCAE':
             rec_rate_list.append([])
             acc_list.append([])
             param_list.append([])
@@ -224,7 +224,7 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
                         continue
                     param = line1_split[0]
                     if defense != defense_name_list[-1]:
-                        print(param, _param_list[_counter])
+                        print(defense, param, _param_list[_counter])
                         assert param == _param_list[_counter]
                         _counter += 1
                     acc = line1_split[1]
@@ -264,10 +264,10 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
     for i in range(len(defense_list)):
         # print(param_list[i])
         if i == len(defense_list)-1:
-            ax.scatter(acc_list[i], rec_rate_list[i], label=defense_list[i], marker=marker_list[i], s=60, color='black')
+            ax.scatter(acc_list[i], rec_rate_list[i], label=defense_list[i], marker=marker_list[i], s=90, color='black')
         elif len(acc_list[i])>0:
             print(acc_list[i],rec_rate_list[i],defense_list[i])
-            ax.scatter(acc_list[i], rec_rate_list[i], label=defense_list[i], marker=marker_list[i], s=60, color=color_list[i])
+            ax.scatter(acc_list[i], rec_rate_list[i], label=defense_list[i], marker=marker_list[i], s=90, color=color_list[i])
             if mark:
                 for j, txt in enumerate(param_list[i]):
                     print(i,j,txt)
@@ -277,9 +277,9 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
                         #     ax.annotate(txt, (acc_list[i][j]-0.3, rec_rate_list[i][j]), fontsize=9)
                         # else:
                         #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
-                        if i != 6:
-                            ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
-                        # ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
+                        # if i != 6:
+                        #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=14)
+                        ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=14)
                     elif dataset == 'mnist':
                         # # ax.annotate(txt, (acc_list[i][j] + offset[i], rec_rate_list[i][j] + offset[i]), fontsize=9)
                         # # if i == 0:
@@ -299,8 +299,8 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
                         # if i != 6:
                         #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
                         if i != 5:
-                            ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
-                        # ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
+                            ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=14)
+                        # ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=14)
                     elif dataset == 'nuswide':
                         # if i == 4 and j == 0:
                         #     ax.annotate(txt, (acc_list[i][j] + offset[j], rec_rate_list[i][j]), fontsize=9)
@@ -310,9 +310,9 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
                         # #     ax.annotate(txt, (acc_list[i][j] , rec_rate_list[i][j] + offset[j]), fontsize=9)
                         # else:
                         #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
-                        ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
+                        ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=14)
         if len(acc_list[i]) > 1:
-            ax.plot(acc_list[i], rec_rate_list[i], '--', linewidth=2, color=color_list[i])
+            ax.plot(acc_list[i], rec_rate_list[i], '--', linewidth=3, color=color_list[i])
             # ax.plot(rec_rate_list[i], acc_list[i], '--',  mec='r', mfc='w', label=defense_list[i])
 
     ax.set_xlabel(label_x, fontsize=16)
@@ -342,11 +342,11 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
 
 dataset = 'nuswide'
 dataset = 'cifar100'
-# dataset = 'mnist'
+dataset = 'mnist'
 
 exp_type = 'multi_no_top_model'
 # exp_type = 'multi_top_model'
-exp_type = 'binary_no_top_model'
+# exp_type = 'binary_no_top_model'
 # exp_type = 'binary_top_model'
 
 if __name__ == '__main__':
@@ -368,9 +368,9 @@ if __name__ == '__main__':
     # draw_defense_on_main_and_dlg_task('exp_result/cifar100', 'laplace')
 
     main_task_x_limit_dict = {
-        'cifar100':{'multi_no_top_model':[34,60],'multi_top_model':[-1,101],'binary_no_top_model':[85,95],'binary_top_model':[-1,101]},
+        'cifar100':{'multi_no_top_model':[34,60],'multi_top_model':[-1,101],'binary_no_top_model':[89,95],'binary_top_model':[-1,101]},
         'mnist':{'multi_no_top_model':[82,98],'multi_top_model':[63,98],'binary_no_top_model':[99.84,100],'binary_top_model':[99.8,100]},
-        'nuswide':{'multi_no_top_model':[82,90],'multi_top_model':[63,98],'binary_no_top_model':[77,90],'binary_top_model':[-1,101]}
+        'nuswide':{'multi_no_top_model':[82,90],'multi_top_model':[63,98],'binary_no_top_model':[77,85],'binary_top_model':[-1,101]}
     }
     attack_task_y_limit_dict = {
         'cifar100':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[-1,101],'binary_top_model':[-1,101]},
@@ -385,7 +385,7 @@ if __name__ == '__main__':
 
     exp_dir = f'./exp_result/{dataset}/'
     exp_dir = f'./exp_result_2048/{dataset}/'
-    exp_dir = f'./exp_result_binary/{dataset}/'
+    # exp_dir = f'./exp_result_binary/{dataset}/'
     # exp_dir = f'./exp_result_direction_scoring/{dataset}/'
     # exp_dir = f'./exp_result_norm_scoring/{dataset}/'
     if not ('_no_top_model' in exp_type):

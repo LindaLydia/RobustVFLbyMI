@@ -665,16 +665,22 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
     for key in data:
         # print("key is",key)
         temps = key.split('-')
+        defense_dataset = temps[0]
         defense_method = temps[3]
         defense_param = -100
         if defense_method in ['gaussian', 'laplace']:
             defense_param = temps[4]
             print(defense_param)
-            if defense_param not in ['1.0', '0.5', '0.1', '0.05', '0.01', '0.005', '0.001', '0.0001']:
-                continue
+            if defense_dataset == 'mnist':
+                if defense_param not in ['1.0', '0.1', '0.01']:
+                    continue
+            else:
+                if defense_param not in ['1.0', '0.5', '0.1', '0.05', '0.01', '0.005', '0.001', '0.0001']:
+                    continue
         elif defense_method == 'gradient_sparsification':
             defense_param = temps[5]
             if defense_param not in ['99.9', '99.5', '99.0']:
+            # if defense_param not in ['99.9', '99.5', '99.0', '95.0']:
                 continue
         elif defense_method == 'certifyFL':
             defense_param = temps[6]
@@ -692,6 +698,8 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
             defense_param = temps[9]
         elif defense_method == 'mid':
             defense_param = temps[8]
+        elif defense_method == 'rvfr':
+            defense_param = temps[10]
         if defense_method not in x:
             x[defense_method] = []
             y[defense_method] = []
@@ -707,19 +715,28 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
     y.pop('none', None)
     print(x)
     fig, ax = plt.subplots()
-    marker_list = ['o', 'v', '^', 'D', '*', '1', '4']
-    color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#17becf']
-    method_name_dict = {'gaussian': 'DP-G', 'laplace': 'DP-L', 'gradient_sparsification': 'GS', 'certifyFL': 'CFL', 'dsgd': 'DG', 'autoencoder': 'CAE', 'autoencoder+dsgd': 'DCAE', 'mid': 'MID'}
+    # marker_list = ['o'(DP-G), 'v'(DP-L), '^'(GS), 'D'(DG), '*'(CAE), '1'(DCAE), '4'(MID)]
+    # color_list = ['#1f77b4'(DP-G), '#ff7f0e'(DP-L), '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#17becf']
+    # marker_list = ['o', 'v', '^', 'D', '*', '1', '4']
+    # color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#17becf']
+    marker_list = ['o', 'v', '^', 'h', '4']
+    color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#e377c2', '#17becf']
+    method_name_dict = {'gaussian': 'DP-G', 'laplace': 'DP-L', 'gradient_sparsification': 'GS', 'certifyFL': 'CFL', 'dsgd': 'DG', 'autoencoder': 'CAE', 'autoencoder+dsgd': 'DCAE', 'mid': 'MID', 'rvfr': 'RVFR'}
     print(type(x))
     for i, key in enumerate(x):
         print("key is", key)
         if key == 'none':
             continue
-        ax.scatter(x[key], y[key], label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=60)
-        ax.plot(x[key], y[key], '--', linewidth=2, color=color_list[i])
+        # ax.scatter(x[key], y[key], label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=60)
+        # ax.plot(x[key], y[key], '--', linewidth=2, color=color_list[i])
+        temp = list(map(lambda a: max(a[0]-a[1],0.0), zip(x[key],y[key])))
+        # temp = list(map(lambda a: a[0]-a[1], zip(x[key],y[key])))
+        ax.scatter(x[key], temp, label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=60)
+        ax.plot(x[key], temp, '--', linewidth=2, color=color_list[i])
         if marker:
             for j, txt in enumerate(label[key]):
-                ax.annotate(txt, (x[key][j], y[key][j]))
+                # ax.annotate(txt, (x[key][j], y[key][j]))
+                ax.annotate(txt, (x[key][j], temp[j]))
 
     # add baseline point
     # if 'mnist' in input_file:
@@ -731,10 +748,12 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
     #         ax.scatter([52.5],[71.4], label='w/o defense', marker='s', color='k', s=60)
     #     else:
     #         ax.scatter([0.5],[5.0], label='w/o defense', marker='s', color='k', s=60)
-    ax.scatter([none_main],[none_attack], label='w/o defense', marker='s', color='k', s=60)
+    # ax.scatter([none_main],[none_attack], label='w/o defense', marker='s', color='k', s=60)
+    ax.scatter([none_main],[none_main-none_attack], label='w/o defense', marker='s', color='k', s=60)
 
     ax.set_xlabel('Main task accuracy', fontsize=16)
-    ax.set_ylabel('Missing sample main task accuracy', fontsize=16)
+    # ax.set_ylabel('Missing sample main task accuracy', fontsize=16)
+    ax.set_ylabel('Missing sample main task difference', fontsize=16)
     ax.tick_params(axis='x', labelsize=14)
     ax.tick_params(axis='y', labelsize=14)
     ax.legend(fontsize=14)
@@ -798,8 +817,9 @@ if __name__ == '__main__':
 
     target_dir = 'images_missing'
     target_dir = 'images_missing/2'
-    # target_dir = 'images_missing/4'
-    for dataset, model in zip(['mnist', 'nuswide', 'cifar20'], ['mlp2', 'mlp2', 'resnet18']):
+    target_dir = 'images_missing/4'
+    for dataset, model in zip(['mnist', 'cifar20'], ['mlp2', 'resnet18']):
+    # for dataset, model in zip(['mnist', 'nuswide', 'cifar20'], ['mlp2', 'mlp2', 'resnet18']):
     # for dataset, model in zip(['mnist', 'nuswide', 'cifar20'], ['mlp2', 'mlp2', 'resnet18']):
     # # for dataset, model in zip(['mnist', 'nuswide', 'cifar100'], ['mlp2', 'mlp2', 'resnet18']):
         plot_scatter_plot_for_paper('{}/data_use/{}_{}.json'.format(target_dir, dataset, model), target_dir, True)

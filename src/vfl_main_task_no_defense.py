@@ -15,8 +15,10 @@ from utils import get_labeled_data
 from vfl_main_task import VFLDefenceExperimentBase
 import vfl_main_task
 import vfl_main_task_mid
+import vfl_main_task_mid_passive
 from utils import append_exp_res
 
+BOTTLENECK_SCALE = 25
 
 tp = transforms.ToTensor()
 transform = transforms.Compose(
@@ -179,8 +181,9 @@ if __name__ == '__main__':
         # ae_name_list = ['negative/autoencoder_20_0.5_1647127262', 'negative/autoencoder_20_1.0_1647127164']
 
     # path = f'./exp_result/{args.dataset_name}/'
+    path = f'./exp_result_2048_new/{args.dataset_name}/'
     # path = f'./exp_result_2048/{args.dataset_name}/'
-    path = f'./exp_result_binary/{args.dataset_name}/'
+    # path = f'./exp_result_binary/{args.dataset_name}/'
     if args.apply_trainable_layer:
         path += '_top_model/'
     if args.apply_mid:
@@ -209,8 +212,10 @@ if __name__ == '__main__':
     args.mid_model = None
     args.mid_enlarge_model = None
     if args.apply_mid:
-        args.mid_model = MID_layer(args.num_classes, args.num_classes)
-        args.mid_enlarge_model = MID_enlarge_layer(args.num_classes, args.num_classes*2)
+        # args.mid_model = MID_layer(args.num_classes, args.num_classes)
+        # args.mid_enlarge_model = MID_enlarge_layer(args.num_classes, args.num_classes*2)
+        args.mid_model = MID_layer(args.num_classes*BOTTLENECK_SCALE, args.num_classes)
+        args.mid_enlarge_model = MID_enlarge_layer(args.num_classes, args.num_classes*2*BOTTLENECK_SCALE)
 
     if args.apply_encoder:
         for ae_name in ae_name_list:
@@ -239,6 +244,7 @@ if __name__ == '__main__':
             append_exp_res(path, str(dp_strength) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
     elif args.apply_grad_spar:
         gradient_sparsification_list = [90, 95, 96, 97, 98, 99]
+        gradient_sparsification_list = [10,5,1]
         for grad_spars in gradient_sparsification_list:
             test_acc_list = []
             for i in range(num_exp):
@@ -249,12 +255,14 @@ if __name__ == '__main__':
             append_exp_res(path, str(grad_spars) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
     elif args.apply_mid:
         mid_lambda_list = [1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
-        mid_lambda_list = [1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
+        # mid_lambda_list = [1e-6,1e-3,1e-1,1]
         for mid_loss_lambda in mid_lambda_list:
             test_acc_list = []
             for i in range(num_exp):
                 args.mid_loss_lambda = mid_loss_lambda
+                set_seed(args.seed)
                 vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
+                # vfl_defence_image = vfl_main_task_mid_passive.VFLDefenceExperimentBase(args)
                 test_acc = vfl_defence_image.train()
                 test_acc_list.append(test_acc[0])
             append_exp_res(path, str(args.mid_loss_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))

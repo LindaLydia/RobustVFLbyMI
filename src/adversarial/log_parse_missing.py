@@ -540,10 +540,15 @@ def save_defense_data(target_dataset, target_model, exp_dir):
     temp_l.sort(reverse=True)
     dict_to_save = dict(temp_l)
     print("dic_to_save",dict_to_save)
-    print('./images_missing/{}/data/{}_{}.json'.format(exp_dir.split('_')[-2], target_dataset, target_model))
-    if not os.path.exists('./images_missing/{}/data/'.format(exp_dir.split('_')[-2])):
+    save_dir = ''
+    if 'rvfr' in exp_dir:
+        save_dir = './images_missing/rvfr_{}/data/'.format(exp_dir.split('_')[-2])
+    else:
+        save_dir = './images_missing/{}/data/'.format(exp_dir.split('_')[-2])
+    print(save_dir)
+    if not os.path.exists(save_dir):
         os.makedirs('./images_missing/{}/data/'.format(exp_dir.split('_')[-2]))
-    with open('./images_missing/{}/data/{}_{}.json'.format(exp_dir.split('_')[-2], target_dataset, target_model), 'w') as f:
+    with open(save_dir+'{}_{}.json'.format(target_dataset, target_model), 'w') as f:
         json.dump(dict_to_save, f, indent=4)
 
 
@@ -876,7 +881,13 @@ if __name__ == '__main__':
     # exp_dir = './experiment_missing_32_defense'
     # exp_dir = './experiment_missing_64_defense'
     # exp_dir = './experiment_missing_no_attack'
-    # exp_dir = './exp_temp'
+    exp_dir = './experiment_missing_2_rvfr_10_defense'
+    exp_dir = './experiment_missing_2_rvfr_50_defense'
+    exp_dir = './experiment_missing_2_rvfr_100_defense'
+    exp_dir = './experiment_missing_4_rvfr_10_defense'
+    exp_dir = './experiment_missing_4_rvfr_50_defense'
+    exp_dir = './experiment_missing_4_rvfr_100_defense'
+      # exp_dir = './exp_temp'
     # exp_dir = './experiment_plot_model_right_50_defense'
     # exp_dir = './experiment_plot_nuswide_50_defense'
 
@@ -896,7 +907,10 @@ if __name__ == '__main__':
     # for dataset, model in zip(['mnist'], ['mlp2']):
     #     CoAE_distribution(dataset, model, exp_dir)
 
-    for dataset, model in zip(['mnist', 'nuswide', 'cifar20'], ['mlp2', 'mlp2', 'resnet18']):
+    # for dataset, model in zip(['mnist', 'nuswide', 'cifar20'], ['mlp2', 'mlp2', 'resnet18']):
+    # # for dataset, model in zip(['mnist', 'cifar20'], ['mlp2', 'resnet18']):
+    #     save_defense_data(dataset, model, exp_dir)
+    for dataset, model in zip(['mnist', 'cifar20'], ['mlp2', 'resnet18']):
     # for dataset, model in zip(['mnist', 'cifar20'], ['mlp2', 'resnet18']):
         save_defense_data(dataset, model, exp_dir)
 

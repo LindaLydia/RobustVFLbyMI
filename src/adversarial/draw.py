@@ -665,14 +665,20 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
     for key in data:
         # print("key is",key)
         temps = key.split('-')
+        dataset = temps[0]
         defense_method = temps[3]
         defense_param = -100
         if defense_method in ['gaussian', 'laplace']:
             defense_param = temps[4]
             print(defense_param)
-            # if defense_param not in ['0.1', '0.01', '0.001']:
-            if defense_param not in ['1.0', '0.5', '0.1', '0.01', '0.05', '0.001', '0.005', '0.0001', '0.00001']:
-                continue
+            if dataset == 'mnist':
+                if defense_param not in ['1.0', '0.1', '0.01']:
+                # if defense_param not in ['1.0', '0.5', '0.1', '0.01', '0.05', '0.001', '0.005', '0.0001', '0.00001']:
+                    continue
+            elif dataset == 'cifar20':
+                if defense_param not in ['1.0', '0.5', '0.1', '0.01', '0.001']:
+                # if defense_param not in ['1.0', '0.5', '0.1', '0.01', '0.05', '0.001', '0.005', '0.0001', '0.00001']:
+                    continue
         elif defense_method == 'gradient_sparsification':
             defense_param = temps[5]
             if defense_param not in ['99.9', '99.5', '99.0']:
@@ -693,6 +699,8 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
             defense_param = temps[9]
         elif defense_method == 'mid':
             defense_param = temps[8]
+        elif defense_method == 'rvfr':
+            defense_param = temps[10]
         if defense_method not in x:
             x[defense_method] = []
             y[defense_method] = []
@@ -706,9 +714,11 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
     y.pop('none', None)
     print(x)
     fig, ax = plt.subplots()
-    marker_list = ['o', 'v', '^', 'D', '*', '1', '4']
-    color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#17becf']
-    method_name_dict = {'gaussian': 'DP-G', 'laplace': 'DP-L', 'gradient_sparsification': 'GS', 'certifyFL': 'CFL', 'dsgd': 'DG', 'autoencoder': 'CAE', 'autoencoder+dsgd': 'DCAE', 'mid': 'MID'}
+    # marker_list = ['o'(DP-G), 'v'(DP-L), '^'(GS), 'D'(DG), '*'(CAE), '1'(DCAE), '4'(MID)]
+    # color_list = ['#1f77b4'(DP-G), '#ff7f0e'(DP-L), '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#17becf']
+    marker_list = ['o', 'v', '^', 'h', '4']
+    color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#e377c2', '#17becf']
+    method_name_dict = {'gaussian': 'DP-G', 'laplace': 'DP-L', 'gradient_sparsification': 'GS', 'certifyFL': 'CFL', 'dsgd': 'DG', 'autoencoder': 'CAE', 'autoencoder+dsgd': 'DCAE', 'mid': 'MID', 'rvfr': 'RVFR'}
     for i, key in enumerate(x):
         # ax.scatter(x[key], y[key], label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=60)
         # ax.plot(x[key], y[key], '--', linewidth=2, color=color_list[i])
@@ -741,7 +751,7 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
 
     ax.set_xlabel('Main task accuracy', fontsize=16)
     # ax.set_ylabel('Adversarial sample main task accuracy', fontsize=15)
-    ax.set_ylabel('Adversarial sample main task difference', fontsize=15)
+    ax.set_ylabel('Noisy-sample main task difference', fontsize=15)
     # ax.set_ylabel('Adversarial sample main task error', fontsize=15)
     ax.tick_params(axis='x', labelsize=14)
     ax.tick_params(axis='y', labelsize=14)

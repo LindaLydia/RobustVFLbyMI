@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
@@ -19,7 +20,7 @@ from marvell_model import (
 )
 import marvell_shared_values as shared_var
 
-BOTTLENECK_SCALE = 25
+
 tf.compat.v1.enable_eager_execution() 
 
 
@@ -130,32 +131,6 @@ class VFLDefenceExperimentBase(object):
             # print("after softmax: _random[i]", _random[i])
         return self.encoder(_random)
 
-    def MIDBottleneckGeneration(self, X):
-        # # discrete form of reparameterization
-        # torch.nn.init.uniform(epsilon) # epsilon is initialized
-        # epsilon = - torch.log(epsilon + torch.tensor(1e-07))
-        # epsilon = - torch.log(epsilon + torch.tensor(1e-07)) # prevent if epsilon=0.0
-        # pred_Z = F.softmax(pred_a) + epsilon.to(self.device)
-        # pred_Z = F.softmax(pred_Z / torch.tensor(self.mid_tau).to(self.device), -1)
-        
-        # continuous form of reparameterization
-        epsilon = torch.empty((X.size()[0],X.size()[1]*BOTTLENECK_SCALE))
-        torch.nn.init.normal(epsilon, mean=0, std=1) # epsilon is initialized
-        epsilon = epsilon.to(self.device)
-        # X.size() = (batch_size, class_num)
-        pred_a_double = self.mid_enlarge_model(X)
-        # mu, std = norm.fit(X.cpu().detach().numpy())
-        mu, std = pred_a_double[:,:self.num_classes*BOTTLENECK_SCALE], pred_a_double[:,self.num_classes*BOTTLENECK_SCALE:]
-        # std = F.softplus(std-0.5) # ? F.softplus(std-5)
-        std = F.softplus(std-5) # ? F.softplus(std-5)
-        print("mu, std: ", mu.size(), std.size())
-        pred_Z = mu+std*epsilon
-        # assert(pred_Z.size()==X.size())
-        pred_Z = pred_Z.to(self.device)
-
-        pred_Z = self.mid_model(pred_Z)
-        return pred_Z.clone(), mu, std
-    
     def train_batch(self, batch_data_a, batch_data_b, batch_label, net_a, net_b, encoder, model_optimizer, criterion):
         gt_equal_probability = torch.from_numpy(np.array([1/self.num_classes]*self.num_classes)).to(self.device)
         if self.apply_encoder:
@@ -192,11 +167,13 @@ class VFLDefenceExperimentBase(object):
         # compute logits of clients
         pred_a = net_a(batch_data_a)
         pred_b = net_b(batch_data_b)
+        zeros = torch.zeros((pred_b.size()[0],pred_b.size()[1])).to(self.device)
 
         # aggregate logits of clients
         ######################## defense start ############################
         ######################## defense: trainable_layer(top_model) ############################
         pred = self.active_aggregate_model(pred_a, pred_b)
+        pred = self.active_aggregate_model(zeros,pred_b)
         loss = criterion(pred, gt_one_hot_label)
         ######################## defense: mi ############################
         if self.apply_mi:
@@ -210,7 +187,8 @@ class VFLDefenceExperimentBase(object):
         elif self.apply_mid:
             # pred_Z = Somefunction(pred_a)
             # print("pred_a.size(): ",pred_a.size())
-            epsilon = torch.empty((pred_a.size()[0],pred_a.size()[1]*BOTTLENECK_SCALE))
+            epsilon = torch.empty((pred_a.size()[0],pred_a.size()[1]))
+            zeros = torch.zeros((pred_b.size()[0],pred_b.size()[1])).to(self.device)
 
             # # discrete form of reparameterization
             # torch.nn.init.uniform(epsilon) # epsilon is initialized
@@ -225,38 +203,35 @@ class VFLDefenceExperimentBase(object):
             # # pred_a.size() = (batch_size, class_num)
             pred_a_double = self.mid_enlarge_model(pred_a)
             # mu, std = norm.fit(pred_a.cpu().detach().numpy())
-            mu, std = pred_a_double[:,:self.num_classes*BOTTLENECK_SCALE], pred_a_double[:,self.num_classes*BOTTLENECK_SCALE:]
-            # std = F.softplus(std-0.5) # ? F.softplus(std-5)
-            std = F.softplus(std-5) # ? F.softplus(std-5)
+            mu, std = pred_a_double[:,:self.num_classes], pred_a_double[:,self.num_classes:]
+            std = F.softplus(std-0.5) # ? F.softplus(std-5)
             print("mu, std: ", mu.size(), std.size())
             pred_Z = mu+std*epsilon
-            # assert(pred_Z.size()==pred_a.size())
+            assert(pred_Z.size()==pred_a.size())
             pred_Z = pred_Z.to(self.device)
 
             pred_Z = self.mid_model(pred_Z)
             # pred = self.active_aggregate_model(pred_Z, F.softmax(pred_b))
-            pred = self.active_aggregate_model(pred_Z, pred_b)
+            pred = self.active_aggregate_model(pred_Z, zeros)
             # # loss for discrete form of reparameterization
             # loss = criterion(pred, gt_one_hot_label) + self.mid_loss_lambda * entropy_for_probability_vector(pred_a)
             # loss for continuous form of reparameterization
             loss = criterion(pred, gt_one_hot_label) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
             print("loss: ", loss)
-
-
         ######################## defense4: distance correlation ############################
         elif self.apply_distance_correlation:
             loss = criterion(pred, gt_one_hot_label) + self.distance_correlation_lambda * torch.mean(torch.cdist(pred_a, gt_one_hot_label, p=2))
         ######################## defense with loss change end ############################
         pred_a_gradients = torch.autograd.grad(loss, pred_a, retain_graph=True)
         pred_a_gradients_clone = pred_a_gradients[0].detach().clone()
-        pred_b_gradients = torch.autograd.grad(loss, pred_b, retain_graph=True)
-        pred_b_gradients_clone = pred_b_gradients[0].detach().clone()
+        # pred_b_gradients = torch.autograd.grad(loss, pred_b, retain_graph=True)
+        # pred_b_gradients_clone = pred_b_gradients[0].detach().clone()
 
         ######################## defense2: dp ############################
         pred_a_gradients = torch.autograd.grad(loss, pred_a, retain_graph=True)
         pred_a_gradients_clone = pred_a_gradients[0].detach().clone()
-        pred_b_gradients = torch.autograd.grad(loss, pred_b, retain_graph=True)
-        pred_b_gradients_clone = pred_b_gradients[0].detach().clone()
+        # pred_b_gradients = torch.autograd.grad(loss, pred_b, retain_graph=True)
+        # pred_b_gradients_clone = pred_b_gradients[0].detach().clone()
         if self.apply_laplace and self.dp_strength != 0.0 or self.apply_gaussian and self.dp_strength != 0.0:
             location = 0.0
             threshold = 0.2  # 1e9
@@ -334,11 +309,11 @@ class VFLDefenceExperimentBase(object):
             weights_grad_enlarge_a_clone = weights_grad_enlarge_a[0].detach().clone()
         model_optimizer.zero_grad()
 
-        # update passive party(attacker) model
-        weights_grad_a = torch.autograd.grad(pred_a, net_a.parameters(), grad_outputs=pred_a_gradients_clone)
-        for w, g in zip(net_a.parameters(), weights_grad_a):
-            if w.requires_grad:
-                w.grad = g.detach()
+        # # update passive party(attacker) model
+        # weights_grad_a = torch.autograd.grad(pred_a, net_a.parameters(), grad_outputs=pred_a_gradients_clone)
+        # for w, g in zip(net_a.parameters(), weights_grad_a):
+        #     if w.requires_grad:
+        #         w.grad = g.detach()
         # update active party(defenser) model
         weights_grad_b = torch.autograd.grad(pred_b, net_b.parameters(), grad_outputs=pred_b_gradients_clone)
         for w, g in zip(net_b.parameters(), weights_grad_b):
@@ -389,13 +364,21 @@ class VFLDefenceExperimentBase(object):
         if self.apply_trainable_layer:
             if self.apply_mid:
                 model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()) + list(self.active_aggregate_model.parameters()) + list(self.mid_model.parameters()) + list(self.mid_enlarge_model.parameters()), lr=self.lr)
+                model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(self.active_aggregate_model.parameters()) + list(self.mid_model.parameters()) + list(self.mid_enlarge_model.parameters()), lr=self.lr)
+                model_optimizer = torch.optim.Adam(list(net_b.parameters()) + list(self.active_aggregate_model.parameters()) + list(self.mid_model.parameters()) + list(self.mid_enlarge_model.parameters()), lr=self.lr)
             else:
                 model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()) + list(self.active_aggregate_model.parameters()), lr=self.lr)
+                model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(self.active_aggregate_model.parameters()), lr=self.lr)
+                model_optimizer = torch.optim.Adam(list(net_b.parameters()) + list(self.active_aggregate_model.parameters()), lr=self.lr)
         else:
             if self.apply_mid:
                 model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()) + list(self.mid_model.parameters()) + list(self.mid_enlarge_model.parameters()), lr=self.lr)
+                model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(self.mid_model.parameters()) + list(self.mid_enlarge_model.parameters()), lr=self.lr)
+                model_optimizer = torch.optim.Adam(list(net_b.parameters()) + list(self.mid_model.parameters()) + list(self.mid_enlarge_model.parameters()), lr=self.lr)
             else:
                 model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()), lr=self.lr)
+                model_optimizer = torch.optim.Adam(list(net_a.parameters()), lr=self.lr)
+                model_optimizer = torch.optim.Adam(list(net_b.parameters()), lr=self.lr)
         criterion = cross_entropy_for_onehot
 
         test_acc = 0.0
@@ -436,10 +419,14 @@ class VFLDefenceExperimentBase(object):
 
                             test_logit_a = net_a(test_data_a)
                             test_logit_b = net_b(test_data_b)
-                            test_logit = self.active_aggregate_model(test_logit_a, test_logit_b)
+                            zeros = torch.zeros((test_logit_b.size()[0],test_logit_b.size()[1])).to(self.device)
+                            # test_logit = self.active_aggregate_model(test_logit_a, test_logit_b)
+                            test_logit = self.active_aggregate_model(test_logit_a, zeros)
+                            test_logit = self.active_aggregate_model(zeros, test_logit_b)
 
                             if self.apply_mid:
-                                epsilon = torch.empty((test_logit_a.size()[0],test_logit_a.size()[1]*BOTTLENECK_SCALE))
+                                epsilon = torch.empty((test_logit_a.size()[0],test_logit_a.size()[1]))
+                                zeros = torch.zeros((test_logit_b.size()[0],test_logit_b.size()[1])).to(self.device)
                                 # # discrete form of reparameterization
                                 # torch.nn.init.uniform(epsilon) # epsilon is initialized
                                 # epsilon = - torch.log(epsilon + torch.tensor(1e-07))
@@ -452,18 +439,16 @@ class VFLDefenceExperimentBase(object):
                                 epsilon = epsilon.to(self.device)
                                 # mu, std = norm.fit(test_logit_a.cpu().detach().numpy())
                                 test_logit_a_double = self.mid_enlarge_model(test_logit_a)
-                                mu, std = test_logit_a_double[:,:self.num_classes*BOTTLENECK_SCALE], test_logit_a_double[:,self.num_classes*BOTTLENECK_SCALE:]
-                                # std = F.softplus(std-0.5) # ? F.softplus(std-5)
-                                std = F.softplus(std-5) # ? F.softplus(std-5)
+                                mu, std = test_logit_a_double[:,:self.num_classes], test_logit_a_double[:,self.num_classes:]
+                                std = F.softplus(std-0.5) # ? F.softplus(std-5)
                                 # print("mu, std: ", mu, std)
                                 test_logit_Z = mu+std*epsilon
-                                # assert(test_logit_Z.size()==test_logit_a.size())
+                                assert(test_logit_Z.size()==test_logit_a.size())
                                 test_logit_Z = test_logit_Z.to(self.device)
 
                                 test_logit_Z = self.mid_model(test_logit_Z)
-                                test_logit = self.active_aggregate_model(test_logit_Z, test_logit_b)
-                                # test_logit = self.active_aggregate_model(test_logit_Z, F.softmax(test_logit_b,dim=-1))
-                                # test_logit = self.active_aggregate_model(F.softmax(test_logit_Z,dim=-1), F.softmax(test_logit_b,dim=-1))
+                                # test_logit = self.active_aggregate_model(test_logit_Z, test_logit_b)
+                                test_logit = self.active_aggregate_model(test_logit_Z, zeros)
 
                             enc_predict_prob = F.softmax(test_logit, dim=-1)
                             if self.apply_encoder:
@@ -484,25 +469,3 @@ class VFLDefenceExperimentBase(object):
                         print('Epoch {}% \t train_loss:{:.2f} train_acc:{:.2f} test_acc:{:.2f}'.format(
                             i_epoch, loss, train_acc, test_acc))
         return test_acc, test_acc_topk
-
-
-
-
-            # # continuous form of reparameterization
-            # epsilon = torch.empty((pred_a.size()[0],pred_a.size()[1]))
-            # torch.nn.init.normal(epsilon, mean=0, std=1) # epsilon is initialized
-            # epsilon = epsilon.to(self.device)
-            # pred_a_double = self.mid_enlarge_model(pred_a)
-            
-            # mu, std = pred_a_double[:,:self.num_classes], pred_a_double[:,self.num_classes:]
-            # std = F.softplus(std-0.5)
-            # pred_Z = mu+std*epsilon
-            # assert(pred_Z.size()==pred_a.size())
-            # pred_Z = pred_Z.to(self.device)
-
-            # pred_Z = self.mid_model(pred_Z)
-            # pred = self.active_aggregate_model(pred_Z,pred_b)
-            
-            # # loss for continuous form of reparameterization
-            # loss = criterion(pred, gt_one_hot_label) + \
-            #     self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))

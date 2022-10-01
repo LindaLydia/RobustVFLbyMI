@@ -18,6 +18,7 @@ from marvell_model import (
 )
 import marvell_shared_values as shared_var
 
+BOTTLENECK_SCALE = 25
 
 tf.compat.v1.enable_eager_execution() 
 
@@ -116,8 +117,8 @@ class LabelLeakage(object):
         for batch_size in self.batch_size_list:
             for num_classes in self.num_class_list:
                 if self.apply_mid:
-                    self.mid_model = MID_layer(num_classes, num_classes).to(self.device)
-                    self.mid_enlarge_model = MID_enlarge_layer(num_classes,num_classes*2).to(self.device)
+                    self.mid_model = MID_layer(num_classes*BOTTLENECK_SCALE, num_classes).to(self.device)
+                    self.mid_enlarge_model = MID_enlarge_layer(num_classes,num_classes*2*BOTTLENECK_SCALE).to(self.device)
                 classes = [None] * num_classes
                 gt_equal_probability = torch.from_numpy(np.array([1/num_classes]*num_classes)).to(self.device)
                 print("gt_equal_probability:", gt_equal_probability)
@@ -204,7 +205,7 @@ class LabelLeakage(object):
                     loss = criterion(pred, gt_onehot_label)
                     ######################## defense3: mutual information defense ############################
                     if self.apply_mid:
-                        epsilon = torch.empty(pred_a.size())
+                        epsilon = torch.empty((pred_a.size()[0],pred_a.size()[1]*BOTTLENECK_SCALE))
                         
                         # # discrete form of reparameterization
                         # torch.nn.init.uniform(epsilon) # epsilon is initialized
@@ -218,11 +219,13 @@ class LabelLeakage(object):
                         epsilon = epsilon.to(self.device)
                         # # pred_a.size() = (batch_size, class_num)
                         pred_a_double = self.mid_enlarge_model(pred_a)
-                        mu, std = pred_a_double[:,:num_classes], pred_a_double[:,num_classes:]
-                        std = F.softplus(std-0.5) # ? F.softplus(std-5)
+                        mu, std = pred_a_double[:,:num_classes*BOTTLENECK_SCALE], pred_a_double[:,num_classes*BOTTLENECK_SCALE:]
+                        std = F.softplus(std-5) # ? F.softplus(std-5)
                         # print("mu, std: ", mu.size(), std.size())
+                        # print(pred_a.size(), pred_a_double.size(), mu.size(), std.size(), epsilon.size())
                         pred_Z = mu+std*epsilon
-                        assert(pred_Z.size()==pred_a.size())
+                        # assert(pred_Z.size()==pred_a.size())
+                        # print(pred_Z.size())
                         pred_Z = pred_Z.to(self.device)
                         
                         pred_Z = self.mid_model(pred_Z)

@@ -33,9 +33,18 @@ class MID_layer(nn.Module):
 class MID_enlarge_layer(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(MID_enlarge_layer, self).__init__()
+        # self.layer1 = nn.Sequential(
+        #     nn.Flatten(),
+        #     nn.Linear(input_dim, output_dim, bias=True),
+        #     nn.ReLU(inplace=True)
+        # )
         self.layer1 = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(input_dim, output_dim, bias=True),
+            nn.Linear(input_dim, input_dim*10, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Linear(input_dim*10, input_dim*4, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Linear(input_dim*4, output_dim, bias=True),
             nn.ReLU(inplace=True)
         )
     

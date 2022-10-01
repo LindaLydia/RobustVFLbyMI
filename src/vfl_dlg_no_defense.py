@@ -129,8 +129,9 @@ if __name__ == '__main__':
 
 
     # args.exp_res_dir = f'exp_result/{args.dataset}/'
+    args.exp_res_dir = f'exp_result_2048_new/{args.dataset}/'
     # args.exp_res_dir = f'exp_result_2048/{args.dataset}/'
-    args.exp_res_dir = f'exp_result_binary/{args.dataset}/'
+    # args.exp_res_dir = f'exp_result_binary/{args.dataset}/'
     # all the route can be concatenated
     if args.apply_trainable_layer:
         args.exp_res_dir += '_top_model/'
