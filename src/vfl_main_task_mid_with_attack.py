@@ -19,7 +19,7 @@ from marvell_model import (
 )
 import marvell_shared_values as shared_var
 
-BOTTLENECK_SCALE = 1
+BOTTLENECK_SCALE = 25
 tf.compat.v1.enable_eager_execution() 
 
 
@@ -155,6 +155,193 @@ class VFLDefenceExperimentBase(object):
 
         pred_Z = self.mid_model(pred_Z)
         return pred_Z.clone(), mu, std
+
+    def calc_label_recovery_rate(self, dummy_label, gt_label):
+        success = torch.sum(torch.argmax(dummy_label, dim=-1) == torch.argmax(gt_label, dim=-1)).item()
+        total = dummy_label.shape[0]
+        return success / total
+
+    def inversion_attack(self,batch_data_a, batch_data_b, batch_label, net_a, net_b, encoder,criterion):
+        gt_equal_probability = torch.from_numpy(np.array([1/self.num_classes]*self.num_classes)).to(self.device)
+        if self.apply_encoder:
+            if self.encoder:
+                _, gt_one_hot_label = self.encoder(batch_label)
+            else:
+                assert(encoder != None)
+        else:
+            gt_one_hot_label = batch_label
+        
+        # compute logits of clients
+        pred_a = net_a(batch_data_a)
+        pred_b = net_b(batch_data_b)
+
+        epochs_dict = {"mnist": 10000,"cifar10": 200,"cifar100": 200,"nuswide": 20000}
+
+        pred = self.active_aggregate_model(pred_a, pred_b)
+        loss = criterion(pred, gt_one_hot_label)
+        ######################## defense: mi ############################
+        if self.apply_mi:
+            # loss = criterion(pred_b, gt_one_hot_label)
+            # loss = criterion(pred, gt_one_hot_label) - self.mi_loss_lambda * criterion(pred_a, gt_one_hot_label) + self.mi_loss_lambda * criterion(pred_a, pred_a) # - criterion(pred,pred)
+            # loss = criterion(pred, gt_one_hot_label) + self.mi_loss_lambda * criterion(pred_a, gt_equal_probability)
+            loss = criterion(pred, gt_one_hot_label) + self.mi_loss_lambda * criterion(pred_a, gt_equal_probability) - self.mi_loss_lambda * criterion(pred_a, pred_a)
+            # mu, std = norm.fit(pred.cpu().numpy())
+            # loss = criterion(pred, gt_onehot_label) + 
+        ######################## defense3: mid ############################
+        elif self.apply_mid:
+            # pred_Z = Somefunction(pred_a)
+            # print("pred_a.size(): ",pred_a.size())
+            epsilon = torch.empty((pred_a.size()[0],pred_a.size()[1]*BOTTLENECK_SCALE))
+
+            # # discrete form of reparameterization
+            # torch.nn.init.uniform(epsilon) # epsilon is initialized
+            # epsilon = - torch.log(epsilon + torch.tensor(1e-07))
+            # epsilon = - torch.log(epsilon + torch.tensor(1e-07)) # prevent if epsilon=0.0
+            # pred_Z = F.softmax(pred_a) + epsilon.to(self.device)
+            # pred_Z = F.softmax(pred_Z / torch.tensor(self.mid_tau).to(self.device), -1)
+
+            # continuous form of reparameterization
+            torch.nn.init.normal(epsilon, mean=0, std=1) # epsilon is initialized
+            epsilon = epsilon.to(self.device)
+            # # pred_a.size() = (batch_size, class_num)
+            pred_a_double = self.mid_enlarge_model(pred_a)
+            # mu, std = norm.fit(pred_a.cpu().detach().numpy())
+            mu, std = pred_a_double[:,:self.num_classes*BOTTLENECK_SCALE], pred_a_double[:,self.num_classes*BOTTLENECK_SCALE:]
+            std = F.softplus(std-0.5) # ? F.softplus(std-5)
+            # std = F.softplus(std-5) # ? F.softplus(std-5)
+            print("mu, std: ", mu.size(), std.size())
+            pred_Z = mu+std*epsilon
+            # assert(pred_Z.size()==pred_a.size())
+            pred_Z = pred_Z.to(self.device)
+
+            pred_Z = self.mid_model(pred_Z)
+            # pred = self.active_aggregate_model(pred_Z, F.softmax(pred_b))
+            pred = self.active_aggregate_model(pred_Z, pred_b)
+            # # loss for discrete form of reparameterization
+            # loss = criterion(pred, gt_one_hot_label) + self.mid_loss_lambda * entropy_for_probability_vector(pred_a)
+            # loss for continuous form of reparameterization
+            loss = criterion(pred, gt_one_hot_label) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
+            print("loss: ", loss)
+        ######################## defense4: distance correlation ############################
+        elif self.apply_distance_correlation:
+            loss = criterion(pred, gt_one_hot_label) + self.distance_correlation_lambda * torch.mean(torch.cdist(pred_a, gt_one_hot_label, p=2))
+        ######################## defense with loss change end ############################
+
+        ######################## defense2: dp ############################
+        pred_a_gradients = torch.autograd.grad(loss, pred_a, retain_graph=True)
+        pred_a_gradients_clone = pred_a_gradients[0].detach().clone()
+        # pred_b_gradients = torch.autograd.grad(loss, pred_b, retain_graph=True)
+        # pred_b_gradients_clone = pred_b_gradients[0].detach().clone()
+        if self.apply_laplace and self.dp_strength != 0.0 or self.apply_gaussian and self.dp_strength != 0.0:
+            location = 0.0
+            threshold = 0.2  # 1e9
+            if self.apply_laplace:
+                with torch.no_grad():
+                    scale = self.dp_strength
+                    # clip 2-norm per sample
+                    print("norm of gradients:", torch.norm(pred_a_gradients_clone, dim=1), torch.max(torch.norm(pred_a_gradients_clone, dim=1)))
+                    norm_factor_a = torch.div(torch.max(torch.norm(pred_a_gradients_clone, dim=1)),
+                                              threshold + 1e-6).clamp(min=1.0)
+                    # add laplace noise
+                    dist_a = torch.distributions.laplace.Laplace(location, scale)
+                    pred_a_gradients_clone = torch.div(pred_a_gradients_clone, norm_factor_a) + \
+                                             dist_a.sample(pred_a_gradients_clone.shape).to(self.device)
+                    print("norm of gradients after laplace:", torch.norm(pred_a_gradients_clone, dim=1), torch.max(torch.norm(pred_a_gradients_clone, dim=1)))
+            elif self.apply_gaussian:
+                with torch.no_grad():
+                    scale = self.dp_strength
+
+                    print("norm of gradients:", torch.norm(pred_a_gradients_clone, dim=1), torch.max(torch.norm(pred_a_gradients_clone, dim=1)))
+                    norm_factor_a = torch.div(torch.max(torch.norm(pred_a_gradients_clone, dim=1)),
+                                              threshold + 1e-6).clamp(min=1.0)
+                    pred_a_gradients_clone = torch.div(pred_a_gradients_clone, norm_factor_a) + \
+                                             torch.normal(location, scale, pred_a_gradients_clone.shape).to(self.device)
+                    print("norm of gradients after gaussian:", torch.norm(pred_a_gradients_clone, dim=1), torch.max(torch.norm(pred_a_gradients_clone, dim=1)))
+        ######################## defense3: gradient sparsification ############################
+        elif self.apply_grad_spar:
+            with torch.no_grad():
+                percent = self.grad_spars / 100.0
+                if self.gradients_res_a is not None and \
+                        pred_a_gradients_clone.shape[0] == self.gradients_res_a.shape[0]:
+                    pred_a_gradients_clone = pred_a_gradients_clone + self.gradients_res_a
+                a_thr = torch.quantile(torch.abs(pred_a_gradients_clone), percent)
+                self.gradients_res_a = torch.where(torch.abs(pred_a_gradients_clone).double() < a_thr.item(),
+                                                      pred_a_gradients_clone.double(), float(0.)).to(self.device)
+                pred_a_gradients_clone = pred_a_gradients_clone - self.gradients_res_a
+        ######################## defense4: marvell ############################
+        elif self.apply_marvell and self.marvell_s != 0 and self.num_classes == 2:
+            # for marvell, change label to [0,1]
+            marvell_y = []
+            for i in range(len(gt_one_hot_label)):
+                marvell_y.append(int(gt_one_hot_label[i][1]))
+            marvell_y = np.array(marvell_y)
+            shared_var.batch_y = np.asarray(marvell_y)
+            logdir = 'marvell_logs/main_task/{}_logs/{}'.format(self.dataset_name, time.strftime("%Y%m%d-%H%M%S"))
+            writer = tf.summary.create_file_writer(logdir)
+            shared_var.writer = writer
+            with torch.no_grad():
+                pred_a_gradients_clone = KL_gradient_perturb(pred_a_gradients_clone, self.marvell_s)
+                pred_a_gradients_clone = pred_a_gradients_clone.to(self.device)
+        # ######################## defense5: ppdl, GradientCompression, laplace_noise, DiscreteSGD ############################
+        # elif self.apply_ppdl:
+        #     dp_gc_ppdl(epsilon=1.8, sensitivity=1, layer_grad_list=[pred_a_gradients_clone], theta_u=self.ppdl_theta_u, gamma=0.001, tau=0.0001)
+        #     dp_gc_ppdl(epsilon=1.8, sensitivity=1, layer_grad_list=[pred_b_gradients_clone], theta_u=self.ppdl_theta_u, gamma=0.001, tau=0.0001)
+        # elif self.apply_gc:
+        #     tensor_pruner = TensorPruner(zip_percent=self.gc_preserved_percent)
+        #     tensor_pruner.update_thresh_hold(pred_a_gradients_clone)
+        #     pred_a_gradients_clone = tensor_pruner.prune_tensor(pred_a_gradients_clone)
+        #     tensor_pruner.update_thresh_hold(pred_b_gradients_clone)
+        #     pred_b_gradients_clone = tensor_pruner.prune_tensor(pred_b_gradients_clone)
+        # elif self.apply_lap_noise:
+        #     dp = DPLaplacianNoiseApplyer(beta=self.noise_scale)
+        #     pred_a_gradients_clone = dp.laplace_mech(pred_a_gradients_clone)
+        #     pred_b_gradients_clone = dp.laplace_mech(pred_b_gradients_clone)
+        elif self.apply_discrete_gradients:
+            # print(pred_a_gradients_clone)
+            pred_a_gradients_clone = multistep_gradient(pred_a_gradients_clone, bins_num=self.discrete_gradients_bins, bound_abs=self.discrete_gradients_bound)
+            # pred_b_gradients_clone = multistep_gradient(pred_b_gradients_clone, bins_num=self.discrete_gradients_bins, bound_abs=self.discrete_gradients_bound)
+        ######################## defense end ############################
+        original_dy_dx = torch.autograd.grad(pred_a, net_a.parameters(), grad_outputs=pred_a_gradients_clone)
+
+        dummy_pred_b = torch.randn(pred_b.size()).to(self.device).requires_grad_(True)
+        dummy_label = torch.randn(gt_one_hot_label.size()).to(self.device).requires_grad_(True)
+
+
+        if self.apply_trainable_layer:
+            dummy_active_aggregate_model = ActivePartyWithTrainableLayer(hidden_dim=self.num_classes * 2, output_dim=self.num_classes)
+            dummy_active_aggregate_model = dummy_active_aggregate_model.to(self.device)
+            optimizer = torch.optim.Adam([dummy_pred_b, dummy_label] + list(dummy_active_aggregate_model.parameters()), lr=self.lr)
+        else:
+            dummy_active_aggregate_model = ActivePartyWithoutTrainableLayer()
+            dummy_active_aggregate_model = dummy_active_aggregate_model.to(self.device)
+            optimizer = torch.optim.Adam([dummy_pred_b, dummy_label], lr=self.lr)
+
+        attack_epochs = epochs_dict[self.dataset_name]
+        for iters in range(1, attack_epochs + 1):
+            def closure():
+                optimizer.zero_grad()
+                dummy_pred = dummy_active_aggregate_model(net_a(batch_data_a), dummy_pred_b)
+
+                dummy_onehot_label = F.softmax(dummy_label, dim=-1)
+                dummy_loss = criterion(dummy_pred, dummy_onehot_label)
+                dummy_dy_dx_a = torch.autograd.grad(dummy_loss, net_a.parameters(), create_graph=True)
+                grad_diff = 0
+                for (gx, gy) in zip(dummy_dy_dx_a, original_dy_dx):
+                    grad_diff += ((gx - gy) ** 2).sum()
+                grad_diff.backward()
+                return grad_diff
+
+            rec_rate = self.calc_label_recovery_rate(dummy_label, batch_label)
+            # if iters == 1:
+            #     append_exp_res(f'exp_result/{self.dataset}/exp_on_{self.dataset}_rec_rate_change.txt',
+            #                    f'{batch_size} 0 {rec_rate} {closure()}')
+            optimizer.step(closure)
+            # if self.early_stop == True:
+            #     if closure().item() < self.early_stop_param:
+            #         break
+        rec_rate = self.calc_label_recovery_rate(dummy_label, batch_label)
+        return rec_rate
+
     
     def train_batch(self, batch_data_a, batch_data_b, batch_label, net_a, net_b, encoder, model_optimizer, criterion):
         gt_equal_probability = torch.from_numpy(np.array([1/self.num_classes]*self.num_classes)).to(self.device)
@@ -483,7 +670,22 @@ class VFLDefenceExperimentBase(object):
                         tqdm_train.set_postfix(postfix)
                         print('Epoch {}% \t train_loss:{:.2f} train_acc:{:.2f} test_acc:{:.2f}'.format(
                             i_epoch, loss, train_acc, test_acc))
-        return test_acc, test_acc_topk
+        rec_rate = 0.0
+        for i, (gt_data, gt_label) in enumerate(tqdm_train):
+            if rec_rate > 0.0:
+                break
+            net_a.eval()
+            net_b.eval()
+            if self.apply_mid:
+                self.mid_model.eval()
+                self.mid_enlarge_model.eval()
+            gt_data_a, gt_data_b = self.fetch_parties_data(gt_data)
+            gt_one_hot_label = self.label_to_one_hot(gt_label, self.num_classes)
+            gt_one_hot_label = gt_one_hot_label.to(self.device)
+            rec_rate = self.inversion_attack(gt_data_a, gt_data_b, gt_one_hot_label, net_a, net_b, self.encoder, criterion)
+            print("recovery rate =", rec_rate)
+        
+        return test_acc, test_acc_topk, rec_rate
 
 
 

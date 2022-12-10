@@ -189,12 +189,14 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
     rec_rate_list = []
     acc_list = []
     param_list = []
-    label_x = 'Main task AUC'
-    label_y = 'Label attack AUC'
+    # label_x = 'Main task AUC'
+    # label_y = 'Label attack AUC'
+    label_x = 'Main task accuracy'
+    label_y = 'Label recovery accuracy'
 
     for defense in defense_name_list:
-        # # if defense != 'MARVELL' and defense != 'CAE' and defense != 'MID' and defense != 'no defense':
-        if defense == 'DCAE':
+        # if defense != 'MARVELL' and defense != 'CAE' and defense != 'MID' and defense != 'no defense':
+        if defense == 'DCAE' or defense == 'CAE' or defense == 'DiscreteGradients':
             rec_rate_list.append([])
             acc_list.append([])
             param_list.append([])
@@ -212,6 +214,9 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
                     line_split = line.strip('\n').split(' ')
                     if len(line_split) == 1:
                         continue
+                    if line_split[2] != 'ACC':
+                    # if line_split[2] != 'AUC':
+                        continue
                     param = line_split[0]
                     rec_rate = line_split[1]
                     # rec_rate = line_split[-1]
@@ -223,6 +228,9 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
                 for line1 in f1.readlines():
                     line1_split = line1.strip('\n').split(' ')
                     if len(line1_split) == 1:
+                        continue
+                    if line1_split[2] != 'ACC':
+                    # if line1_split[2] != 'AUC':
                         continue
                     param = line1_split[0]
                     if defense != defense_name_list[-1]:
@@ -258,6 +266,7 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
     # marker_list = ['o', 'v', '^', 'x',|| 'h'(PPDL), 'D'(DG), '+'(CAE+DG), '*'(CAE), 's'(w/o defense), '1'(RCAE), '2', '3', '4'(MID)]
     # marker_list = ['o', 'v', '^', 'x', '*', '+', 's', '1', '2', '3', '4']
     marker_list = ['o', 'v', '^', 'D', '*', '+', 'x', '4', 's']
+    # marker_list = ['o', 'v', '^', 'D', '*', '+', 'x', '+', 's']
     # color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728'(CAE),|| '#9467bd'(Marvell), '#8c564b'(RCAE), '#e377c2'(PPDL), '#7f7f7f'(DG), '#bcbd22'(CAE+DG), '#17becf'(MID)] # the same as the default colors
     # color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#9467bd', '#d62728', '#bcbd22', '#8c564b', '#e377c2', '#7f7f7f', '#17becf'] # the same as the default colors
     color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#9467bd', '#17becf'] # the same as the default colors
@@ -267,14 +276,21 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
     for i in range(len(defense_list)):
         # print(param_list[i])
         if i == len(defense_list)-1:
-            ax.scatter(acc_list[i], rec_rate_list[i], label=defense_list[i], marker=marker_list[i], s=60, color='black')
+            ax.scatter(acc_list[i], rec_rate_list[i], label=defense_list[i], marker=marker_list[i], s=150, color='black')
         elif len(acc_list[i])>0:
             print(acc_list[i],rec_rate_list[i],defense_list[i])
-            ax.scatter(acc_list[i], rec_rate_list[i], label=defense_list[i], marker=marker_list[i], s=60, color=color_list[i])
+            ax.scatter(acc_list[i], rec_rate_list[i], label=defense_list[i], marker=marker_list[i], s=150, color=color_list[i])
             if mark:
                 for j, txt in enumerate(param_list[i]):
                     print(i,j,txt)
                     if dataset == 'cifar100': # and float(txt)>0.4
+                        # # ax.annotate(txt, (acc_list[i][j] + offset[j], rec_rate_list[i][j] + offset[j]), fontsize=9)
+                        # if j == len(param_list[i])-2 and (i==4 or i==5):
+                        #     ax.annotate(txt, (acc_list[i][j]-0.3, rec_rate_list[i][j]), fontsize=9)
+                        # else:
+                        #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
+                        ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
+                    elif dataset == 'cifar10': # and float(txt)>0.4
                         # # ax.annotate(txt, (acc_list[i][j] + offset[j], rec_rate_list[i][j] + offset[j]), fontsize=9)
                         # if j == len(param_list[i])-2 and (i==4 or i==5):
                         #     ax.annotate(txt, (acc_list[i][j]-0.3, rec_rate_list[i][j]), fontsize=9)
@@ -309,7 +325,7 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
                         #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
                         ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
         if len(acc_list[i]) > 1:
-            ax.plot(acc_list[i], rec_rate_list[i], '--', linewidth=2, color=color_list[i])
+            ax.plot(acc_list[i], rec_rate_list[i], '--', linewidth=3, color=color_list[i])
             # ax.plot(rec_rate_list[i], acc_list[i], '--',  mec='r', mfc='w', label=defense_list[i])
 
     ax.set_xlabel(label_x, fontsize=16)
@@ -318,7 +334,7 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
     # ax.set_ylabel(label_y, fontsize=16, fontdict={'family' : 'SimSun', 'weight':800})
     ax.tick_params(axis='x', labelsize=14)
     ax.tick_params(axis='y', labelsize=14)
-    ax.legend(fontsize=12)  
+    ax.legend(fontsize=14)  
     ax.set_xlim(x_limit)
     ax.set_ylim(y_limit)
     x_major_locator = mtick.MultipleLocator(x_major_locator)
@@ -338,6 +354,7 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
 
 
 dataset = 'nuswide'
+dataset = 'cifar10'
 # dataset = 'cifar100'
 # dataset = 'mnist'
 
@@ -366,17 +383,20 @@ if __name__ == '__main__':
 
     exp_dir = f'./exp_result_direction_scoring/{dataset}/'
     main_task_x_limit_dict = {
-        'cifar100':{'multi_no_top_model':[34,60],'multi_top_model':[-1,101],'binary_no_top_model':[85,95],'binary_top_model':[75,95]},
+        'cifar10':{'multi_no_top_model':[34,60],'multi_top_model':[-1,101],'binary_no_top_model':[85,95],'binary_top_model':[93.1,96.2]},
+        'cifar100':{'multi_no_top_model':[34,60],'multi_top_model':[-1,101],'binary_no_top_model':[85,95],'binary_top_model':[79,92]},
         'mnist':{'multi_no_top_model':[82,98],'multi_top_model':[63,98],'binary_no_top_model':[99.75,100],'binary_top_model':[99.8,100]},
         'nuswide':{'multi_no_top_model':[82,90],'multi_top_model':[63,98],'binary_no_top_model':[77,90],'binary_top_model':[77,90]}
     }
     attack_task_y_limit_dict = {
+        'cifar10':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[40,101],'binary_top_model':[45,101]},
         'cifar100':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[40,101],'binary_top_model':[45,101]},
         'mnist':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[39,101],'binary_top_model':[45,101]},
         'nuswide':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[30,70],'binary_top_model':[40,101]}
     }
     x_major_locator_dict = {
-        'cifar100':{'multi_no_top_model':2,'binary_no_top_model':2,'binary_top_model':5},
+        'cifar10':{'multi_no_top_model':2,'binary_no_top_model':2,'binary_top_model':0.6},
+        'cifar100':{'multi_no_top_model':2,'binary_no_top_model':2,'binary_top_model':2},
         'mnist':{'multi_no_top_model':3,'multi_top_model':5,'binary_no_top_model':0.05,'binary_top_model':0.05},
         'nuswide':{'multi_no_top_model':2,'binary_no_top_model':2,'binary_top_model':3}
     }

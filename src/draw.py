@@ -175,7 +175,7 @@ def draw_defense_on_main_and_dlg_task(dir, defense):
     draw_line_chart(title=title, note_list=name, x=x, y=y, x_scale=x_scale, y_scale=y_scale, label_x=label_x,
                     label_y=label_y, path=res_path)
 
-def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_major_locator, mark):
+def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_major_locator, y_major_locator, mark):
     # plt.style.use('ggplot')
     fig, ax = plt.subplots()
 
@@ -193,7 +193,8 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
     for defense in defense_name_list:
         # if defense != 'MARVELL' and defense != 'CAE' and defense != 'MID' and defense != 'no defense':
         # if defense != 'MARVELL' and defense != 'MID' and defense != 'no defense':
-        if defense == 'MARVELL' or defense == 'CAE' or defense == 'DCAE':
+        # if defense == 'MARVELL' or defense == 'CAE' or defense == 'DCAE':
+        if defense == 'MARVELL' or defense == 'DCAE':
             rec_rate_list.append([])
             acc_list.append([])
             param_list.append([])
@@ -264,14 +265,14 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
     for i in range(len(defense_list)):
         # print(param_list[i])
         if i == len(defense_list)-1:
-            ax.scatter(acc_list[i], rec_rate_list[i], label=defense_list[i], marker=marker_list[i], s=90, color='black')
+            ax.scatter(acc_list[i], rec_rate_list[i], label=defense_list[i], marker=marker_list[i], s=150, color='black')
         elif len(acc_list[i])>0:
             print(acc_list[i],rec_rate_list[i],defense_list[i])
-            ax.scatter(acc_list[i], rec_rate_list[i], label=defense_list[i], marker=marker_list[i], s=90, color=color_list[i])
+            ax.scatter(acc_list[i], rec_rate_list[i], label=defense_list[i], marker=marker_list[i], s=150, color=color_list[i])
             if mark:
                 for j, txt in enumerate(param_list[i]):
                     print(i,j,txt)
-                    if dataset == 'cifar100': # and float(txt)>0.4
+                    if dataset == 'cifar100' or dataset == 'cifar10' or dataset == 'cifar20': # and float(txt)>0.4
                         # # ax.annotate(txt, (acc_list[i][j] + offset[j], rec_rate_list[i][j] + offset[j]), fontsize=9)
                         # if j == len(param_list[i])-2 and (i==4 or i==5):
                         #     ax.annotate(txt, (acc_list[i][j]-0.3, rec_rate_list[i][j]), fontsize=9)
@@ -279,7 +280,7 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
                         #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
                         # if i != 6:
                         #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=14)
-                        ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=14)
+                        ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
                     elif dataset == 'mnist':
                         # # ax.annotate(txt, (acc_list[i][j] + offset[i], rec_rate_list[i][j] + offset[i]), fontsize=9)
                         # # if i == 0:
@@ -299,7 +300,7 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
                         # if i != 6:
                         #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
                         if i != 5:
-                            ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=14)
+                            ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
                         # ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=14)
                     elif dataset == 'nuswide':
                         # if i == 4 and j == 0:
@@ -310,9 +311,9 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
                         # #     ax.annotate(txt, (acc_list[i][j] , rec_rate_list[i][j] + offset[j]), fontsize=9)
                         # else:
                         #     ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
-                        ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=14)
+                        ax.annotate(txt, (acc_list[i][j], rec_rate_list[i][j]), fontsize=9)
         if len(acc_list[i]) > 1:
-            ax.plot(acc_list[i], rec_rate_list[i], '--', linewidth=3, color=color_list[i])
+            ax.plot(acc_list[i], rec_rate_list[i], '--', linewidth=4, color=color_list[i])
             # ax.plot(rec_rate_list[i], acc_list[i], '--',  mec='r', mfc='w', label=defense_list[i])
 
     ax.set_xlabel(label_x, fontsize=16)
@@ -321,11 +322,12 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
     # ax.set_ylabel(label_y, fontsize=16, fontdict={'family' : 'SimSun', 'weight':800})
     ax.tick_params(axis='x', labelsize=14)
     ax.tick_params(axis='y', labelsize=14)
-    ax.legend(fontsize=12)  
+    ax.legend(fontsize=14)  
     ax.set_xlim(x_limit)
     ax.set_ylim(y_limit)
+    # print(f"x_major_locator={x_major_locator},y_major_locator={y_major_locator}")
     x_major_locator = mtick.MultipleLocator(x_major_locator)
-    y_major_locator = mtick.MultipleLocator(20)
+    y_major_locator = mtick.MultipleLocator(y_major_locator)
     ax.xaxis.set_major_locator(x_major_locator)
     ax.yaxis.set_major_locator(y_major_locator)
     
@@ -341,12 +343,14 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
 
 
 dataset = 'nuswide'
-dataset = 'cifar100'
+dataset = 'cifar10'
+# dataset = 'cifar20'
+# dataset = 'cifar100'
 dataset = 'mnist'
 
 exp_type = 'multi_no_top_model'
 # exp_type = 'multi_top_model'
-# exp_type = 'binary_no_top_model'
+# exp_type = 'binary_no_top_model' # please also change the exp_dir and if condition
 # exp_type = 'binary_top_model'
 
 if __name__ == '__main__':
@@ -368,19 +372,32 @@ if __name__ == '__main__':
     # draw_defense_on_main_and_dlg_task('exp_result/cifar100', 'laplace')
 
     main_task_x_limit_dict = {
-        'cifar100':{'multi_no_top_model':[34,60],'multi_top_model':[-1,101],'binary_no_top_model':[89,95],'binary_top_model':[-1,101]},
-        'mnist':{'multi_no_top_model':[82,98],'multi_top_model':[63,98],'binary_no_top_model':[99.84,100],'binary_top_model':[99.8,100]},
+        'cifar10':{'multi_no_top_model':[68,82],'multi_top_model':[-1,101],'binary_no_top_model':[92,97],'binary_top_model':[-1,101]},
+        'cifar20':{'multi_no_top_model':[34,60],'multi_top_model':[-1,101],'binary_no_top_model':[89,93],'binary_top_model':[-1,101]},
+        'cifar100':{'multi_no_top_model':[34,49],'multi_top_model':[-1,101],'binary_no_top_model':[89,93],'binary_top_model':[-1,101]},
+        'mnist':{'multi_no_top_model':[84,98],'multi_top_model':[63,98],'binary_no_top_model':[99.84,100],'binary_top_model':[99.88,100]},
         'nuswide':{'multi_no_top_model':[82,90],'multi_top_model':[63,98],'binary_no_top_model':[77,85],'binary_top_model':[-1,101]}
     }
     attack_task_y_limit_dict = {
-        'cifar100':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[-1,101],'binary_top_model':[-1,101]},
-        'mnist':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[-1,101],'binary_top_model':[-1,101]},
-        'nuswide':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[-1,101],'binary_top_model':[-1,101]}
+        'cifar10':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[44,101],'binary_top_model':[-1,101]},
+        'cifar20':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[44,101],'binary_top_model':[-1,101]},
+        'cifar100':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[44,101],'binary_top_model':[-1,101]},
+        'mnist':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[44,101],'binary_top_model':[-1,101]},
+        'nuswide':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[44,101],'binary_top_model':[-1,101]}
     }
     x_major_locator_dict = {
-        'cifar100':{'multi_no_top_model':2,'binary_no_top_model':2,'binary_top_model':2},
+        'cifar10':{'multi_no_top_model':2,'binary_no_top_model':1,'binary_top_model':2},
+        'cifar20':{'multi_no_top_model':2,'binary_no_top_model':1,'binary_top_model':2},
+        'cifar100':{'multi_no_top_model':2,'binary_no_top_model':1,'binary_top_model':2},
         'mnist':{'multi_no_top_model':3,'multi_top_model':5,'binary_no_top_model':0.02,'binary_top_model':2},
         'nuswide':{'multi_no_top_model':2,'binary_no_top_model':2,'binary_top_model':2}
+    }
+    y_major_locator_dict = {
+        'cifar10':{'multi_no_top_model':20,'multi_top_model':20,'binary_no_top_model':10,'binary_top_model':10},
+        'cifar20':{'multi_no_top_model':20,'multi_top_model':20,'binary_no_top_model':10,'binary_top_model':10},
+        'cifar100':{'multi_no_top_model':20,'multi_top_model':20,'binary_no_top_model':10,'binary_top_model':10},
+        'mnist':{'multi_no_top_model':20,'multi_top_model':20,'binary_no_top_model':10,'binary_top_model':10},
+        'nuswide':{'multi_no_top_model':20,'multi_top_model':20,'binary_no_top_model':10,'binary_top_model':10}
     }
 
     exp_dir = f'./exp_result/{dataset}/'
@@ -393,5 +410,6 @@ if __name__ == '__main__':
     x_limit = main_task_x_limit_dict[dataset][exp_type]
     y_limit = attack_task_y_limit_dict[dataset][exp_type]
     x_major_locator = x_major_locator_dict[dataset][exp_type]
-    draw_defense_on_main_and_dlg_task_using_scatter(exp_dir, x_limit, y_limit, x_major_locator, True)
-    draw_defense_on_main_and_dlg_task_using_scatter(exp_dir, x_limit, y_limit, x_major_locator, False)
+    y_major_locator = y_major_locator_dict[dataset][exp_type]
+    draw_defense_on_main_and_dlg_task_using_scatter(exp_dir, x_limit, y_limit, x_major_locator, y_major_locator, True)
+    draw_defense_on_main_and_dlg_task_using_scatter(exp_dir, x_limit, y_limit, x_major_locator, y_major_locator, False)

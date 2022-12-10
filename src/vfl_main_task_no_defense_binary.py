@@ -119,8 +119,8 @@ if __name__ == '__main__':
 
     if args.dataset_name == "cifar100":
         half_dim = 16
-        num_classes = 100
-        # num_classes = 2
+        # num_classes = 100
+        num_classes = 2
         train_dst = datasets.CIFAR100("../../../share_dataset/", download=True, train=True, transform=transform)
         data, label = fetch_data_and_label(train_dst, num_classes)
         train_dst = SimpleDataset(data, label)
@@ -129,8 +129,8 @@ if __name__ == '__main__':
         test_dst = SimpleDataset(data, label)
     elif args.dataset_name == "cifar20":
         half_dim = 16
-        num_classes = 20
-        # num_classes = 2
+        # num_classes = 20
+        num_classes = 2
         train_dst = datasets.CIFAR100("../../../share_dataset/", download=True, train=True, transform=transform)
         data, label = fetch_data_and_label(train_dst, num_classes)
         train_dst = SimpleDataset(data, label)
@@ -139,8 +139,8 @@ if __name__ == '__main__':
         test_dst = SimpleDataset(data, label)
     elif args.dataset_name == "cifar10":
         half_dim = 16
-        num_classes = 10
-        # num_classes = 2
+        # num_classes = 10
+        num_classes = 2
         train_dst = datasets.CIFAR10("../../../share_dataset/", download=True, train=True, transform=transform)
         data, label = fetch_data_and_label(train_dst, num_classes)
         train_dst = SimpleDataset(data, label)
@@ -149,8 +149,8 @@ if __name__ == '__main__':
         test_dst = SimpleDataset(data, label)
     elif args.dataset_name == "mnist":
         half_dim = 14
-        num_classes = 10
-        # num_classes = 2
+        # num_classes = 10
+        num_classes = 2
         train_dst = datasets.MNIST("~/.torch", download=True, train=True, transform=transform_fn)
         data, label = fetch_data_and_label(train_dst, num_classes)
         train_dst = SimpleDataset(data, label)
@@ -159,11 +159,12 @@ if __name__ == '__main__':
         test_dst = SimpleDataset(data, label)
     elif args.dataset_name == 'nuswide':
         half_dim = [634, 1000]
-        num_classes = 5
-        # num_classes = 2
+        # num_classes = 5
+        num_classes = 2
         train_dst = NUSWIDEDataset('../../../share_dataset/NUS_WIDE', 'train')
         test_dst = NUSWIDEDataset('../../../share_dataset/NUS_WIDE', 'test')
     
+
     args.train_dataset = train_dst
     args.val_dataset = test_dst
     args.half_dim = half_dim
@@ -195,8 +196,8 @@ if __name__ == '__main__':
 
     # path = f'./exp_result/{args.dataset_name}/'
     # path = f'./exp_result_2048_new/{args.dataset_name}/'
-    path = f'./exp_result_2048/{args.dataset_name}/'
-    # path = f'./exp_result_binary/{args.dataset_name}/'
+    # path = f'./exp_result_2048/{args.dataset_name}/'
+    path = f'./exp_result_binary/{args.dataset_name}/'
     if args.apply_trainable_layer:
         path += '_top_model/'
     if args.apply_mid:
@@ -220,8 +221,8 @@ if __name__ == '__main__':
     path += 'main_task_acc.txt'
     print(f"path={path}")
     # num_exp = 10
-    # num_exp = 5
-    num_exp = 3
+    num_exp = 5
+    # num_exp = 3
     # num_exp = 1
 
     args.encoder = None
@@ -251,7 +252,6 @@ if __name__ == '__main__':
     elif args.apply_laplace or args.apply_gaussian:
         # dp_strength_list = [0.00005, 0.0001, 0.0005, 0.001, 0.01, 0.1]
         dp_strength_list = [0.0001, 0.001, 0.01, 0.1]
-        dp_strength_list = [0.000001,0.0000001,0.0000001]#0.00001
         for dp_strength in dp_strength_list:
             test_acc_list = []
             for i in range(num_exp):
@@ -272,10 +272,9 @@ if __name__ == '__main__':
                 test_acc_list.append(test_acc[0])
             append_exp_res(path, str(grad_spars) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
     elif args.apply_mid:
-        # mid_lambda_list = [0.0,1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
-        mid_lambda_list = [1,1e-1,1e-2,1e-3]
+        mid_lambda_list = [0.0,1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
         # mid_lambda_list = [1e-6,1e-3,1e-1,1]
-        # mid_lambda_list = [0]
+        # mid_lambda_list = [0.0]
         for mid_loss_lambda in mid_lambda_list:
             test_acc_list = []
             rec_acc_list = []

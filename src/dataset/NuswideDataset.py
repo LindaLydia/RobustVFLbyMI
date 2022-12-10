@@ -21,10 +21,10 @@ class NUSWIDEDataset():
         # {'sky':74190, 'clouds':54087, 'person':51577, 'water':35264, 'animal':33887, 'grass':22561, 'buildings':17835, 'window':15051, 'plants':14345, 'lake':13392}
 
         self.data_dir = data_dir
-        # self.selected_labels = ['buildings', 'grass', 'animal', 'water', 'person']
-        # self.class_num = 5
-        self.selected_labels = ['clouds','person']
-        self.class_num = 2
+        self.selected_labels = ['buildings', 'grass', 'animal', 'water', 'person']
+        self.class_num = 5
+        # self.selected_labels = ['clouds','person']
+        # self.class_num = 2
 
         if data_type == 'train':
             X_image, X_text, Y = get_labeled_data(self.data_dir, self.selected_labels, 60000, 'Train')

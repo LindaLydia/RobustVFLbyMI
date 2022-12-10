@@ -83,9 +83,14 @@
 #     python main_rvfr.py --name defense --dataset cifar20 --model resnet18 --seed $i --epoch 100 --backdoor 1 --rvfr 1 --rvfr_alpha 1.0 --quarantine_epochs 10 --rae_pretrain_epochs 100 --rae_tune_epochs 10 --gpu 0
 # done
 
+# for i in `seq 1 10`; do
+#     python main_missing_rvfr.py --name defense --dataset cifar20 --model resnet18 --seed $i --epoch 100 --backdoor 1 --rvfr 1 --rvfr_alpha 1.0 --quarantine_epochs 10 --rae_pretrain_epochs 100 --rae_tune_epochs 100 --missing_rate 4 --gpu 0
+#     python main_missing_rvfr.py --name defense --dataset cifar20 --model resnet18 --seed $i --epoch 100 --backdoor 1 --rvfr 1 --rvfr_alpha 1.0 --quarantine_epochs 10 --rae_pretrain_epochs 100 --rae_tune_epochs 50 --missing_rate 4 --gpu 0
+#     python main_missing_rvfr.py --name defense --dataset cifar20 --model resnet18 --seed $i --epoch 100 --backdoor 1 --rvfr 1 --rvfr_alpha 1.0 --quarantine_epochs 10 --rae_pretrain_epochs 100 --rae_tune_epochs 10 --missing_rate 4 --gpu 0
+#     python main_missing_rvfr.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --rvfr 1 --rvfr_alpha 1.0 --quarantine_epochs 10 --rae_pretrain_epochs 100 --rae_tune_epochs 10 --missing_rate 4 --gpu 0
+# done
+
 for i in `seq 1 10`; do
-    python main_missing_rvfr.py --name defense --dataset cifar20 --model resnet18 --seed $i --epoch 100 --backdoor 1 --rvfr 1 --rvfr_alpha 1.0 --quarantine_epochs 10 --rae_pretrain_epochs 100 --rae_tune_epochs 100 --missing_rate 4 --gpu 0
-    python main_missing_rvfr.py --name defense --dataset cifar20 --model resnet18 --seed $i --epoch 100 --backdoor 1 --rvfr 1 --rvfr_alpha 1.0 --quarantine_epochs 10 --rae_pretrain_epochs 100 --rae_tune_epochs 50 --missing_rate 4 --gpu 0
-    python main_missing_rvfr.py --name defense --dataset cifar20 --model resnet18 --seed $i --epoch 100 --backdoor 1 --rvfr 1 --rvfr_alpha 1.0 --quarantine_epochs 10 --rae_pretrain_epochs 100 --rae_tune_epochs 10 --missing_rate 4 --gpu 0
-    python main_missing_rvfr.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --rvfr 1 --rvfr_alpha 1.0 --quarantine_epochs 10 --rae_pretrain_epochs 100 --rae_tune_epochs 10 --missing_rate 4 --gpu 0
+    python main.py --name defense_test0.0 --dataset cifar20 --model resnet18 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.0 --gpu 1
+    # python main_missing.py --name defense_test0.0 --dataset cifar20 --model resnet18 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.0 --missing_rate 4 --gpu 0
 done

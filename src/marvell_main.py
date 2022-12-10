@@ -214,7 +214,7 @@ if __name__ == '__main__':
                 label_leakage.train()
         elif args.apply_laplace or args.apply_gaussian:
             # dp_strength_list = [0.00005, 0.0001, 0.0005, 0.001, 0.01, 0.1]
-            dp_strength_list = [0.0001, 0.001, 0.01, 0.1]
+            dp_strength_list = [0.0001, 0.001, 0.005, 0.01, 0.05, 0.1,0.5, 1.0]
             for dp_strength in dp_strength_list:
                 args.dp_strength = dp_strength
                 label_leakage = marvell_scoring_attack.ScoringAttack(args)
@@ -226,8 +226,8 @@ if __name__ == '__main__':
                 label_leakage = marvell_scoring_attack.ScoringAttack(args)
                 label_leakage.train()
         elif args.apply_mid:
-            mid_lambda_list = [1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
-            mid_lambda_list = [1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1,2,5,10,20,20,10,5,2,1,1e-1,1e-2,1e-3,1e-4,1e-5,1e-6,1e-7,1e-8,1e-9]
+            mid_lambda_list = [0.0,1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1,10,20]
+            # mid_lambda_list = [1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1,2,5,10,20,20,10,5,2,1,1e-1,1e-2,1e-3,1e-4,1e-5,1e-6,1e-7,1e-8,1e-9]
             for mid_loss_lambda in mid_lambda_list:
                 args.mid_loss_lambda = mid_loss_lambda
                 label_leakage = marvell_scoring_attack.ScoringAttack(args)
@@ -348,6 +348,7 @@ if __name__ == '__main__':
         temp += 'main_task_acc.txt'
         path = [path, temp]
         num_exp = 10
+        num_exp = 1
 
         args.encoder = None
         # Model(pred_Z) for mid
@@ -360,6 +361,7 @@ if __name__ == '__main__':
         if args.apply_encoder:
             for ae_name in ae_name_list:
                 test_auc_list = []
+                test_acc_list = []
                 for i in range(num_exp):
                     dim = args.num_classes
                     encoder = AutoEncoder(input_dim=dim, encode_dim=2 + dim * 6).to(args.device)
@@ -368,75 +370,130 @@ if __name__ == '__main__':
                     _lambda = ae_name.split('_')[2]
                     print(f'num_exp:{i + 1}, epochs:{args.epochs}, batchsize:{args.batch_size}, lambda:{_lambda}')
                     marvell_vfl = marvell_scoring_main_auc.VFLmodel_AUC(args)
-                    test_auc = marvell_vfl.train()
+                    test_auc, test_acc = marvell_vfl.train()
                     test_auc_list.append(test_auc)
-                append_exp_res(path[0], str(_lambda) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
-                append_exp_res(path[1], str(_lambda) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                    test_acc_list.append(test_acc)
+                append_exp_res(path[0], str(_lambda) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[1], str(_lambda) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[0], str(_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+                append_exp_res(path[1], str(_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
         elif args.apply_laplace or args.apply_gaussian:
             # dp_strength_list = [0.00005, 0.0001, 0.0005, 0.001, 0.01, 0.1]
-            dp_strength_list = [0.0001, 0.001, 0.01, 0.1]
+            dp_strength_list = [0.0001, 0.001, 0.005, 0.01, 0.05, 0.1,0.5, 1.0]
             for dp_strength in dp_strength_list:
                 test_auc_list = []
+                test_acc_list = []
                 for i in range(num_exp):
                     args.dp_strength = dp_strength
                     marvell_vfl = marvell_scoring_main_auc.VFLmodel_AUC(args)
-                    test_auc = marvell_vfl.train()
+                    # test_auc = marvell_vfl.train()
+                    # test_auc_list.append(test_auc)
+                    test_auc, test_acc = marvell_vfl.train()
                     test_auc_list.append(test_auc)
-                append_exp_res(path[0], str(dp_strength) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
-                append_exp_res(path[1], str(dp_strength) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                    test_acc_list.append(test_acc)
+                append_exp_res(path[0], str(dp_strength) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[1], str(dp_strength) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[0], str(dp_strength) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+                append_exp_res(path[1], str(dp_strength) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
         elif args.apply_grad_spar:
-            gradient_sparsification_list = [90, 95, 96, 97, 98, 99]
-            for grad_spars in gradient_sparsification_list:
-                test_auc_list = []
-                for i in range(num_exp):
-                    args.grad_spars = grad_spars
-                    marvell_vfl = marvell_scoring_main_auc.VFLmodel_AUC(args)
-                    test_auc = marvell_vfl.train()
-                    test_auc_list.append(test_auc)
-                append_exp_res(path[0], str(grad_spars) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
-                append_exp_res(path[1], str(grad_spars) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+            # gradient_sparsification_list = [90, 95, 96, 97, 98, 99]
+            # for grad_spars in gradient_sparsification_list:
+            #     test_auc_list = []
+            #     test_acc_list = []
+            #     for i in range(num_exp):
+            #         args.grad_spars = grad_spars
+            #         marvell_vfl = marvell_scoring_main_auc.VFLmodel_AUC(args)
+            #         # test_auc = marvell_vfl.train()
+            #         # test_auc_list.append(test_auc)
+            #         test_auc, test_acc = marvell_vfl.train()
+            #         test_auc_list.append(test_auc)
+            #         test_acc_list.append(test_acc)
+            #     append_exp_res(path[0], str(grad_spars) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+            #     append_exp_res(path[1], str(grad_spars) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+            #     append_exp_res(path[0], str(grad_spars) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+            #     append_exp_res(path[1], str(grad_spars) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+            test_auc_list = []
+            test_acc_list = []
+            grad_spars = args.grad_spars
+            for i in range(num_exp):
+                # args.grad_spars = grad_spars
+                # grad_spars = args.grad_spars
+                marvell_vfl = marvell_scoring_main_auc.VFLmodel_AUC(args)
+                # test_auc = marvell_vfl.train()
+                # test_auc_list.append(test_auc)
+                test_auc, test_acc = marvell_vfl.train()
+                test_auc_list.append(test_auc)
+                test_acc_list.append(test_acc)
+            append_exp_res(path[0], str(grad_spars) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+            append_exp_res(path[1], str(grad_spars) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+            append_exp_res(path[0], str(grad_spars) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+            append_exp_res(path[1], str(grad_spars) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
         elif args.apply_mid:
             # mid_lambda_list = [1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
             # mid_lambda_list = [1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
-            mid_lambda_list = [1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1,2,5,10,20]
+            mid_lambda_list = [0.0,1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1,10]
             # mid_lambda_list = [1e-1,1,2,5,10,20]
             for mid_loss_lambda in mid_lambda_list:
                 print("mid_loss_lambda", mid_loss_lambda)
                 test_auc_list = []
+                test_acc_list = []
                 for i in range(num_exp):
                     args.mid_loss_lambda = mid_loss_lambda
                     marvell_vfl = marvell_scoring_main_auc.VFLmodel_AUC(args)
-                    test_auc = marvell_vfl.train()
+                    # test_auc = marvell_vfl.train()
+                    # test_auc_list.append(test_auc)
+                    test_auc, test_acc = marvell_vfl.train()
                     test_auc_list.append(test_auc)
-                append_exp_res(path[0], str(args.mid_loss_lambda) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
-                append_exp_res(path[1], str(args.mid_loss_lambda) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                    test_acc_list.append(test_acc)
+                append_exp_res(path[0], str(args.mid_loss_lambda) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[1], str(args.mid_loss_lambda) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[0], str(args.mid_loss_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+                append_exp_res(path[1], str(args.mid_loss_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
         elif args.apply_marvell:
             marvell_s_list = [10,5,2,1,0.1]
             for marvell_s in marvell_s_list:
                 test_auc_list = []
+                test_acc_list = []
                 for i in range(num_exp):
                     args.marvell_s = marvell_s
                     marvell_vfl = marvell_scoring_main_auc.VFLmodel_AUC(args)
-                    test_auc = marvell_vfl.train()
+                    # test_auc = marvell_vfl.train()
+                    # test_auc_list.append(test_auc)
+                    test_auc, test_acc = marvell_vfl.train()
                     test_auc_list.append(test_auc)
-                append_exp_res(path[0], str(args.marvell_s) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
-                append_exp_res(path[1], str(args.marvell_s) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                    test_acc_list.append(test_acc)
+                append_exp_res(path[0], str(args.marvell_s) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[1], str(args.marvell_s) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[0], str(args.marvell_s) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+                append_exp_res(path[1], str(args.marvell_s) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
         else:
             test_auc_list = []
+            test_acc_list = []
             for _ in range(num_exp):
                 marvell_vfl = marvell_scoring_main_auc.VFLmodel_AUC(args)
-                test_auc = marvell_vfl.train()
+                # test_auc = marvell_vfl.train()
+                # test_auc_list.append(test_auc)
+                test_auc, test_acc = marvell_vfl.train()
                 test_auc_list.append(test_auc)
+                test_acc_list.append(test_acc)
             if args.apply_mi:
-                append_exp_res(path[0], str(args.mi_loss_lambda) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
-                append_exp_res(path[1], str(args.mi_loss_lambda) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[0], str(args.mi_loss_lambda) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[1], str(args.mi_loss_lambda) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[0], str(args.mi_loss_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+                append_exp_res(path[1], str(args.mi_loss_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
             elif args.apply_distance_correlation:
-                append_exp_res(path[0], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
-                append_exp_res(path[1], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[0], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[1], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[0], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+                append_exp_res(path[1], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
             elif args.apply_discrete_gradients:
-                append_exp_res(path[0], str(args.discrete_gradients_bins) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
-                append_exp_res(path[1], str(args.discrete_gradients_bins) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[0], str(args.discrete_gradients_bins) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[1], str(args.discrete_gradients_bins) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[0], str(args.discrete_gradients_bins) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+                append_exp_res(path[1], str(args.discrete_gradients_bins) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
             else:
-                append_exp_res(path[0], "bs|num_class|recovery_rate," + str(args.batch_size) + '|' + str(num_classes) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
-                append_exp_res(path[1], "bs|num_class|recovery_rate," + str(args.batch_size) + '|' + str(num_classes) + ' ' + str(np.mean(test_auc_list))+ ' ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[0], "bs|num_class|recovery_rate," + str(args.batch_size) + '|' + str(num_classes) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[1], "bs|num_class|recovery_rate," + str(args.batch_size) + '|' + str(num_classes) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[0], "bs|num_class|recovery_rate," + str(args.batch_size) + '|' + str(num_classes) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+                append_exp_res(path[1], "bs|num_class|recovery_rate," + str(args.batch_size) + '|' + str(num_classes) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
                 

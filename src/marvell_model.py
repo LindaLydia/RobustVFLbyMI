@@ -605,6 +605,8 @@ def cosine_similarity(A, B):
               adjoint_b=True) # transpose second matrix)
     # average_abs_cosine = tf.reduce_mean(tf.math.abs(cosine_matrix), axis=1)
     # average_abs_cosine = tf.reduce_mean(cosine_matrix, axis=1)
+    # print("cosine_matrix", cosine_matrix, type(cosine_matrix), cosine_matrix.shape)
+    # assert 0==1
     return cosine_matrix
 
 def projection_similarity(A, B):
@@ -629,6 +631,19 @@ def update_auc(y, predicted_value, m_auc):
     # if auc:
     #     m_auc.update_state(auc)
     return auc
+
+def update_acc(y, predicted_value):
+    # print("update_acc", y[0:10], predicted_value[0:10], y[0].shape, predicted_value[0].shape)
+    _y = y.numpy()
+    _predicted_value = predicted_value.numpy()
+    # print(f"[have nan, have inf] = [{torch.isnan(torch_predict_value).any()},{torch.isinf(torch_predict_value).any()}]")
+    acc = (np.argmax(_predicted_value,axis=-1)==_y).sum()/len(_y)
+    # print(acc)
+    # assert 0==1
+    # print("computed result", auc)
+    # if auc:
+    #     m_auc.update_state(auc)
+    return acc
 
 
 def compute_auc(y, predicted_value):
@@ -667,11 +682,13 @@ def update_all_norm_leak_auc(norm_leak_auc_dict, grad_list, y):
             auc = update_auc(y=y,
                 predicted_value=grad,
                 m_auc=norm_leak_auc_dict[key])
+            acc = update_acc(y=y,predicted_value=grad)
 
         else:
             auc = update_auc(y=y,
                        predicted_value=tf.norm(grad, axis=-1, keepdims=False),
                        m_auc=norm_leak_auc_dict[key])
+            acc = update_acc(y=y,predicted_value=grad)
         # not only update the epoch average above
         # also log this current batch value on the tensorboard
         # if auc:
@@ -679,7 +696,7 @@ def update_all_norm_leak_auc(norm_leak_auc_dict, grad_list, y):
         #         tf.summary.scalar(name=key+'_batch',
         #                           data=auc,
         #                           step=shared_var.counter)
-        return auc
+        return auc, acc
 
 def update_all_ip_leak_auc(ip_leak_auc_dict, grad_list, pos_grad_list, y):
     for (key, grad, pos_grad) in zip(ip_leak_auc_dict.keys(), grad_list, pos_grad_list):
@@ -713,6 +730,10 @@ def update_all_cosine_leak_auc(cosine_leak_auc_dict, grad_list, pos_grad_list, y
                     y=y,
                     predicted_value=cosine_similarity(grad, pos_grad),
                     m_auc=cosine_leak_auc_dict[key])
+        predicted_value = cosine_similarity(grad, pos_grad).numpy()
+        predicted_label = np.where(predicted_value>0,1,0).reshape(-1)
+        _y = y.numpy()
+        acc = ((predicted_label==_y).sum()/len(_y))
         # not only update the epoch average above
         # also log this current batch value on the tensorboard
         # if auc:
@@ -720,7 +741,7 @@ def update_all_cosine_leak_auc(cosine_leak_auc_dict, grad_list, pos_grad_list, y
         #         tf.summary.scalar(name=key+'_batch',
         #                           data=auc,
         #                           step=shared_var.counter)
-        return auc
+        return auc, acc
         
 
 def update_all_hint_norm_attack_leak_auc(hint_attack_auc_dict, grad_list, y, num_hints=1):

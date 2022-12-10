@@ -93,6 +93,9 @@ if __name__ == '__main__':
 
     if args.dataset == 'cifar100':
         args.dst = datasets.CIFAR100("../../../share_dataset/", download=True)
+        args.num_class_list = [100] #[5, 10, 15, 20, 40, 60, 80, 100]
+    elif args.dataset == 'cifar20':
+        args.dst = datasets.CIFAR100("../../../share_dataset/", download=True)
         args.num_class_list = [20] #[5, 10, 15, 20, 40, 60, 80, 100]
     elif args.dataset == 'cifar10':
         args.dst = datasets.CIFAR10("../../../share_dataset/", download=True)
@@ -129,8 +132,8 @@ if __name__ == '__main__':
 
 
     # args.exp_res_dir = f'exp_result/{args.dataset}/'
-    args.exp_res_dir = f'exp_result_2048_new/{args.dataset}/'
     # args.exp_res_dir = f'exp_result_2048/{args.dataset}/'
+    args.exp_res_dir = f'exp_result_2048/{args.dataset}/'
     # args.exp_res_dir = f'exp_result_binary/{args.dataset}/'
     # all the route can be concatenated
     if args.apply_trainable_layer:
@@ -170,6 +173,7 @@ if __name__ == '__main__':
     elif args.apply_laplace or args.apply_gaussian:
         # dp_strength_list = [0.00005, 0.0001, 0.0005, 0.001, 0.01, 0.1]
         dp_strength_list = [0.0001, 0.001, 0.01, 0.1]
+        dp_strength_list = [0.000001,0.0000001,0.0000001]#0.00001
         for dp_strength in dp_strength_list:
             args.dp_strength = dp_strength
             label_leakage = vfl_dlg_mid.LabelLeakage(args)
@@ -181,7 +185,8 @@ if __name__ == '__main__':
             label_leakage = vfl_dlg_mid.LabelLeakage(args)
             label_leakage.train()
     elif args.apply_mid:
-        mid_lambda_list = [1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
+        mid_lambda_list = [0,1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
+        # mid_lambda_list = [0]
         for mid_loss_lambda in mid_lambda_list:
             args.mid_loss_lambda = mid_loss_lambda
             label_leakage = vfl_dlg_mid.LabelLeakage(args)

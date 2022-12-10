@@ -18,7 +18,7 @@ def unpickle(file):
 
 class Cifar100DatasetVFL():
 
-    def __init__(self, data_dir, data_type, height, width, poison_number, target_number=10, target_label=0):
+    def __init__(self, data_dir, data_type, height, width, poison_number, target_number=10, target_label=0, backdoor_scale=1.0):
         self.data_dir = data_dir
         self.target_label = target_label
         if data_type == 'train':

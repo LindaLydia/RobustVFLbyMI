@@ -23,14 +23,14 @@
 # python vfl_main_task_no_defense.py --apply_encoder True --epochs 300 --apply_trainable_layer True --batch_size 1
 # python vfl_dlg_no_defense.py --apply_encoder True --apply_trainable_layer True --gpu 1
 
-python vfl_main_task_no_defense_binary.py --dataset_name cifar10 --epochs 160 --gpu 0
-python vfl_dlg_no_defense.py --dataset cifar10 --gpu 0
-python vfl_main_task_no_defense_binary.py --dataset_name cifar10 --apply_mid True --epochs 160 --gpu 0
-python vfl_dlg_no_defense.py --dataset cifar10 --apply_mid True --gpu 0
-python vfl_main_task_no_defense_binary.py --dataset_name cifar10 --apply_gaussian True --epochs 160 --gpu 0
-python vfl_dlg_no_defense.py --dataset cifar10 --apply_gaussian True --gpu 0
-python vfl_main_task_no_defense_binary.py --dataset_name cifar10 --apply_laplace True --epochs 160 --gpu 0
-python vfl_dlg_no_defense.py --dataset cifar10 --apply_laplace True --gpu 0
+# python vfl_main_task_no_defense_binary.py --dataset_name cifar10 --epochs 160 --gpu 0
+# python vfl_dlg_no_defense.py --dataset cifar10 --gpu 0
+# python vfl_main_task_no_defense_binary.py --dataset_name cifar10 --apply_mid True --epochs 160 --gpu 0
+# python vfl_dlg_no_defense.py --dataset cifar10 --apply_mid True --gpu 0
+# python vfl_main_task_no_defense_binary.py --dataset_name cifar10 --apply_gaussian True --epochs 160 --gpu 0
+# python vfl_dlg_no_defense.py --dataset cifar10 --apply_gaussian True --gpu 0
+# python vfl_main_task_no_defense_binary.py --dataset_name cifar10 --apply_laplace True --epochs 160 --gpu 0
+# python vfl_dlg_no_defense.py --dataset cifar10 --apply_laplace True --gpu 0
 python vfl_main_task_no_defense_binary.py --dataset_name cifar10 --apply_grad_spar True --epochs 160 --gpu 0
 python vfl_dlg_no_defense.py --dataset cifar10 --apply_grad_spar True --gpu 0
 

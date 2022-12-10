@@ -371,8 +371,10 @@ class VFLmodel_AUC(object):
         predict_prob = F.softmax(pred, dim=-1)
         # print(torch.argmax(gt_one_hot_label,dim=-1), torch.argmax(gt_one_hot_label,dim=-1).size())
         # print(torch.argmax(predict_prob,dim=-1).size())
+        suc_cnt = torch.sum(torch.argmax(predict_prob, dim=-1) == torch.argmax(gt_one_hot_label, dim=-1)).item()
+        train_acc = suc_cnt / predict_prob.shape[0]
         auc = roc_auc_score(y_true=torch.argmax(gt_one_hot_label, dim=-1).cpu().numpy(), y_score=torch.argmax(predict_prob, dim=-1).cpu().numpy())
-        return loss.item(), auc
+        return loss.item(), (auc,train_acc)
 
     def train(self):
 
@@ -428,7 +430,7 @@ class VFLmodel_AUC(object):
                 gt_one_hot_label = gt_one_hot_label.to(self.device)
                 # print('before batch, gt_one_hot_label:', gt_one_hot_label)
                 # ====== train batch ======
-                loss, train_auc = self.train_batch(gt_data_a, gt_data_b, gt_one_hot_label,
+                loss, (train_auc,train_acc) = self.train_batch(gt_data_a, gt_data_b, gt_one_hot_label,
                                               net_a, net_b, self.encoder, model_optimizer, criterion)
                 
                 # wandb.log({"loss":loss, "train_auc":train_auc*100})
@@ -511,16 +513,19 @@ class VFLmodel_AUC(object):
 
                             # enc_predict_label = torch.argmax(enc_predict_prob, dim=-1)
                             actual_label = torch.argmax(gt_val_one_hot_label, dim=-1)
-                            # sample_cnt += predict_label.shape[0]
-                            # suc_cnt += torch.sum(predict_label == actual_label).item()
+                            sample_cnt += predict_label.shape[0]
+                            suc_cnt += torch.sum(predict_label == actual_label).item()
                             actual_labels = np.append(actual_labels,actual_label.cpu().numpy())
                             predict_labels = np.append(predict_labels, predict_label.cpu().numpy())
                         test_auc = roc_auc_score(y_true=actual_labels, y_score=predict_labels)
+                        test_acc = suc_cnt / float(sample_cnt)
                         # wandb.log({"test_auc": test_auc * 100})
                         postfix['train_loss'] = loss
                         postfix['train_auc'] = '{:.2f}%'.format(train_auc * 100)
                         postfix['test_auc'] = '{:.2f}%'.format(test_auc * 100)
+                        postfix['train_acc'] = '{:.2f}%'.format(train_acc * 100)
+                        postfix['test_acc'] = '{:.2f}%'.format(test_acc * 100)
                         tqdm_train.set_postfix(postfix)
-                        print('Epoch {}% \t train_loss:{:.2f} train_auc:{:.2f} test_auc:{:.2f}'.format(
-                            i_epoch, loss, train_auc, test_auc))
-        return test_auc
+                        print('Epoch {}% \t train_loss:{:.2f} train_auc:{:.2f} test_auc:{:.2f} train_acc:{:.2f} test_acc:{:.2f}'.format(
+                            i_epoch, loss, train_auc, test_auc, train_acc, test_acc))
+        return test_auc, test_acc

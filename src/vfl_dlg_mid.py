@@ -18,7 +18,8 @@ from marvell_model import (
 )
 import marvell_shared_values as shared_var
 
-BOTTLENECK_SCALE = 25
+# BOTTLENECK_SCALE = 25
+BOTTLENECK_SCALE = 1
 
 tf.compat.v1.enable_eager_execution() 
 
@@ -122,13 +123,16 @@ class LabelLeakage(object):
                 classes = [None] * num_classes
                 gt_equal_probability = torch.from_numpy(np.array([1/num_classes]*num_classes)).to(self.device)
                 print("gt_equal_probability:", gt_equal_probability)
-                if self.dataset == 'cifar100':
+                if self.dataset == 'cifar20':
+                    classes = random.sample(list(range(20)), num_classes)
+                    all_data, all_label = get_class_i(self.dst, classes)
+                elif self.dataset == 'cifar100':
                     # if apply the defense, we only use cifar20
                     # if self.apply_laplace or self.apply_gaussian or self.apply_grad_spar:
                     #     classes = [i for i in range(num_classes)]
                     # else:
-                    #     classes = random.sample(list(range(100)), num_classes)
-                    classes = random.sample(list(range(20)), num_classes)
+                        # classes = random.sample(list(range(20)), num_classes)
+                    classes = random.sample(list(range(100)), num_classes)
                     all_data, all_label = get_class_i(self.dst, classes)
                 elif self.dataset == 'mnist':
                     classes = random.sample(list(range(10)), num_classes)
@@ -144,7 +148,7 @@ class LabelLeakage(object):
                 for i_run in range(1, self.num_exp + 1):
                     start_time = time.time()
                     # randomly sample
-                    if self.dataset == 'mnist' or self.dataset == 'cifar100' or self.dataset == 'cifar10':
+                    if self.dataset == 'mnist' or self.dataset == 'cifar100' or self.dataset == 'cifar20' or self.dataset == 'cifar10':
                         gt_data = []
                         gt_label = []
                         for i in range(0, batch_size):

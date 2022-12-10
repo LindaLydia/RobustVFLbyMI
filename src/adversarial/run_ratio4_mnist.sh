@@ -1,4 +1,4 @@
-# for i in `seq 1 10`; do 
+for i in `seq 1 10`; do 
 #     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --gpu 0 --missing_rate 4
 #     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --dp_type laplace --dp_strength 1 --missing_rate 4 --gpu 0
 #     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --dp_type laplace --dp_strength 0.1 --missing_rate 4 --gpu 0
@@ -12,6 +12,9 @@
 #     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --gradient_sparsification 99.0 --missing_rate 4 --gpu 0
 #     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --gradient_sparsification 99.5 --missing_rate 4 --gpu 0
 #     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --gradient_sparsification 99.9 --missing_rate 4 --gpu 0
+    python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --gradient_sparsification 99.99 --missing_rate 4 --gpu 0
+    python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --gradient_sparsification 99.999 --missing_rate 4 --gpu 0
+    python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --gradient_sparsification 99.9999 --missing_rate 4 --gpu 0
 #     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --apply_discrete_gradients 1 --discrete_gradients_bins 6 --missing_rate 4 --gpu 0
 #     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --apply_discrete_gradients 1 --discrete_gradients_bins 12 --missing_rate 4 --gpu 0
 #     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --apply_discrete_gradients 1 --discrete_gradients_bins 18 --missing_rate 4 --gpu 0
@@ -27,7 +30,7 @@
 #     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.01 --missing_rate 4 --gpu 0
 #     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.1 --missing_rate 4 --gpu 0
 #     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 1 --missing_rate 4 --gpu 0
-# done
+done
 
 # for i in `seq 1 10`; do 
 #     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --gpu 0 --missing_rate 2
@@ -43,6 +46,9 @@
 #     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --gradient_sparsification 99.0 --missing_rate 2 --gpu 0
 #     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --gradient_sparsification 99.5 --missing_rate 2 --gpu 0
 #     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --gradient_sparsification 99.9 --missing_rate 2 --gpu 0
+#     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --gradient_sparsification 99.99 --missing_rate 2 --gpu 0
+#     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --gradient_sparsification 99.999 --missing_rate 2 --gpu 0
+#     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --gradient_sparsification 99.9999 --missing_rate 2 --gpu 0
 #     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --apply_discrete_gradients 1 --discrete_gradients_bins 6 --missing_rate 2 --gpu 0
 #     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --apply_discrete_gradients 1 --discrete_gradients_bins 12 --missing_rate 2 --gpu 0
 #     python main_missing.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --apply_discrete_gradients 1 --discrete_gradients_bins 18 --missing_rate 2 --gpu 0
@@ -72,6 +78,7 @@
     # python main_missing.py --name defense --dataset nuswide --model mlp2 --seed $i --epoch 100 --backdoor 1 --gpu 0 --missing_rate 8
     # python main_missing.py --name defense --dataset nuswide --model mlp2 --seed $i --epoch 100 --backdoor 1 --gpu 0 --missing_rate 32
     # python main_missing.py --name defense --dataset nuswide --model mlp2 --seed $i --epoch 100 --backdoor 1 --gpu 0 --missing_rate 64
-for i in `seq 1 5`; do 
-    python main_missing.py --name defense --dataset nuswide --model mlp2 --seed $i --epoch 100 --backdoor 0 --gpu 0
-done
+# done
+# for i in `seq 1 5`; do 
+#     python main_missing.py --name defense --dataset nuswide --model mlp2 --seed $i --epoch 100 --backdoor 0 --gpu 0
+# done

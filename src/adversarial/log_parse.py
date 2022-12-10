@@ -444,7 +444,7 @@ def save_defense_data(target_dataset, target_model, exp_dir):
             mid_lambda = temps[16]
             if mid_lambda == '1e':
                 mid_lambda = float(temps[16]+'-'+temps[17])
-                deiscrete_bins = int(temps[19])
+                discrete_bins = int(temps[19])
             else:
                 mid_lambda = float(temps[16])
                 discrete_bins = int(temps[18])
@@ -467,7 +467,7 @@ def save_defense_data(target_dataset, target_model, exp_dir):
                     defense_model = 'autoencoder+dsgd'
             if defense_model=='none' and discrete_bins in [6,12,18] and str(temps[17])=='True':
                 defense_model = 'dsgd'
-            if autoencoder_coef == 0.0 and mid_lambda != 0.0:
+            if int(temps[15]) or autoencoder_coef == 0.0 and mid_lambda != 0.0:
                 defense_model = 'mid'
             # else:
             #     autoencoder_coef = 0
@@ -874,6 +874,7 @@ if __name__ == '__main__':
     # exp_dir = './experiment_rvfr_10_defense'
     # exp_dir = './experiment_rvfr_50_defense'
     # exp_dir = './experiment_rvfr_100_defense'
+    # exp_dir = './experiment_defense_test0.0'
     # exp_dir = './experiment_test'
     # exp_dir = './experiment_plot_model_right_50_defense'
     # exp_dir = './experiment_plot_nuswide_50_defense'
@@ -894,7 +895,7 @@ if __name__ == '__main__':
     # for dataset, model in zip(['mnist'], ['mlp2']):
     #     CoAE_distribution(dataset, model, exp_dir)
 
-    for dataset, model in zip(['mnist', 'nuswide', 'cifar20'], ['mlp2', 'mlp2', 'resnet18']):
+    for dataset, model in zip(['mnist', 'nuswide', 'cifar10', 'cifar20', 'cifar100'], ['mlp2', 'mlp2', 'resnet18', 'resnet18', 'resnet18']):
     # for dataset, model in zip(['mnist', 'cifar20'], ['mlp2', 'resnet18']):
         save_defense_data(dataset, model, exp_dir)
 

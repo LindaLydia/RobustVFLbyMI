@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import json
 
 from pyparsing import line
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 
 EPOCH_NUM = 50
 EPOCH_NUM = 100
@@ -274,9 +276,9 @@ def plot_per_dataset_and_model(target_dataset, target_model, exp_dir, target_dir
         ref = res_to_plot[item]
         if len(ref['mean']) > 0:
             label = 'amplify_rate_{}'.format(int(ref['amplify_rate'])) if ref['backdoor'] == 1 else 'normal training'
-            axs[0,0].plot(ref['x'], ref['mean'][2], label=label, linewidth=2)
-    axs[0,0].set_xlabel('Number of epochs', fontsize=12)
-    axs[0,0].set_ylabel('Main task test accuracy', fontsize=12)
+            axs[0,0].plot(ref['x'], ref['mean'][2], label=label, linewidth=4)
+    axs[0,0].set_xlabel('Number of epochs', fontsize=14)
+    axs[0,0].set_ylabel('Main task test accuracy', fontsize=14)
     axs[0,0].legend()
 
     # plot main task test loss
@@ -284,9 +286,9 @@ def plot_per_dataset_and_model(target_dataset, target_model, exp_dir, target_dir
         ref = res_to_plot[item]
         if len(ref['mean']) > 0:
             label = 'amplify_rate_{}'.format(int(ref['amplify_rate'])) if ref['backdoor'] == 1 else 'normal training'
-            axs[1,0].plot(ref['x'], np.log10(np.array(ref['mean'][3])+1), label=label, linewidth=2)
-    axs[1,0].set_xlabel('Number of epochs', fontsize=12)
-    axs[1,0].set_ylabel('Main task test loss [log10]', fontsize=12)
+            axs[1,0].plot(ref['x'], np.log10(np.array(ref['mean'][3])+1), label=label, linewidth=4)
+    axs[1,0].set_xlabel('Number of epochs', fontsize=14)
+    axs[1,0].set_ylabel('Main task test loss [log10]', fontsize=14)
     axs[1,0].legend()
 
     # plot backdoor task accuracy
@@ -294,9 +296,9 @@ def plot_per_dataset_and_model(target_dataset, target_model, exp_dir, target_dir
         ref = res_to_plot[item]
         if len(ref['mean']) > 0:
             label = 'amplify_rate_{}'.format(int(ref['amplify_rate'])) if ref['backdoor'] == 1 else 'normal training'
-            axs[0,1].plot(ref['x'], ref['mean'][4], label=label, linewidth=2)
-    axs[0,1].set_xlabel('Number of epochs', fontsize=12)
-    axs[0,1].set_ylabel('Backdoor task accuracy', fontsize=12)
+            axs[0,1].plot(ref['x'], ref['mean'][4], label=label, linewidth=4)
+    axs[0,1].set_xlabel('Number of epochs', fontsize=14)
+    axs[0,1].set_ylabel('Backdoor task accuracy', fontsize=14)
     if target_dataset == 'mnist':
         axs[0, 1].legend(loc="center right", bbox_to_anchor=(1.0,0.58))
     elif target_dataset == 'nuswide':
@@ -309,8 +311,8 @@ def plot_per_dataset_and_model(target_dataset, target_model, exp_dir, target_dir
         ref = res_to_plot[item]
         if len(ref['mean']) > 0:
             label = 'amplify_rate_{}'.format(int(ref['amplify_rate'])) if ref['backdoor'] == 1 else 'normal'
-            axs[1,1].plot(ref['x'], np.log10(np.array(ref['mean'][5])+1), label=label, linewidth=2)
-    axs[1,1].set_xlabel('Number of epochs', fontsize=12)
+            axs[1,1].plot(ref['x'], np.log10(np.array(ref['mean'][5])+1), label=label, linewidth=4)
+    axs[1,1].set_xlabel('Number of epochs', fontsize=14)
     axs[1,1].set_ylabel('Backdoor task loss [log10]')
     axs[1,1].legend()
 
@@ -396,8 +398,8 @@ def plot_per_dataset_and_model_defense(target_dataset, target_model, exp_dir, ta
             else:
                 temps = item.split('-')
                 tag.append(temps[-1])
-    ax.plot(x, y_main, marker='o', label='main task', color='tab:red', linewidth=2, markersize=8)
-    ax.plot(x, y_backdoor, marker='o', label='backdoor task', color='tab:blue', linewidth=2, markersize=8)
+    ax.plot(x, y_main, marker='o', label='main task', color='tab:red', linewidth=4, markersize=8)
+    ax.plot(x, y_backdoor, marker='o', label='backdoor task', color='tab:blue', linewidth=4, markersize=8)
 
     if target_method in ['gaussian', 'laplace']:
         ax.set_xlabel('Noise level', fontsize=14)
@@ -407,9 +409,9 @@ def plot_per_dataset_and_model_defense(target_dataset, target_model, exp_dir, ta
     ax.set_ylabel('Test accuracy', fontsize=14)
     ax.set_xticks(x)
     ax.set_xticklabels(tag, fontsize=14)#, rotation=45, ha="right")
-    ax.tick_params(axis='x', labelsize=12)
-    ax.tick_params(axis='y', labelsize=12)
-    ax.legend(fontsize=12)
+    ax.tick_params(axis='x', labelsize=14)
+    ax.tick_params(axis='y', labelsize=14)
+    ax.legend(fontsize=14)
     plt.tight_layout()
     fig.subplots_adjust(top=0.90)
     plt.savefig('./{}/{}_{}_{}_inone.png'.format(target_dir, target_dataset, target_model, target_method), dpi=200)
@@ -618,7 +620,7 @@ def plot_per_dataset_and_model_for_paper(target_dataset, target_model, exp_dir, 
         ref = res_to_plot[item]
         if len(ref['mean']) > 0:
             label = 'amplify_rate_{}'.format(int(ref['amplify_rate'])) if ref['backdoor'] == 1 else 'normal training'
-            ax.plot(ref['x'], ref['mean'][2], label=label, linewidth=2, linestyle=linestyle_tuple[_i][1])
+            ax.plot(ref['x'], ref['mean'][2], label=label, linewidth=4, linestyle=linestyle_tuple[_i][1])
             _i += 1
     ax.set_xlabel('Number of epochs', fontsize=16)
     ax.set_ylabel('Main task accuracy', fontsize=16)
@@ -637,7 +639,7 @@ def plot_per_dataset_and_model_for_paper(target_dataset, target_model, exp_dir, 
         ref = res_to_plot[item]
         if len(ref['mean']) > 0:
             label = 'amplify_rate_{}'.format(int(ref['amplify_rate'])) if ref['backdoor'] == 1 else 'normal training'
-            ax.plot(ref['x'], ref['mean'][4], label=label, linewidth=2, linestyle=linestyle_tuple[_i][1])
+            ax.plot(ref['x'], ref['mean'][4], label=label, linewidth=4, linestyle=linestyle_tuple[_i][1])
             _i += 1
     ax.set_xlabel('Number of epochs', fontsize=16)
     ax.set_ylabel('Backdoor task accuracy', fontsize=16)
@@ -672,17 +674,19 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
             defense_param = temps[4]
             print(defense_param)
             if dataset == 'mnist':
-                if defense_param not in ['1.0', '0.1', '0.01']:
+                if defense_param not in ['1.0', '0.1', '0.05', '0.01']:
                 # if defense_param not in ['1.0', '0.5', '0.1', '0.01', '0.05', '0.001', '0.005', '0.0001', '0.00001']:
                     continue
-            elif dataset == 'cifar20':
+            elif dataset == 'cifar20' or dataset == 'cifar10':
                 if defense_param not in ['1.0', '0.5', '0.1', '0.01', '0.001']:
                 # if defense_param not in ['1.0', '0.5', '0.1', '0.01', '0.05', '0.001', '0.005', '0.0001', '0.00001']:
                     continue
         elif defense_method == 'gradient_sparsification':
             defense_param = temps[5]
-            if defense_param not in ['99.9', '99.5', '99.0']:
-                continue
+            # if ('cifar10_' not in input_file) and defense_param not in ['99.9', '99.5', '99.0']:
+            #     continue
+            # elif 'cifar10_' in input_file and defense_param not in ['99.9', '99.5', '95.0']:
+            #     continue
         elif defense_method == 'certifyFL':
             defense_param = temps[6]
             if defense_param not in ['0.1', '0.01', '0.001', '0.0001']:
@@ -720,11 +724,11 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
     color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#e377c2', '#17becf']
     method_name_dict = {'gaussian': 'DP-G', 'laplace': 'DP-L', 'gradient_sparsification': 'GS', 'certifyFL': 'CFL', 'dsgd': 'DG', 'autoencoder': 'CAE', 'autoencoder+dsgd': 'DCAE', 'mid': 'MID', 'rvfr': 'RVFR'}
     for i, key in enumerate(x):
-        # ax.scatter(x[key], y[key], label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=60)
-        # ax.plot(x[key], y[key], '--', linewidth=2, color=color_list[i])
+        # ax.scatter(x[key], y[key], label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=150)
+        # ax.plot(x[key], y[key], '--', linewidth=4, color=color_list[i])
         temp = list(map(lambda a: a[0]-a[1], zip(x[key],y[key])))
-        ax.scatter(x[key], temp, label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=60)
-        ax.plot(x[key], temp, '--', linewidth=2, color=color_list[i])
+        ax.scatter(x[key], temp, label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=150)
+        ax.plot(x[key], temp, '--', linewidth=4, color=color_list[i])
         if marker:
             for j, txt in enumerate(label[key]):
                 # ax.annotate(txt, (x[key][j], y[key][j]))
@@ -732,22 +736,30 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
 
     # add baseline point
     if 'mnist' in input_file:
-        # ax.scatter([93.2],[42.6], label='w/o defense', marker='s', color='k', s=60)
-        ax.scatter([93.2],[93.2-42.6], label='w/o defense', marker='s', color='k', s=60)
-        # ax.scatter([93.2],[100-42.6], label='w/o defense', marker='s', color='k', s=60)
+        # ax.scatter([93.2],[42.6], label='w/o defense', marker='s', color='k', s=150)
+        ax.scatter([93.2],[93.2-42.6], label='w/o defense', marker='s', color='k', s=150)
+        # ax.scatter([93.2],[100-42.6], label='w/o defense', marker='s', color='k', s=150)
     elif 'nuswide' in input_file:
-        # ax.scatter([61.1],[22.8], label='w/o defense', marker='s', color='k', s=60)
-        ax.scatter([61.1],[61.1-22.8], label='w/o defense', marker='s', color='k', s=60)
-        # ax.scatter([61.1],[100-22.8], label='w/o defense', marker='s', color='k', s=60)
+        # ax.scatter([61.1],[22.8], label='w/o defense', marker='s', color='k', s=150)
+        ax.scatter([61.1],[61.1-22.8], label='w/o defense', marker='s', color='k', s=150)
+        # ax.scatter([61.1],[100-22.8], label='w/o defense', marker='s', color='k', s=150)
+    elif 'cifar10_' in input_file:
+        # ax.scatter([75.96],[71.0], label='w/o defense', marker='s', color='k', s=150)
+        ax.scatter([75.96],[75.96-71.0], label='w/o defense', marker='s', color='k', s=150)
+        # ax.scatter([75.96],[100-71.0], label='w/o defense', marker='s', color='k', s=150)
+    elif 'cifar100' in input_file:
+        # ax.scatter([42.42],[10.5], label='w/o defense', marker='s', color='k', s=150)
+        ax.scatter([42.42],[42.41-10.5], label='w/o defense', marker='s', color='k', s=150)
+        # ax.scatter([42.42],[100-10.5], label='w/o defense', marker='s', color='k', s=150)
     else:
         if not 'multi_party' in target_dir:
-            # ax.scatter([55.7],[13.6], label='w/o defense', marker='s', color='k', s=60)
-            ax.scatter([55.7],[55.7-13.6], label='w/o defense', marker='s', color='k', s=60)
-            # ax.scatter([55.7],[100-13.6], label='w/o defense', marker='s', color='k', s=60)
+            # ax.scatter([55.7],[13.6], label='w/o defense', marker='s', color='k', s=150)
+            ax.scatter([55.7],[55.7-13.6], label='w/o defense', marker='s', color='k', s=150)
+            # ax.scatter([55.7],[100-13.6], label='w/o defense', marker='s', color='k', s=150)
         else:
-            # ax.scatter([0.5],[5.0], label='w/o defense', marker='s', color='k', s=60)
-            ax.scatter([0.5],[0.5-5.0], label='w/o defense', marker='s', color='k', s=60)
-            # ax.scatter([0.5],[100-5.0], label='w/o defense', marker='s', color='k', s=60)
+            # ax.scatter([0.5],[5.0], label='w/o defense', marker='s', color='k', s=150)
+            ax.scatter([0.5],[0.5-5.0], label='w/o defense', marker='s', color='k', s=150)
+            # ax.scatter([0.5],[100-5.0], label='w/o defense', marker='s', color='k', s=150)
 
     ax.set_xlabel('Main task accuracy', fontsize=16)
     # ax.set_ylabel('Adversarial sample main task accuracy', fontsize=15)
@@ -757,11 +769,190 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
     ax.tick_params(axis='y', labelsize=14)
     ax.legend(fontsize=14)
 
+    if 'cifar100' in input_file:
+        # axins = inset_axes(ax, loc='center', bbox_to_anchor=[0.6, 0.3, 0.2, 0.2]) #, width=1.2, height=1.2, loc='center',bbox_to_anchor=[left, bottom, width, height], bbox_to_anchor=[0.6, 0.7, 0.2, 0.2]
+        # axins = inset_axes((0.6, 0.3, 0.2, 0.2)) #, width=1.2, height=1.2, loc='center',bbox_to_anchor=[left, bottom, width, height], bbox_to_anchor=[0.6, 0.7, 0.2, 0.2]
+        axins = inset_axes(ax, width="20%", height="20%",loc='lower left',bbox_to_anchor=(0.45, 0.75, 1, 1),bbox_transform=ax.transAxes)
+        for i, key in enumerate(x):
+            # axins.scatter(x[key], y[key], label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=150)
+            # axins.plot(x[key], y[key], '--', linewidth=4, color=color_list[i])
+            temp = list(map(lambda a: a[0]-a[1], zip(x[key],y[key])))
+            axins.scatter(x[key], temp, label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=150)
+            axins.plot(x[key], temp, '--', linewidth=4-0.5, color=color_list[i])
+            if marker:
+                for j, txt in enumerate(label[key]):
+                    # axins.annotate(txt, (x[key][j], y[key][j]))
+                    axins.annotate(txt, (x[key][j], temp[j]))
+        if 'cifar100' in input_file:
+            axins.set_xlim(40.6, 42.8)
+            axins.set_ylim(28.7,33.3)
+        # axins.scatter([42.42],[10.5], label='w/o defense', marker='s', color='k', s=150)
+        axins.scatter([42.42],[42.41-10.5], label='w/o defense', marker='s', color='k', s=150)
+        # axins.scatter([42.42],[100-10.5], label='w/o defense', marker='s', color='k', s=150)
+
+        axins.patch.set_alpha(0.4)
+        mark_inset(ax, axins, loc1=1, loc2=4, fc="none", ec='k', lw=0.5) # 1(upper right) 2 (upper left) 3(lower left) 4(lower right)
+
+
+
     plt.tight_layout()
     if marker:
         plt.savefig(os.path.join(target_dir, input_file.split('/')[-1].split('.')[0] + '_reference.png'), dpi=200)
     else:
         plt.savefig(os.path.join(target_dir, input_file.split('/')[-1].split('.')[0] + '_nomarker.png'), dpi=200)
+    plt.close()
+
+
+def plot_scatter_plot_for_paper_smaller(input_file, target_dir, marker=False):
+    with open(input_file, 'r') as f:
+        data = json.load(f)
+    x = {}
+    y = {}
+    label = {}
+    for key in data:
+        # print("key is",key)
+        temps = key.split('-')
+        defense_dataset = temps[0]
+        defense_method = temps[3]
+        defense_param = -100
+        if defense_method in ['gaussian', 'laplace']:
+            defense_param = temps[4]
+            print(defense_param)
+            if dataset == 'mnist':
+                if defense_param not in ['1.0', '0.1', '0.05', '0.01']:
+                # if defense_param not in ['1.0', '0.5', '0.1', '0.01', '0.05', '0.001', '0.005', '0.0001', '0.00001']:
+                    continue
+            elif dataset == 'cifar20' or dataset == 'cifar10':
+                if defense_param not in ['1.0', '0.5', '0.1', '0.01', '0.001']:
+                # if defense_param not in ['1.0', '0.5', '0.1', '0.01', '0.05', '0.001', '0.005', '0.0001', '0.00001']:
+                    continue
+        elif defense_method == 'gradient_sparsification':
+            defense_param = temps[5]
+            # if defense_param not in ['99.9', '99.5', '99.0']:
+            # # if defense_param not in ['99.9', '99.5', '99.0', '95.0']:
+            #     continue
+        elif defense_method == 'certifyFL':
+            defense_param = temps[6]
+            if defense_param not in ['0.1', '0.01', '0.001', '0.0001']:
+                continue
+        elif defense_method == 'autoencoder' or defense_method == 'autoencoder+dsgd':
+            defense_param = temps[7]
+            if 'nuswide' in input_file:
+                if defense_param not in ['0.0', '0.1', '0.5', '1.0']:
+                    continue
+            else:
+                if defense_param not in ['0.0', '0.1', '0.5', '1.0']:
+                    continue
+        elif defense_method == 'dsgd':
+            defense_param = temps[9]
+        elif defense_method == 'mid':
+            defense_param = temps[8]
+        elif defense_method == 'rvfr':
+            defense_param = temps[10]
+        if defense_method not in x:
+            x[defense_method] = []
+            y[defense_method] = []
+            label[defense_method] = []
+        x[defense_method].append(data[key]['main'])
+        y[defense_method].append(data[key]['backdoor'])
+        label[defense_method].append(defense_param)
+
+    none_main = x['none'][0]
+    none_attack = y['none'][0]
+
+    x.pop('none', None)
+    y.pop('none', None)
+    print(x)
+    fig, ax = plt.subplots(nrows=1, ncols=2, sharex=False, sharey=False, squeeze=False, figsize=(15,6))
+    # ax[0][1] = fig.add_axes([7.5,0,0.5,0.5])
+    # marker_list = ['o'(DP-G), 'v'(DP-L), '^'(GS), 'D'(DG), '*'(CAE), '1'(DCAE), '4'(MID)]
+    # color_list = ['#1f77b4'(DP-G), '#ff7f0e'(DP-L), '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#17becf']
+    # marker_list = ['o', 'v', '^', 'D', '*', '1', '4']
+    # color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#17becf']
+    marker_list = ['o', 'v', '^', 'h', '4']
+    color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#e377c2', '#17becf']
+    method_name_dict = {'gaussian': 'DP-G', 'laplace': 'DP-L', 'gradient_sparsification': 'GS', 'certifyFL': 'CFL', 'dsgd': 'DG', 'autoencoder': 'CAE', 'autoencoder+dsgd': 'DCAE', 'mid': 'MID', 'rvfr': 'RVFR'}
+    print(type(x))
+    for i, key in enumerate(x):
+        print("key is", key)
+        if key == 'none':
+            continue
+        # ax.scatter(x[key], y[key], label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=150)
+        # ax.plot(x[key], y[key], '--', linewidth=4, color=color_list[i])
+        temp = list(map(lambda a: max(a[0]-a[1],0.0), zip(x[key],y[key])))
+        # temp = list(map(lambda a: a[0]-a[1], zip(x[key],y[key])))
+        ax[0][0].scatter(x[key], temp, label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=150)
+        ax[0][0].plot(x[key], temp, '--', linewidth=4, color=color_list[i])
+        if marker:
+            for j, txt in enumerate(label[key]):
+                # ax[0][0].annotate(txt, (x[key][j], y[key][j]))
+                ax[0][0].annotate(txt, (x[key][j], temp[j]))
+        # ax[0][1] = fig.add_axes([7.5,0,0.5,0.5])
+        if key == 'mid' or key== 'rvfr':
+            ax[0][1].scatter(x[key], temp, label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=150)
+            ax[0][1].plot(x[key], temp, '--', linewidth=4, color=color_list[i])
+            if marker:
+                for j, txt in enumerate(label[key]):
+                    # ax[0][1].annotate(txt, (x[key][j], y[key][j]))
+                    ax[0][1].annotate(txt, (x[key][j], temp[j]))
+
+    # add baseline point
+    # if 'mnist' in input_file:
+    #     ax.scatter([90.6],[100.0], label='w/o defense', marker='s', color='k', s=150)
+    # elif 'nuswide' in input_file:
+    #     ax.scatter([61.8],[54.2], label='w/o defense', marker='s', color='k', s=150)
+    # else:
+    #     if not 'multi_party' in target_dir:
+    #         ax.scatter([52.5],[71.4], label='w/o defense', marker='s', color='k', s=150)
+    #     else:
+    #         ax.scatter([0.5],[5.0], label='w/o defense', marker='s', color='k', s=150)
+    # ax.scatter([none_main],[none_attack], label='w/o defense', marker='s', color='k', s=150)
+    # add baseline point
+    if 'mnist' in input_file:
+        # ax.scatter([93.2],[42.6], label='w/o defense', marker='s', color='k', s=150)
+        ax[0][0].scatter([93.2],[93.2-42.6], label='w/o defense', marker='s', color='k', s=150)
+        # ax.scatter([93.2],[100-42.6], label='w/o defense', marker='s', color='k', s=150)
+    elif 'nuswide' in input_file:
+        # ax.scatter([61.1],[22.8], label='w/o defense', marker='s', color='k', s=150)
+        ax[0][0].scatter([61.1],[61.1-22.8], label='w/o defense', marker='s', color='k', s=150)
+        # ax.scatter([61.1],[100-22.8], label='w/o defense', marker='s', color='k', s=150)
+    elif 'cifar10_' in input_file:
+        # ax.scatter([75.96],[71.0], label='w/o defense', marker='s', color='k', s=150)
+        ax[0][0].scatter([75.96],[75.96-71.0], label='w/o defense', marker='s', color='k', s=150)
+        # ax.scatter([75.96],[100-71.0], label='w/o defense', marker='s', color='k', s=150)
+    elif 'cifar100' in input_file:
+        # ax.scatter([42.42],[10.5], label='w/o defense', marker='s', color='k', s=150)
+        ax[0][0].scatter([42.42],[42.41-10.5], label='w/o defense', marker='s', color='k', s=150)
+        # ax.scatter([42.42],[100-10.5], label='w/o defense', marker='s', color='k', s=150)
+    else:
+        if not 'multi_party' in target_dir:
+            # ax.scatter([55.7],[13.6], label='w/o defense', marker='s', color='k', s=150)
+            ax[0][0].scatter([55.7],[55.7-13.6], label='w/o defense', marker='s', color='k', s=150)
+            # ax.scatter([55.7],[100-13.6], label='w/o defense', marker='s', color='k', s=150)
+        else:
+            # ax.scatter([0.5],[5.0], label='w/o defense', marker='s', color='k', s=150)
+            ax[0][0].scatter([0.5],[0.5-5.0], label='w/o defense', marker='s', color='k', s=150)
+            # ax.scatter([0.5],[100-5.0], label='w/o defense', marker='s', color='k', s=150)
+
+
+    ax[0][0].set_xlabel('Main task accuracy', fontsize=16)
+    # ax[0][0].set_ylabel('Missing sample main task accuracy', fontsize=16)
+    ax[0][0].set_ylabel('Missing sample main task difference', fontsize=16)
+    ax[0][0].tick_params(axis='x', labelsize=14)
+    ax[0][0].tick_params(axis='y', labelsize=14)
+    ax[0][0].legend(fontsize=14)
+    ax[0][1].set_xlabel('Main task accuracy', fontsize=16)
+    # ax[0][1].set_ylabel('Missing sample main task accuracy', fontsize=16)
+    ax[0][1].set_ylabel('Missing sample main task difference', fontsize=16)
+    ax[0][1].tick_params(axis='x', labelsize=14)
+    ax[0][1].tick_params(axis='y', labelsize=14)
+    ax[0][1].legend(fontsize=14)
+
+    plt.tight_layout()
+    if marker:
+        plt.savefig(os.path.join(target_dir, input_file.split('/')[-1].split('.')[0] + '_small_reference.png'), dpi=200)
+    else:
+        plt.savefig(os.path.join(target_dir, input_file.split('/')[-1].split('.')[0] + '_small_nomarker.png'), dpi=200)
     plt.close()
 
 
@@ -913,9 +1104,12 @@ if __name__ == '__main__':
 
 
     target_dir = 'images'
-    for dataset, model in zip(['mnist', 'nuswide', 'cifar20'], ['mlp2', 'mlp2', 'resnet18']):
+    # for dataset, model in zip(['mnist', 'nuswide', 'cifar10', 'cifar20', 'cifar100'], ['mlp2', 'mlp2', 'resnet18', 'resnet18', 'resnet18']):
+    for dataset, model in zip(['mnist', 'cifar100'], ['mlp2', 'resnet18']):
     # for dataset, model in zip(['mnist', 'nuswide', 'cifar20'], ['mlp2', 'mlp2', 'resnet18']):
     # # for dataset, model in zip(['mnist', 'nuswide', 'cifar100'], ['mlp2', 'mlp2', 'resnet18']):
+        # plot_scatter_plot_for_paper_smaller('images/data_use/{}_{}.json'.format(dataset, model), target_dir, True)
+        # plot_scatter_plot_for_paper_smaller('images/data_use/{}_{}.json'.format(dataset, model), target_dir, False)
         plot_scatter_plot_for_paper('images/data_use/{}_{}.json'.format(dataset, model), target_dir, True)
         plot_scatter_plot_for_paper('images/data_use/{}_{}.json'.format(dataset, model), target_dir, False)
 

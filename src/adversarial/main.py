@@ -367,6 +367,8 @@ def main():
         for model in model_list:
             active_model.train()
             model.train()
+            args.mid_model.train()
+            args.mid_enlarge_model.train()
 
         for step, (trn_X, trn_y) in enumerate(train_loader):
 
@@ -407,7 +409,8 @@ def main():
             # active party backward
             logits = active_model(z_up_clone, z_down_clone)
             loss = criterion(logits, target)
-            if args.mid == 1 and args.mid_lambda > 0.0:
+            if args.mid == 1:
+            # if args.mid == 1 and args.mid_lambda > 0.0:
                 epsilon = torch.empty(z_down_clone.size())
                 torch.nn.init.normal_(epsilon, mean=0, std=1) # epsilon is initialized
                 epsilon = epsilon.to(args.device)
@@ -451,7 +454,8 @@ def main():
             # file.write("Epoch: {} Step: {} loss_benign: {} loss_melicious: {}\n".format(epoch, step, loss_benign.item(), loss_melicious.item()))
             # print(loss_benign.item(),loss_melicious.item())
 
-            if args.mid and args.mid_lambda > 0.0:
+            if args.mid:
+            # if args.mid and args.mid_lambda > 0.0:
                 pred_a_double_gradients = torch.autograd.grad(loss, pred_a_double, retain_graph=True)
                 pred_a_double_gradients_clone = pred_a_double_gradients[0].detach().clone()
                 pred_Z_gradients = torch.autograd.grad(loss, pred_Z, retain_graph=True)
@@ -531,7 +535,8 @@ def main():
             ########### defense end here ##########
 
             # update mid_model and mid_enlarge_model if it exists
-            if args.mid and args.mid_lambda > 0.0 and args.mid_optimizer != None:
+            if args.mid and args.mid_optimizer != None:
+            # if args.mid and args.mid_lambda > 0.0 and args.mid_optimizer != None:
                 args.mid_enlarge_optimizer.zero_grad()
                 weights_gradients_mid = torch.autograd.grad(pred_a_double, args.mid_enlarge_model.parameters(),
                                                     grad_outputs=pred_a_double_gradients_clone)
@@ -600,6 +605,8 @@ def main():
         for model in model_list:
             active_model.eval()
             model.eval()
+            args.mid_model.eval()
+            args.mid_enlarge_model.eval()
 
         if args.certify != 0 and epoch >= args.certify_start_epoch:
             # print("validation with voting")
@@ -697,7 +704,8 @@ def main():
 
                     logits = active_model(z_up, z_down)
                     loss = criterion(logits, target)
-                    if args.mid == 1 and args.mid_lambda > 0.0:
+                    if args.mid == 1:
+                    # if args.mid == 1 and args.mid_lambda > 0.0:
                         epsilon = torch.empty(z_down.size())
                         torch.nn.init.normal_(epsilon, mean=0, std=1) # epsilon is initialized
                         epsilon = epsilon.to(args.device)

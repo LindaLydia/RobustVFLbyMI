@@ -159,20 +159,21 @@
 # # python marvell_main.py --dataset cifar10 --apply_discrete_gradients True --discrete_gradients_bins 12 --apply_trainable_layer True
 # # python marvell_main.py --dataset cifar10 --apply_discrete_gradients True --discrete_gradients_bins 18 --apply_trainable_layer True
 
-# python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_trainable_layer True
-# python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_marvell True --apply_trainable_layer True
-# python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_mid True --apply_trainable_layer True
+# python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_trainable_layer True --lr 0.01
+# python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_marvell True --apply_trainable_layer True --lr 0.01
+# python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_mid True --apply_trainable_layer True --lr 0.01
 # python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_encoder True --apply_trainable_layer True
 # python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_encoder True --apply_discrete_gradients True --discrete_gradients_bins 12 --apply_trainable_layer True
-python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_laplace True --apply_trainable_layer True --lr 0.01
-python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_gaussian True --apply_trainable_layer True --lr 0.01
-python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_grad_spar True --apply_trainable_layer True --lr 0.01
-python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_grad_spar True --apply_trainable_layer True --lr 0.01 --grad_spars 90
-python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_grad_spar True --apply_trainable_layer True --lr 0.01 --grad_spars 95
-python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_grad_spar True --apply_trainable_layer True --lr 0.01 --grad_spars 96
-python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_grad_spar True --apply_trainable_layer True --lr 0.01 --grad_spars 97
-python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_grad_spar True --apply_trainable_layer True --lr 0.01 --grad_spars 98
-python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_grad_spar True --apply_trainable_layer True --lr 0.01 --grad_spars 99
+# python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_laplace True --apply_trainable_layer True
+# python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_gaussian True --apply_trainable_layer True
+# python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_grad_spar True --apply_trainable_layer True
 # python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_discrete_gradients True --discrete_gradients_bins 6 --apply_trainable_layer True
 # python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_discrete_gradients True --discrete_gradients_bins 12 --apply_trainable_layer True
 # python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_discrete_gradients True --discrete_gradients_bins 18 --apply_trainable_layer True
+
+python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_grad_spar True --apply_trainable_layer True --lr 0.01 --grad_spars 90 --gpu 3
+python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_grad_spar True --apply_trainable_layer True --lr 0.01 --grad_spars 95 --gpu 3
+# python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_grad_spar True --apply_trainable_layer True --lr 0.01 --grad_spars 96
+# python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_grad_spar True --apply_trainable_layer True --lr 0.01 --grad_spars 97
+# python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_grad_spar True --apply_trainable_layer True --lr 0.01 --grad_spars 98
+# python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_grad_spar True --apply_trainable_layer True --lr 0.01 --grad_spars 99

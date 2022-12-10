@@ -18,7 +18,7 @@ def unpickle(file):
 
 class Cifar10DatasetVFL():
 
-    def __init__(self, data_dir, data_type, height, width, poison_number, target_number=10, target_label=0):
+    def __init__(self, data_dir, data_type, height, width, poison_number, target_number=10, target_label=0, backdoor_scale=1.0):
         self.data_dir = data_dir
         self.target_label = target_label
         if data_type == 'train':
@@ -91,23 +91,27 @@ class Cifar10DatasetVFL():
     def get_target_list(self):
         return self.target_list
 
-# 设置攻击对象的特殊图案
+# 设置攻击对象的特殊图�?
 def data_poison(images, poison_number):
     target_pixel_value = [[1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0], [1.0, 0.0, 1.0, 0.0]]
     poison_list = random.sample(range(images.shape[0]), poison_number)
-    images[poison_list,0,15,31] = target_pixel_value[0][0]
-    images[poison_list,0,14,30] = target_pixel_value[0][1]
-    images[poison_list,0,13,31] = target_pixel_value[0][2]
-    images[poison_list,0,15,29] = target_pixel_value[0][3]
-    images[poison_list,1,15,31] = target_pixel_value[1][0]
-    images[poison_list,1,14,30] = target_pixel_value[1][1]
-    images[poison_list,1,13,31] = target_pixel_value[1][2]
-    images[poison_list,1,15,29] = target_pixel_value[1][3]
-    images[poison_list,2,15,31] = target_pixel_value[2][0]
-    images[poison_list,2,14,30] = target_pixel_value[2][1]
-    images[poison_list,2,13,31] = target_pixel_value[2][2]
-    images[poison_list,2,15,29] = target_pixel_value[2][3]
-    return images, poison_list
+    # images[poison_list,0,15,31] = target_pixel_value[0][0]
+    # images[poison_list,0,14,30] = target_pixel_value[0][1]
+    # images[poison_list,0,13,31] = target_pixel_value[0][2]
+    # images[poison_list,0,15,29] = target_pixel_value[0][3]
+    # images[poison_list,1,15,31] = target_pixel_value[1][0]
+    # images[poison_list,1,14,30] = target_pixel_value[1][1]
+    # images[poison_list,1,13,31] = target_pixel_value[1][2]
+    # images[poison_list,1,15,29] = target_pixel_value[1][3]
+    # images[poison_list,2,15,31] = target_pixel_value[2][0]
+    # images[poison_list,2,14,30] = target_pixel_value[2][1]
+    # images[poison_list,2,13,31] = target_pixel_value[2][2]
+    # images[poison_list,2,15,29] = target_pixel_value[2][3]
+    for idx in poison_list:
+        images[idx,:,:,:] += np.random.normal(loc=0.0, scale=2.0, size=(3,16,32))
+        np.putmask(images[idx,:,:,:], images[idx,:,:,:]>1.0, 1.0)
+        np.putmask(images[idx,:,:,:], images[idx,:,:,:]<0.0, 0.0)
+    return images, poison_listreturn images, poison_list
 
 
 def visualize(images, labels, poison_list):

@@ -1,5 +1,5 @@
-# for i in `seq 1 10`; do 
-for i in `seq 7 10`; do 
+for i in `seq 1 10`; do 
+# for i in `seq 7 10`; do 
 #     python main.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --gpu 0
 #     python main.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --dp_type laplace --dp_strength 0.1 --gpu 0
 #     python main.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --dp_type laplace --dp_strength 0.01 --gpu 0
@@ -22,13 +22,16 @@ for i in `seq 7 10`; do
 #     python main.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.00001 --gpu 0
 #     python main.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.0001 --gpu 0
 #     python main.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.001 --gpu 0
-    python main.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.00000001 --gpu 0
-    python main.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.0000001 --gpu 0
+    # python main.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.00000001 --gpu 0
+    # python main.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.0000001 --gpu 0
     # python main.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.000001 --gpu 0
     # python main.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.00001 --gpu 0
     # python main.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.0001 --gpu 0
     # python main.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.001 --gpu 0
-    python main.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.01 --gpu 0
+    # python main.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.01 --gpu 0
+    # python main.py --name defense_test0.0 --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.0 --gpu 0
+    python main_missing.py --name defense_test0.0 --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.0 --missing_rate 4 --gpu 0
+    python main_missing.py --name defense_test0.0 --dataset nuswide --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.0 --missing_rate 4 --gpu 0 --learning_rate 0.0001
 done
 
 # for i in `seq 1 10`; do 
