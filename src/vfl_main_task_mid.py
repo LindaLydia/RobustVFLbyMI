@@ -175,27 +175,6 @@ class VFLDefenceExperimentBase(object):
             RRwP_one_hot_label = RRwithPrior(batch_label, self.RRwithPrior_epsilon, gt_equal_probability)
         else:
             gt_one_hot_label = batch_label
-        # if self.apply_encoder:
-        #     if encoder:
-        #         if not self.apply_random_encoder:
-        #             print('normal encoder')
-        #             _, gt_one_hot_label = encoder(batch_label)
-        #         else:
-        #             print('random encoder')
-        #             _, gt_one_hot_label = self.get_random_softmax_onehot_label(batch_label)
-        #     else:
-        #         assert(encoder != None)
-        # elif self.apply_adversarial_encoder:
-        #     _, gt_one_hot_label = encoder(batch_data_a)
-        #     # print('gt_one_hot_label shape:', gt_one_hot_label, gt_one_hot_label.shape)
-        #     # print(gt_one_hot_label.detach().shape)
-        #     # gt_one_hot_label = sharpen(gt_one_hot_label.detach(), T=0.03)
-        #     # print('gt_one_hot_label:', torch.max(gt_one_hot_label, dim=-1))
-        #     # print('gt_one_hot_label shape:', gt_one_hot_label.shape)
-        # else:
-        #     # print('use nothing')
-        #     gt_one_hot_label = batch_label
-        # print('current_label:', gt_one_hot_label)
 
         # ====== normal vertical federated learning ======
 
@@ -214,24 +193,12 @@ class VFLDefenceExperimentBase(object):
             loss_rr_label = criterion(pred,RRwP_one_hot_label)
         ######################## defense: mi ############################
         if self.apply_mi:
-            # loss = criterion(pred_b, gt_one_hot_label)
-            # loss = criterion(pred, gt_one_hot_label) - self.mi_loss_lambda * criterion(pred_a, gt_one_hot_label) + self.mi_loss_lambda * criterion(pred_a, pred_a) # - criterion(pred,pred)
-            # loss = criterion(pred, gt_one_hot_label) + self.mi_loss_lambda * criterion(pred_a, gt_equal_probability)
             loss = criterion(pred, gt_one_hot_label) + self.mi_loss_lambda * criterion(pred_a, gt_equal_probability) - self.mi_loss_lambda * criterion(pred_a, pred_a)
-            # mu, std = norm.fit(pred.cpu().numpy())
-            # loss = criterion(pred, gt_onehot_label) + 
         ######################## defense3: mid ############################
         elif self.apply_mid:
             # pred_Z = Somefunction(pred_a)
             # print("pred_a.size(): ",pred_a.size())
             epsilon = torch.empty((pred_a.size()[0],pred_a.size()[1]*BOTTLENECK_SCALE))
-
-            # # discrete form of reparameterization
-            # torch.nn.init.uniform(epsilon) # epsilon is initialized
-            # epsilon = - torch.log(epsilon + torch.tensor(1e-07))
-            # epsilon = - torch.log(epsilon + torch.tensor(1e-07)) # prevent if epsilon=0.0
-            # pred_Z = F.softmax(pred_a) + epsilon.to(self.device)
-            # pred_Z = F.softmax(pred_Z / torch.tensor(self.mid_tau).to(self.device), -1)
 
             # continuous form of reparameterization
             torch.nn.init.normal(epsilon, mean=0, std=1) # epsilon is initialized
@@ -248,11 +215,7 @@ class VFLDefenceExperimentBase(object):
             pred_Z = pred_Z.to(self.device)
 
             pred_Z = self.mid_model(pred_Z)
-            # pred = self.active_aggregate_model(pred_Z, F.softmax(pred_b))
             pred = self.active_aggregate_model(pred_Z, pred_b)
-            # # loss for discrete form of reparameterization
-            # loss = criterion(pred, gt_one_hot_label) + self.mid_loss_lambda * entropy_for_probability_vector(pred_a)
-            # loss for continuous form of reparameterization
             loss = criterion(pred, gt_one_hot_label) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
             # print("loss: ", loss)
 
@@ -464,12 +427,6 @@ class VFLDefenceExperimentBase(object):
 
                             if self.apply_mid:
                                 epsilon = torch.empty((test_logit_a.size()[0],test_logit_a.size()[1]*BOTTLENECK_SCALE))
-                                # # discrete form of reparameterization
-                                # torch.nn.init.uniform(epsilon) # epsilon is initialized
-                                # epsilon = - torch.log(epsilon + torch.tensor(1e-07))
-                                # epsilon = - torch.log(epsilon + torch.tensor(1e-07)) # prevent if epsilon=0.0
-                                # test_logit_Z = F.softmax(test_logit_a) + epsilon.to(self.device)
-                                # test_logit_Z = F.softmax(test_logit_Z / torch.tensor(self.mid_tau).to(self.device), -1)
 
                                 # continuous form of reparameterization
                                 torch.nn.init.normal(epsilon, mean=0, std=1) # epsilon is initialized
@@ -486,9 +443,6 @@ class VFLDefenceExperimentBase(object):
 
                                 test_logit_Z = self.mid_model(test_logit_Z)
                                 test_logit = self.active_aggregate_model(test_logit_Z, test_logit_b)
-                                # test_logit = self.active_aggregate_model(test_logit_Z, F.softmax(test_logit_b,dim=-1))
-                                # test_logit = self.active_aggregate_model(F.softmax(test_logit_Z,dim=-1), F.softmax(test_logit_b,dim=-1))
-
                             enc_predict_prob = F.softmax(test_logit, dim=-1)
                             if self.apply_encoder:
                                 dec_predict_prob = self.encoder.decoder(enc_predict_prob)
@@ -511,25 +465,3 @@ class VFLDefenceExperimentBase(object):
         print(f"time used = {end_time-start_time}")
         # assert 1 == 0
         return test_acc, test_acc_topk
-
-
-
-
-            # # continuous form of reparameterization
-            # epsilon = torch.empty((pred_a.size()[0],pred_a.size()[1]))
-            # torch.nn.init.normal(epsilon, mean=0, std=1) # epsilon is initialized
-            # epsilon = epsilon.to(self.device)
-            # pred_a_double = self.mid_enlarge_model(pred_a)
-            
-            # mu, std = pred_a_double[:,:self.num_classes], pred_a_double[:,self.num_classes:]
-            # std = F.softplus(std-0.5)
-            # pred_Z = mu+std*epsilon
-            # assert(pred_Z.size()==pred_a.size())
-            # pred_Z = pred_Z.to(self.device)
-
-            # pred_Z = self.mid_model(pred_Z)
-            # pred = self.active_aggregate_model(pred_Z,pred_b)
-            
-            # # loss for continuous form of reparameterization
-            # loss = criterion(pred, gt_one_hot_label) + \
-            #     self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))

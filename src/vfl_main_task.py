@@ -127,29 +127,6 @@ class VFLDefenceExperimentBase(object):
                 assert(encoder != None)
         else:
             gt_one_hot_label = batch_label
-        # if self.apply_encoder:
-        #     if encoder:
-        #         if not self.apply_random_encoder:
-        #             print('normal encoder')
-        #             _, gt_one_hot_label = encoder(batch_label)
-        #         else:
-        #             print('random encoder')
-        #             _, gt_one_hot_label = self.get_random_softmax_onehot_label(batch_label)
-        #     else:
-        #         assert(encoder != None)
-        # elif self.apply_adversarial_encoder:
-        #     _, gt_one_hot_label = encoder(batch_data_a)
-        #     # print('gt_one_hot_label shape:', gt_one_hot_label, gt_one_hot_label.shape)
-        #     # print(gt_one_hot_label.detach().shape)
-        #     # gt_one_hot_label = sharpen(gt_one_hot_label.detach(), T=0.03)
-        #     # print('gt_one_hot_label:', torch.max(gt_one_hot_label, dim=-1))
-        #     # print('gt_one_hot_label shape:', gt_one_hot_label.shape)
-        # else:
-        #     # print('use nothing')
-        #     gt_one_hot_label = batch_label
-        # print('current_label:', gt_one_hot_label)
-
-        # ====== normal vertical federated learning ======
 
         # compute logits of clients
         pred_a = net_a(batch_data_a)
@@ -162,17 +139,10 @@ class VFLDefenceExperimentBase(object):
         loss = criterion(pred, gt_one_hot_label)
         ######################## defense: mi ############################
         if self.apply_mi:
-            # loss = criterion(pred_b, gt_one_hot_label)
-            # loss = criterion(pred, gt_one_hot_label) - self.mi_loss_lambda * criterion(pred_a, gt_one_hot_label) + self.mi_loss_lambda * criterion(pred_a, pred_a) # - criterion(pred,pred)
-            # loss = criterion(pred, gt_one_hot_label) + self.mi_loss_lambda * criterion(pred_a, gt_equal_probability)
             loss = criterion(pred, gt_one_hot_label) + self.mi_loss_lambda * criterion(pred_a, gt_equal_probability) - self.mi_loss_lambda * criterion(pred_a, pred_a)
-            # mu, std = norm.fit(pred.cpu().numpy())
-            # loss = criterion(pred, gt_onehot_label) + 
         ######################## defense end ############################
         pred_a_gradients = torch.autograd.grad(loss, pred_a, retain_graph=True)
         pred_a_gradients_clone = pred_a_gradients[0].detach().clone()
-        # pred_a_gradients = torch.autograd.grad(loss, pred_a, retain_graph=True,allow_unused=True)
-        # pred_a_gradients_clone = pred_a_gradients[0]
         pred_b_gradients = torch.autograd.grad(loss, pred_b, retain_graph=True)
         pred_b_gradients_clone = pred_b_gradients[0].detach().clone()
         model_optimizer.zero_grad()

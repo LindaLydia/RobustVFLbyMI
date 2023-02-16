@@ -219,13 +219,6 @@ class LabelLeakage(object):
                     if self.apply_mid:
                         epsilon = torch.empty((pred_a.size()[0],pred_a.size()[1]*BOTTLENECK_SCALE))
                         
-                        # # discrete form of reparameterization
-                        # torch.nn.init.uniform(epsilon) # epsilon is initialized
-                        # epsilon = - torch.log(epsilon + torch.tensor(1e-07))
-                        # epsilon = - torch.log(epsilon + torch.tensor(1e-07)) # prevent if epsilon=0.0
-                        # pred_Z = F.softmax(pred_a) + epsilon.to(self.device)
-                        # pred_Z = F.softmax(pred_Z / torch.tensor(self.mid_tau).to(self.device), -1)
-                        
                         # continuous form of reparameterization
                         torch.nn.init.normal(epsilon, mean=0, std=1) # epsilon is initialized
                         epsilon = epsilon.to(self.device)
@@ -242,9 +235,6 @@ class LabelLeakage(object):
                         
                         pred_Z = self.mid_model(pred_Z)
                         pred = active_aggregate_model(pred_Z, F.softmax(pred_b))
-                        # # loss for discrete form of reparameterization
-                        # loss = criterion(pred, gt_onehot_label) + self.mid_loss_lambda * entropy_for_probability_vector(pred_a)
-                        # loss for continuous form of reparameterization
                         loss = criterion(pred, gt_onehot_label) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
                     ######################## defense4: distance correlation ############################
                     if self.apply_distance_correlation:
@@ -283,30 +273,6 @@ class LabelLeakage(object):
                                 torch.abs(pred_a_gradients_clone).double() < up_thr.item(),
                                 pred_a_gradients_clone.double(), float(0.)).to(self.device)
                             pred_a_gradients_clone = pred_a_gradients_clone - active_up_gradients_res
-                    # ######################## defense4: marvell ############################
-                    # elif self.apply_marvell and self.marvell_s != 0 and num_classes == 2:
-                    #     # for marvell, change label to [0,1]
-                    #     marvell_y = []
-                    #     for i in range(len(gt_label)):
-                    #         marvell_y.append(int(gt_label[i][1]))
-                    #     marvell_y = np.array(marvell_y)
-                    #     shared_var.batch_y = np.asarray(marvell_y)
-                    #     logdir = 'marvell_logs/dlg_task/{}_logs/{}'.format(self.dataset, time.strftime("%Y%m%d-%H%M%S"))
-                    #     writer = tf.summary.create_file_writer(logdir)
-                    #     shared_var.writer = writer
-                    #     with torch.no_grad():
-                    #         pred_a_gradients_clone = KL_gradient_perturb(pred_a_gradients_clone, classes, self.marvell_s)
-                    #         pred_a_gradients_clone = pred_a_gradients_clone.to(self.device)
-                    ######################## defense5: ppdl, GradientCompression, laplace_noise, DiscreteSGD ############################
-                    # elif self.apply_ppdl:
-                    #     dp_gc_ppdl(epsilon=1.8, sensitivity=1, layer_grad_list=[pred_a_gradients_clone], theta_u=self.ppdl_theta_u, gamma=0.001, tau=0.0001)
-                    # elif self.apply_gc:
-                    #     tensor_pruner = TensorPruner(zip_percent=self.gc_preserved_percent)
-                    #     tensor_pruner.update_thresh_hold(pred_a_gradients_clone)
-                    #     pred_a_gradients_clone = tensor_pruner.prune_tensor(pred_a_gradients_clone)
-                    # elif self.apply_lap_noise:
-                    #     dp = DPLaplacianNoiseApplyer(beta=self.noise_scale)
-                    #     pred_a_gradients_clone = dp.laplace_mech(pred_a_gradients_clone)
                     elif self.apply_discrete_gradients:
                         pred_a_gradients_clone = multistep_gradient(pred_a_gradients_clone, bins_num=self.discrete_gradients_bins, bound_abs=self.discrete_gradients_bound)
                     ######################## defense end #################################################### defense3: mid ############################
@@ -339,18 +305,6 @@ class LabelLeakage(object):
                         #     append_exp_res(f'exp_result/{self.dataset}/exp_on_{self.dataset}_rec_rate_change.txt',
                         #                    f'{batch_size} 0 {rec_rate} {closure()}')
                         optimizer.step(closure)
-                        # if self.calc_label_recovery_rate(dummy_label, gt_label) >= 99.99:
-                        #     break
-
-                        # append_exp_res(f'exp_result/{self.dataset}/exp_on_{self.dataset}_rec_rate_change.txt',
-                        #                f'{batch_size} {iters} {rec_rate} {closure()}')
-                        # if rec_rate >= 0.999:
-                        #     break
-                        # print(iters, "%.4f" % closure().item())
-                        # if iters % 10 == 0:
-                        #     print(iters, torch.sum(torch.argmax(dummy_label, dim=-1) == torch.argmax(gt_label, dim=-1)).item() / batch_size)
-                        #     print(f'iters:{iters}, loss:{closure().item()}')
-                        #     append_exp_res(f'exp_result/exp_on_{self.dataset}_loss.txt', f'{iters} {closure().item()}')
                         if self.early_stop == True:
                             if closure().item() < self.early_stop_param:
                                 break

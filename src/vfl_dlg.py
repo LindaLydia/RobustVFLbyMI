@@ -224,18 +224,6 @@ class LabelLeakage(object):
                         #     append_exp_res(f'exp_result/{self.dataset}/exp_on_{self.dataset}_rec_rate_change.txt',
                         #                    f'{batch_size} 0 {rec_rate} {closure()}')
                         optimizer.step(closure)
-                        # if self.calc_label_recovery_rate(dummy_label, gt_label) >= 99.99:
-                        #     break
-
-                        # append_exp_res(f'exp_result/{self.dataset}/exp_on_{self.dataset}_rec_rate_change.txt',
-                        #                f'{batch_size} {iters} {rec_rate} {closure()}')
-                        # if rec_rate >= 0.999:
-                        #     break
-                        # print(iters, "%.4f" % closure().item())
-                        # if iters % 10 == 0:
-                        #     print(iters, torch.sum(torch.argmax(dummy_label, dim=-1) == torch.argmax(gt_label, dim=-1)).item() / batch_size)
-                        #     print(f'iters:{iters}, loss:{closure().item()}')
-                        #     append_exp_res(f'exp_result/exp_on_{self.dataset}_loss.txt', f'{iters} {closure().item()}')
                         if self.early_stop == True:
                             if closure().item() < self.early_stop_param:
                                 break
@@ -243,13 +231,6 @@ class LabelLeakage(object):
                     rec_rate = self.calc_label_recovery_rate(dummy_label, gt_label)
                     recovery_rate_history.append(rec_rate)
                     end_time = time.time()
-                    # output the rec_info of this exp
-                    # if self.apply_laplace or self.apply_gaussian:
-                    #     print(f'batch_size=%d,class_num=%d,exp_id=%d,dp_strength=%lf,recovery_rate=%lf,time_used=%lf'
-                    #           % (batch_size, num_classes, i_run, self.dp_strength,rec_rate, end_time - start_time))
-                    # elif self.apply_grad_spar:
-                    #     print(f'batch_size=%d,class_num=%d,exp_id=%d,grad_spars=%lf,recovery_rate=%lf,time_used=%lf'
-                    #           % (batch_size, num_classes, i_run, self.grad_spars,rec_rate, end_time - start_time))
                     
                     if self.apply_mi:
                         print(f'batch_size=%d,class_num=%d,exp_id=%d,mi_loss_lambda=%lf,recovery_rate=%lf,time_used=%lf'

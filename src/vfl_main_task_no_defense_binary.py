@@ -283,14 +283,6 @@ if __name__ == '__main__':
                 # vfl_defence_image = vfl_main_task_mid_passive.VFLDefenceExperimentBase(args)
                 test_acc = vfl_defence_image.train()
                 test_acc_list.append(test_acc[0])
-                #############################################
-                # # vfl_defence_image = vfl_main_task_mid_with_attack.VFLDefenceExperimentBase(args)
-                # vfl_defence_image = vfl_main_task_mid_alternate_with_attack.VFLDefenceExperimentBase(args)
-                # # append_exp_res(path, "alternate")
-                # test_acc = vfl_defence_image.train()
-                # test_acc_list.append(test_acc[0])
-                # rec_acc_list.append(test_acc[2])
-                #############################################
             append_exp_res(path, str(args.mid_loss_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
             # append_exp_res(path, str(args.mid_loss_lambda) + ' ' + str(np.mean(rec_acc_list))+ ' ' + str(rec_acc_list) + ' ' + str(np.max(rec_acc_list)) + ' attack')
     else:

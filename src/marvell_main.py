@@ -430,38 +430,22 @@ if __name__ == '__main__':
                 append_exp_res(path[0], str(dp_strength) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
                 append_exp_res(path[1], str(dp_strength) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
         elif args.apply_grad_spar:
-            # gradient_sparsification_list = [90, 95, 96, 97, 98, 99]
-            # for grad_spars in gradient_sparsification_list:
-            #     test_auc_list = []
-            #     test_acc_list = []
-            #     for i in range(num_exp):
-            #         args.grad_spars = grad_spars
-            #         marvell_vfl = marvell_scoring_main_auc.VFLmodel_AUC(args)
-            #         # test_auc = marvell_vfl.train()
-            #         # test_auc_list.append(test_auc)
-            #         test_auc, test_acc = marvell_vfl.train()
-            #         test_auc_list.append(test_auc)
-            #         test_acc_list.append(test_acc)
-            #     append_exp_res(path[0], str(grad_spars) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
-            #     append_exp_res(path[1], str(grad_spars) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
-            #     append_exp_res(path[0], str(grad_spars) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
-            #     append_exp_res(path[1], str(grad_spars) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
-            test_auc_list = []
-            test_acc_list = []
-            grad_spars = args.grad_spars
-            for i in range(num_exp):
-                # args.grad_spars = grad_spars
-                # grad_spars = args.grad_spars
-                marvell_vfl = marvell_scoring_main_auc.VFLmodel_AUC(args)
-                # test_auc = marvell_vfl.train()
-                # test_auc_list.append(test_auc)
-                test_auc, test_acc = marvell_vfl.train()
-                test_auc_list.append(test_auc)
-                test_acc_list.append(test_acc)
-            append_exp_res(path[0], str(grad_spars) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
-            append_exp_res(path[1], str(grad_spars) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
-            append_exp_res(path[0], str(grad_spars) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
-            append_exp_res(path[1], str(grad_spars) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+            gradient_sparsification_list = [90, 95, 96, 97, 98, 99]
+            for grad_spars in gradient_sparsification_list:
+                test_auc_list = []
+                test_acc_list = []
+                for i in range(num_exp):
+                    args.grad_spars = grad_spars
+                    marvell_vfl = marvell_scoring_main_auc.VFLmodel_AUC(args)
+                    # test_auc = marvell_vfl.train()
+                    # test_auc_list.append(test_auc)
+                    test_auc, test_acc = marvell_vfl.train()
+                    test_auc_list.append(test_auc)
+                    test_acc_list.append(test_acc)
+                append_exp_res(path[0], str(grad_spars) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[1], str(grad_spars) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[0], str(grad_spars) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+                append_exp_res(path[1], str(grad_spars) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
         elif args.apply_mid:
             # mid_lambda_list = [1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
             # mid_lambda_list = [1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
