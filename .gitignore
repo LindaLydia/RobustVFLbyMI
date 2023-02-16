@@ -11,6 +11,7 @@ old*
 trained_models/
 wandb*/
 wandb/
+src/adversarial/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
