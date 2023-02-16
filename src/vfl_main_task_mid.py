@@ -71,6 +71,10 @@ class VFLDefenceExperimentBase(object):
         self.mid_enlarge_model = args.mid_enlarge_model
         self.apply_distance_correlation = args.apply_distance_correlation
         self.distance_correlation_lambda = args.distance_correlation_lambda
+        self.apply_grad_perturb = args.apply_grad_perturb
+        self.perturb_epsilon = args.perturb_epsilon
+        self.apply_RRwithPrior = args.apply_RRwithPrior
+        self.RRwithPrior_epsilon = args.RRwithPrior_epsilon        
 
     def fetch_parties_data(self, data):
         if self.dataset_name == 'nuswide':
@@ -148,7 +152,7 @@ class VFLDefenceExperimentBase(object):
         mu, std = pred_a_double[:,:self.num_classes*BOTTLENECK_SCALE], pred_a_double[:,self.num_classes*BOTTLENECK_SCALE:]
         std = F.softplus(std-0.5) # ? F.softplus(std-5)
         # std = F.softplus(std-5) # ? F.softplus(std-5)
-        print("mu, std: ", mu.size(), std.size())
+        # print("mu, std: ", mu.size(), std.size())
         pred_Z = mu+std*epsilon
         # assert(pred_Z.size()==X.size())
         pred_Z = pred_Z.to(self.device)
@@ -163,6 +167,12 @@ class VFLDefenceExperimentBase(object):
                 _, gt_one_hot_label = self.encoder(batch_label)
             else:
                 assert(encoder != None)
+        elif self.apply_grad_perturb:
+            gt_one_hot_label = batch_label
+            perturb_one_hot_label = label_perturb(batch_label, self.perturb_epsilon)
+        elif self.apply_RRwithPrior:
+            gt_one_hot_label = batch_label
+            RRwP_one_hot_label = RRwithPrior(batch_label, self.RRwithPrior_epsilon, gt_equal_probability)
         else:
             gt_one_hot_label = batch_label
         # if self.apply_encoder:
@@ -198,6 +208,10 @@ class VFLDefenceExperimentBase(object):
         ######################## defense: trainable_layer(top_model) ############################
         pred = self.active_aggregate_model(pred_a, pred_b)
         loss = criterion(pred, gt_one_hot_label)
+        if self.apply_grad_perturb:
+            loss_perturb_label = criterion(pred,perturb_one_hot_label)
+        if self.apply_RRwithPrior:
+            loss_rr_label = criterion(pred,RRwP_one_hot_label)
         ######################## defense: mi ############################
         if self.apply_mi:
             # loss = criterion(pred_b, gt_one_hot_label)
@@ -228,7 +242,7 @@ class VFLDefenceExperimentBase(object):
             mu, std = pred_a_double[:,:self.num_classes*BOTTLENECK_SCALE], pred_a_double[:,self.num_classes*BOTTLENECK_SCALE:]
             std = F.softplus(std-0.5) # ? F.softplus(std-5)
             # std = F.softplus(std-5) # ? F.softplus(std-5)
-            print("mu, std: ", mu.size(), std.size())
+            # print("mu, std: ", mu.size(), std.size())
             pred_Z = mu+std*epsilon
             # assert(pred_Z.size()==pred_a.size())
             pred_Z = pred_Z.to(self.device)
@@ -240,20 +254,29 @@ class VFLDefenceExperimentBase(object):
             # loss = criterion(pred, gt_one_hot_label) + self.mid_loss_lambda * entropy_for_probability_vector(pred_a)
             # loss for continuous form of reparameterization
             loss = criterion(pred, gt_one_hot_label) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
-            print("loss: ", loss)
+            # print("loss: ", loss)
 
 
         ######################## defense4: distance correlation ############################
         elif self.apply_distance_correlation:
-            loss = criterion(pred, gt_one_hot_label) + self.distance_correlation_lambda * torch.mean(torch.cdist(pred_a, gt_one_hot_label, p=2))
+            # loss = criterion(pred, gt_one_hot_label) + self.distance_correlation_lambda * torch.mean(torch.cdist(pred_a, gt_one_hot_label, p=2))
+            loss = criterion(pred, gt_one_hot_label) + self.distance_correlation_lambda * torch.log(tf_distance_cov_cor(pred_a, gt_one_hot_label))
         ######################## defense with loss change end ############################
         pred_a_gradients = torch.autograd.grad(loss, pred_a, retain_graph=True)
+        if self.apply_grad_perturb:
+            pred_a_gradients = torch.autograd.grad(loss_perturb_label, pred_a, retain_graph=True)
+        if self.apply_RRwithPrior:
+            pred_a_gradients = torch.autograd.grad(loss_rr_label, pred_a, retain_graph=True)
         pred_a_gradients_clone = pred_a_gradients[0].detach().clone()
         pred_b_gradients = torch.autograd.grad(loss, pred_b, retain_graph=True)
         pred_b_gradients_clone = pred_b_gradients[0].detach().clone()
 
         ######################## defense2: dp ############################
         pred_a_gradients = torch.autograd.grad(loss, pred_a, retain_graph=True)
+        if self.apply_grad_perturb:
+            pred_a_gradients = torch.autograd.grad(loss_perturb_label, pred_a, retain_graph=True)
+        if self.apply_RRwithPrior:
+            pred_a_gradients = torch.autograd.grad(loss_rr_label, pred_a, retain_graph=True)
         pred_a_gradients_clone = pred_a_gradients[0].detach().clone()
         pred_b_gradients = torch.autograd.grad(loss, pred_b, retain_graph=True)
         pred_b_gradients_clone = pred_b_gradients[0].detach().clone()
@@ -264,24 +287,24 @@ class VFLDefenceExperimentBase(object):
                 with torch.no_grad():
                     scale = self.dp_strength
                     # clip 2-norm per sample
-                    print("norm of gradients:", torch.norm(pred_a_gradients_clone, dim=1), torch.max(torch.norm(pred_a_gradients_clone, dim=1)))
+                    # print("norm of gradients:", torch.norm(pred_a_gradients_clone, dim=1), torch.max(torch.norm(pred_a_gradients_clone, dim=1)))
                     norm_factor_a = torch.div(torch.max(torch.norm(pred_a_gradients_clone, dim=1)),
                                               threshold + 1e-6).clamp(min=1.0)
                     # add laplace noise
                     dist_a = torch.distributions.laplace.Laplace(location, scale)
                     pred_a_gradients_clone = torch.div(pred_a_gradients_clone, norm_factor_a) + \
                                              dist_a.sample(pred_a_gradients_clone.shape).to(self.device)
-                    print("norm of gradients after laplace:", torch.norm(pred_a_gradients_clone, dim=1), torch.max(torch.norm(pred_a_gradients_clone, dim=1)))
+                    # print("norm of gradients after laplace:", torch.norm(pred_a_gradients_clone, dim=1), torch.max(torch.norm(pred_a_gradients_clone, dim=1)))
             elif self.apply_gaussian:
                 with torch.no_grad():
                     scale = self.dp_strength
 
-                    print("norm of gradients:", torch.norm(pred_a_gradients_clone, dim=1), torch.max(torch.norm(pred_a_gradients_clone, dim=1)))
+                    # print("norm of gradients:", torch.norm(pred_a_gradients_clone, dim=1), torch.max(torch.norm(pred_a_gradients_clone, dim=1)))
                     norm_factor_a = torch.div(torch.max(torch.norm(pred_a_gradients_clone, dim=1)),
                                               threshold + 1e-6).clamp(min=1.0)
                     pred_a_gradients_clone = torch.div(pred_a_gradients_clone, norm_factor_a) + \
                                              torch.normal(location, scale, pred_a_gradients_clone.shape).to(self.device)
-                    print("norm of gradients after gaussian:", torch.norm(pred_a_gradients_clone, dim=1), torch.max(torch.norm(pred_a_gradients_clone, dim=1)))
+                    # print("norm of gradients after gaussian:", torch.norm(pred_a_gradients_clone, dim=1), torch.max(torch.norm(pred_a_gradients_clone, dim=1)))
         ######################## defense3: gradient sparsification ############################
         elif self.apply_grad_spar:
             with torch.no_grad():
@@ -358,7 +381,7 @@ class VFLDefenceExperimentBase(object):
         model_optimizer.step()
 
         predict_prob = F.softmax(pred, dim=-1)
-        suc_cnt = torch.sum(torch.argmax(predict_prob, dim=-1) == torch.argmax(gt_one_hot_label, dim=-1)).item()
+        suc_cnt = torch.sum(torch.argmax(predict_prob, dim=-1) == torch.argmax(batch_label, dim=-1)).item()
         train_acc = suc_cnt / predict_prob.shape[0]
         return loss.item(), train_acc
 
@@ -398,6 +421,7 @@ class VFLDefenceExperimentBase(object):
                 model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()), lr=self.lr)
         criterion = cross_entropy_for_onehot
 
+        start_time = time.time()
         test_acc = 0.0
         test_acc_topk = 0.0
         for i_epoch in range(self.epochs):
@@ -483,6 +507,9 @@ class VFLDefenceExperimentBase(object):
                         tqdm_train.set_postfix(postfix)
                         print('Epoch {}% \t train_loss:{:.2f} train_acc:{:.2f} test_acc:{:.2f}'.format(
                             i_epoch, loss, train_acc, test_acc))
+        end_time = time.time()
+        print(f"time used = {end_time-start_time}")
+        # assert 1 == 0
         return test_acc, test_acc_topk
 
 

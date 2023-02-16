@@ -11,14 +11,14 @@
 # python marvell_main.py --apply_discrete_gradients True --discrete_gradients_bins 12
 # python marvell_main.py --apply_discrete_gradients True --discrete_gradients_bins 18
 
-python marvell_main.py --apply_trainable_layer True
-python marvell_main.py --apply_marvell True --apply_trainable_layer True
-python marvell_main.py --apply_mid True --apply_trainable_layer True
+# python marvell_main.py --apply_trainable_layer True
+# python marvell_main.py --apply_marvell True --apply_trainable_layer True
+# python marvell_main.py --apply_mid True --apply_trainable_layer True
 # python marvell_main.py --apply_encoder True --apply_trainable_layer True
 # python marvell_main.py --apply_encoder True --apply_discrete_gradients True --discrete_gradients_bins 12 --apply_trainable_layer True
-python marvell_main.py --apply_laplace True --apply_trainable_layer True
-python marvell_main.py --apply_gaussian True --apply_trainable_layer True
-python marvell_main.py --apply_grad_spar True --apply_trainable_layer True
+# python marvell_main.py --apply_laplace True --apply_trainable_layer True
+# python marvell_main.py --apply_gaussian True --apply_trainable_layer True
+# python marvell_main.py --apply_grad_spar True --apply_trainable_layer True
 # python marvell_main.py --apply_discrete_gradients True --discrete_gradients_bins 6 --apply_trainable_layer True
 # python marvell_main.py --apply_discrete_gradients True --discrete_gradients_bins 12 --apply_trainable_layer True
 # python marvell_main.py --apply_discrete_gradients True --discrete_gradients_bins 18 --apply_trainable_layer True
@@ -110,14 +110,16 @@ python marvell_main.py --apply_grad_spar True --apply_trainable_layer True
 # python marvell_main.py --dataset cifar100 --apply_discrete_gradients True --discrete_gradients_bins 12
 # python marvell_main.py --dataset cifar100 --apply_discrete_gradients True --discrete_gradients_bins 18
 
-python marvell_main.py --dataset cifar100 --apply_trainable_layer True
-python marvell_main.py --dataset cifar100 --apply_marvell True --apply_trainable_layer True
-python marvell_main.py --dataset cifar100 --apply_mid True --apply_trainable_layer True
+# python marvell_main.py --dataset cifar100 --apply_trainable_layer True
+# python marvell_main.py --dataset cifar100 --apply_marvell True --apply_trainable_layer True
+# python marvell_main.py --dataset cifar100 --apply_mid True --apply_trainable_layer True
+# python marvell_main.py --dataset cifar100 --apply_distance_correlation True --apply_trainable_layer True
+python marvell_main.py --dataset cifar100 --apply_grad_perturb True --apply_trainable_layer True
 # python marvell_main.py --dataset cifar100 --apply_encoder True --apply_trainable_layer True
 # python marvell_main.py --dataset cifar100 --apply_encoder True --apply_discrete_gradients True --discrete_gradients_bins 12 --apply_trainable_layer True
-python marvell_main.py --dataset cifar100 --apply_laplace True --apply_trainable_layer True
-python marvell_main.py --dataset cifar100 --apply_gaussian True --apply_trainable_layer True
-python marvell_main.py --dataset cifar100 --apply_grad_spar True --apply_trainable_layer True
+# python marvell_main.py --dataset cifar100 --apply_laplace True --apply_trainable_layer True
+# python marvell_main.py --dataset cifar100 --apply_gaussian True --apply_trainable_layer True
+# python marvell_main.py --dataset cifar100 --apply_grad_spar True --apply_trainable_layer True
 # python marvell_main.py --dataset cifar100 --apply_discrete_gradients True --discrete_gradients_bins 6 --apply_trainable_layer True
 # python marvell_main.py --dataset cifar100 --apply_discrete_gradients True --discrete_gradients_bins 12 --apply_trainable_layer True
 # python marvell_main.py --dataset cifar100 --apply_discrete_gradients True --discrete_gradients_bins 18 --apply_trainable_layer True
@@ -125,6 +127,8 @@ python marvell_main.py --dataset cifar100 --apply_grad_spar True --apply_trainab
 # python marvell_main.py --dataset cifar100 --exp_type main_task --epochs 160
 # python marvell_main.py --dataset cifar100 --exp_type main_task --apply_marvell True --epochs 160
 # python marvell_main.py --dataset cifar100 --exp_type main_task --apply_mid True --epochs 160
+# python marvell_main.py --dataset cifar100 --exp_type main_task --apply_distance_correlation True --epochs 160
+# python marvell_main.py --dataset cifar100 --exp_type main_task --apply_grad_perturb True --epochs 160
 # python marvell_main.py --dataset cifar100 --exp_type main_task --apply_encoder True --epochs 160
 # python marvell_main.py --dataset cifar100 --exp_type main_task --apply_encoder True --apply_discrete_gradients True --discrete_gradients_bins 12 --epochs 160
 # python marvell_main.py --dataset cifar100 --exp_type main_task --apply_laplace True --epochs 160
@@ -137,6 +141,8 @@ python marvell_main.py --dataset cifar100 --apply_grad_spar True --apply_trainab
 # python marvell_main.py --dataset cifar100 --exp_type main_task --epochs 160 --apply_trainable_layer True
 # python marvell_main.py --dataset cifar100 --exp_type main_task --epochs 160 --apply_marvell True --apply_trainable_layer True
 # python marvell_main.py --dataset cifar100 --exp_type main_task --epochs 160 --apply_mid True --apply_trainable_layer True
+# python marvell_main.py --dataset cifar100 --exp_type main_task --epochs 160 --apply_distance_correlation True --apply_trainable_layer True
+python marvell_main.py --dataset cifar100 --exp_type main_task --epochs 160 --apply_grad_perturb True --apply_trainable_layer True
 # python marvell_main.py --dataset cifar100 --exp_type main_task --epochs 160 --apply_encoder True --apply_trainable_layer True
 # python marvell_main.py --dataset cifar100 --exp_type main_task --epochs 160 --apply_encoder True --apply_discrete_gradients True --discrete_gradients_bins 12 --apply_trainable_layer True
 # python marvell_main.py --dataset cifar100 --exp_type main_task --epochs 160 --apply_laplace True --apply_trainable_layer True
@@ -149,6 +155,8 @@ python marvell_main.py --dataset cifar100 --apply_grad_spar True --apply_trainab
 # python marvell_main.py --dataset cifar10 --apply_trainable_layer True
 # python marvell_main.py --dataset cifar10 --apply_marvell True --apply_trainable_layer True
 # python marvell_main.py --dataset cifar10 --apply_mid True --apply_trainable_layer True
+# python marvell_main.py --dataset cifar10 --apply_distance_correlation True --apply_trainable_layer True
+# python marvell_main.py --dataset cifar10 --apply_grad_perturb True --apply_trainable_layer True
 # # python marvell_main.py --dataset cifar10 --apply_encoder True --apply_trainable_layer True
 # # python marvell_main.py --dataset cifar10 --apply_encoder True --apply_discrete_gradients True --discrete_gradients_bins 12 --apply_trainable_layer True
 # python marvell_main.py --dataset cifar10 --apply_laplace True --apply_trainable_layer True
@@ -157,3 +165,6 @@ python marvell_main.py --dataset cifar100 --apply_grad_spar True --apply_trainab
 # # python marvell_main.py --dataset cifar10 --apply_discrete_gradients True --discrete_gradients_bins 6 --apply_trainable_layer True
 # # python marvell_main.py --dataset cifar10 --apply_discrete_gradients True --discrete_gradients_bins 12 --apply_trainable_layer True
 # # python marvell_main.py --dataset cifar10 --apply_discrete_gradients True --discrete_gradients_bins 18 --apply_trainable_layer True
+
+# python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_distance_correlation True --apply_trainable_layer True
+# python marvell_main.py --dataset cifar10 --exp_type main_task --epochs 160 --apply_grad_perturb True --apply_trainable_layer True

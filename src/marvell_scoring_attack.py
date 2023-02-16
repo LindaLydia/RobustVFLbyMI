@@ -71,6 +71,10 @@ class ScoringAttack(object):
         self.mid_enlarge_model = None
         self.apply_distance_correlation = args.apply_distance_correlation
         self.distance_correlation_lambda = args.distance_correlation_lambda
+        self.apply_grad_perturb = args.apply_grad_perturb
+        self.perturb_epsilon = args.perturb_epsilon
+        self.apply_RRwithPrior = args.apply_RRwithPrior
+        self.RRwithPrior_epsilon = args.RRwithPrior_epsilon        
         # self.show_param()
 
     def show_param(self):
@@ -151,6 +155,10 @@ class ScoringAttack(object):
                         gt_onehot_label = torch.stack(gt_onehot_label).to(self.device)
                         # gt_label = torch.stack(gt_label).to(self.device)
                         # gt_onehot_label = gt_label  # label_to_onehot(gt_label)
+                    if self.apply_grad_perturb:
+                        gt_onehot_label = label_perturb(gt_onehot_label, self.perturb_epsilon)
+                    if self.apply_RRwithPrior:
+                        gt_onehot_label = RRwithPrior(gt_onehot_label, self.RRwithPrior_epsilon, gt_equal_probability)
                     if self.apply_encoder:
                         _, gt_onehot_label = self.encoder(gt_onehot_label)
                     # if self.apply_encoder:
@@ -264,7 +272,7 @@ class ScoringAttack(object):
 
                     ######################## defense4: distance correlation ############################
                     if self.apply_distance_correlation:
-                        loss = criterion(pred, gt_onehot_label) + self.distance_correlation_lambda * torch.mean(torch.cdist(pred_a, gt_onehot_label, p=2))
+                        loss = criterion(pred, gt_onehot_label) + self.distance_correlation_lambda * torch.log(tf_distance_cov_cor(pred_a, gt_onehot_label))
                         # pos_loss = criterion(pred[pos_idx:pos_idx+1], gt_onehot_label[pos_idx:pos_idx+1]) + self.distance_correlation_lambda * torch.mean(torch.cdist(pred_a, gt_onehot_label, p=2)) / pred_Z.size()[0]
                     ######################## defense with loss change end ############################
                     pred_a_gradients = torch.autograd.grad(loss, pred_a, retain_graph=True)
@@ -422,6 +430,16 @@ class ScoringAttack(object):
                               % (batch_size, num_classes, i_run, self.distance_correlation_lambda,norm_leak_auc, cosine_leak_auc,  end_time - start_time))
                         print(f'batch_size=%d,class_num=%d,exp_id=%d,distance_correlationlambda=%lf,norm_leak_acc=%lf,cosine_leak_acc=%lf,time_used=%lf'
                               % (batch_size, num_classes, i_run, self.distance_correlation_lambda,norm_leak_acc, cosine_leak_acc,  end_time - start_time))
+                    elif self.apply_RRwithPrior:
+                        print(f'batch_size=%d,class_num=%d,exp_id=%d,RRwithPrior_epsilon=%lf,norm_leak_auc=%lf,cosine_leak_auc=%lf,time_used=%lf'
+                              % (batch_size, num_classes, i_run, self.RRwithPrior_epsilon ,norm_leak_auc, cosine_leak_auc,  end_time - start_time))
+                        print(f'batch_size=%d,class_num=%d,exp_id=%d,RRwithPrior_epsilon=%lf,norm_leak_acc=%lf,cosine_leak_acc=%lf,time_used=%lf'
+                              % (batch_size, num_classes, i_run, self.RRwithPrior_epsilon,norm_leak_acc, cosine_leak_acc,  end_time - start_time))
+                    elif self.apply_grad_perturb:
+                        print(f'batch_size=%d,class_num=%d,exp_id=%d,perturb_epsilon=%lf,norm_leak_auc=%lf,cosine_leak_auc=%lf,time_used=%lf'
+                              % (batch_size, num_classes, i_run, self.perturb_epsilon,norm_leak_auc, cosine_leak_auc,  end_time - start_time))
+                        print(f'batch_size=%d,class_num=%d,exp_id=%d,perturb_epsilon=%lf,norm_leak_acc=%lf,cosine_leak_acc=%lf,time_used=%lf'
+                              % (batch_size, num_classes, i_run, self.perturb_epsilon,norm_leak_acc, cosine_leak_acc,  end_time - start_time))
                     elif self.apply_discrete_gradients:
                         print(f'batch_size=%d,class_num=%d,exp_id=%d,ae_lambda=%s,norm_leak_auc=%lf,cosine_leak_auc=%lf,time_used=%lf'
                               % (batch_size, num_classes, i_run, self.ae_lambda,norm_leak_auc, cosine_leak_auc,  end_time - start_time))
@@ -473,9 +491,15 @@ class ScoringAttack(object):
                 elif self.apply_mi:
                     exp_result = str(self.mi_loss_lambda) + ' ' + str(np.mean(norm_leak_auc_history)) + ' AUC ' + str(norm_leak_auc_history) + ' ' + str(np.max(norm_leak_auc_history))
                     exp_result1 = str(self.mi_loss_lambda) + ' ' + str(np.mean(cosine_leak_auc_history)) + ' AUC ' + str(cosine_leak_auc_history) + ' ' + str(np.max(cosine_leak_auc_history))
+                elif self.apply_RRwithPrior:
+                    exp_result = str(self.RRwithPrior_epsilon) + ' ' + str(np.mean(norm_leak_auc_history)) + ' AUC ' + str(norm_leak_auc_history) + ' ' + str(np.max(norm_leak_auc_history))
+                    exp_result1 = str(self.RRwithPrior_epsilon) + ' ' + str(np.mean(cosine_leak_auc_history)) + ' AUC ' + str(cosine_leak_auc_history) + ' ' + str(np.max(cosine_leak_auc_history))
                 elif self.apply_distance_correlation:
                     exp_result = str(self.distance_correlation_lambda) + ' ' + str(np.mean(norm_leak_auc_history)) + ' AUC ' + str(norm_leak_auc_history) + ' ' + str(np.max(norm_leak_auc_history))
                     exp_result1 = str(self.distance_correlation_lambda) + ' ' + str(np.mean(cosine_leak_auc_history)) + ' AUC ' + str(cosine_leak_auc_history) + ' ' + str(np.max(cosine_leak_auc_history))
+                elif self.apply_grad_perturb:
+                    exp_result = str(self.perturb_epsilon) + ' ' + str(np.mean(norm_leak_auc_history)) + ' AUC ' + str(norm_leak_auc_history) + ' ' + str(np.max(norm_leak_auc_history))
+                    exp_result1 = str(self.perturb_epsilon) + ' ' + str(np.mean(cosine_leak_auc_history)) + ' AUC ' + str(cosine_leak_auc_history) + ' ' + str(np.max(cosine_leak_auc_history))
                 elif self.apply_marvell:
                     exp_result = str(self.marvell_s) + ' ' + str(np.mean(norm_leak_auc_history)) + ' AUC ' + str(norm_leak_auc_history) + ' ' + str(np.max(norm_leak_auc_history))
                     exp_result1 = str(self.marvell_s) + ' ' + str(np.mean(cosine_leak_auc_history)) + ' AUC ' + str(cosine_leak_auc_history) + ' ' + str(np.max(cosine_leak_auc_history))
@@ -519,9 +543,15 @@ class ScoringAttack(object):
                 elif self.apply_mi:
                     exp_result = str(self.mi_loss_lambda) + ' ' + str(np.mean(norm_leak_acc_history)) + ' ACC ' + str(norm_leak_acc_history) + ' ' + str(np.max(norm_leak_acc_history))
                     exp_result1 = str(self.mi_loss_lambda) + ' ' + str(np.mean(cosine_leak_acc_history)) + ' ACC ' + str(cosine_leak_acc_history) + ' ' + str(np.max(cosine_leak_acc_history))
+                elif self.apply_RRwithPrior:
+                    exp_result = str(self.RRwithPrior_epsilon) + ' ' + str(np.mean(norm_leak_acc_history)) + ' ACC ' + str(norm_leak_acc_history) + ' ' + str(np.max(norm_leak_acc_history))
+                    exp_result1 = str(self.RRwithPrior_epsilon) + ' ' + str(np.mean(cosine_leak_acc_history)) + ' ACC ' + str(cosine_leak_acc_history) + ' ' + str(np.max(cosine_leak_acc_history))
                 elif self.apply_distance_correlation:
                     exp_result = str(self.distance_correlation_lambda) + ' ' + str(np.mean(norm_leak_acc_history)) + ' ACC ' + str(norm_leak_acc_history) + ' ' + str(np.max(norm_leak_acc_history))
                     exp_result1 = str(self.distance_correlation_lambda) + ' ' + str(np.mean(cosine_leak_acc_history)) + ' ACC ' + str(cosine_leak_acc_history) + ' ' + str(np.max(cosine_leak_acc_history))
+                elif self.apply_grad_perturb:
+                    exp_result = str(self.perturb_epsilon) + ' ' + str(np.mean(norm_leak_acc_history)) + ' ACC ' + str(norm_leak_acc_history) + ' ' + str(np.max(norm_leak_acc_history))
+                    exp_result1 = str(self.perturb_epsilon) + ' ' + str(np.mean(cosine_leak_acc_history)) + ' ACC ' + str(cosine_leak_acc_history) + ' ' + str(np.max(cosine_leak_acc_history))
                 elif self.apply_marvell:
                     exp_result = str(self.marvell_s) + ' ' + str(np.mean(norm_leak_acc_history)) + ' ACC ' + str(norm_leak_acc_history) + ' ' + str(np.max(norm_leak_acc_history))
                     exp_result1 = str(self.marvell_s) + ' ' + str(np.mean(cosine_leak_acc_history)) + ' ACC ' + str(cosine_leak_acc_history) + ' ' + str(np.max(cosine_leak_acc_history))

@@ -89,6 +89,12 @@
 #     python main_missing.py --name defense_test0.0 --dataset cifar10 --model resnet18 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.0 --gpu 0
 # done
 
+# for i in `seq 1 10`; do 
+#     python main.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.0 --gpu 0
+#     python main.py --name defense --dataset nuswide --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.0 --gpu 0
+#     python main.py --name defense --dataset cifar10 --model resnet18 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 1.0 --gpu 0
+# done
+
 for i in `seq 1 10`; do 
     python main.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.0 --gpu 0
     python main.py --name defense --dataset nuswide --model mlp2 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.0 --gpu 0

@@ -717,7 +717,8 @@ def plot_scatter_plot_for_paper(input_file, target_dir, marker=False):
     x.pop('none', None)
     y.pop('none', None)
     print(x)
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots() #default_figsize=(6.4,4.8)
+    ax.set_xscale("log")
     # marker_list = ['o'(DP-G), 'v'(DP-L), '^'(GS), 'D'(DG), '*'(CAE), '1'(DCAE), '4'(MID)]
     # color_list = ['#1f77b4'(DP-G), '#ff7f0e'(DP-L), '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#17becf']
     marker_list = ['o', 'v', '^', 'h', '4']

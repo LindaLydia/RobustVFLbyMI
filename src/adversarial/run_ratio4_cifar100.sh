@@ -41,13 +41,13 @@
 for i in `seq 1 10`; do 
 #     python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --gpu 0
 #     python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --dp_type laplace --dp_strength 0.1 --missing_rate 4 --gpu 0
-    python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --dp_type laplace --dp_strength 0.05 --missing_rate 4 --gpu 0
-    python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --dp_type laplace --dp_strength 0.01 --missing_rate 4 --gpu 0
+    # python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --dp_type laplace --dp_strength 0.05 --missing_rate 4 --gpu 0
+    # python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --dp_type laplace --dp_strength 0.01 --missing_rate 4 --gpu 0
 #     python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --dp_type laplace --dp_strength 0.001 --missing_rate 4 --gpu 0
 #     python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --dp_type laplace --dp_strength 0.0001 --missing_rate 4 --gpu 0
 #     python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --dp_type gaussian --dp_strength 0.1 --missing_rate 4 --gpu 0
-    python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --dp_type gaussian --dp_strength 0.05 --missing_rate 4 --gpu 0
-    python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --dp_type gaussian --dp_strength 0.01 --missing_rate 4 --gpu 0
+    # python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --dp_type gaussian --dp_strength 0.05 --missing_rate 4 --gpu 0
+    # python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --dp_type gaussian --dp_strength 0.01 --missing_rate 4 --gpu 0
 #     python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --dp_type gaussian --dp_strength 0.001 --missing_rate 4 --gpu 0
 #     python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --dp_type gaussian --dp_strength 0.0001 --missing_rate 4 --gpu 0
 #     python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --gradient_sparsification 95.0 --gpu 0
@@ -72,6 +72,12 @@ for i in `seq 1 10`; do
 #     python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.1 --missing_rate 4 --gpu 0
 #     python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.5 --missing_rate 4 --gpu 0
 #     python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 1.0 --missing_rate 4 --gpu 0
+    python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --apply_distance_correlation 1 --distance_correlation_lambda 0.1 --missing_rate 4 --gpu 1
+    python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --apply_distance_correlation 1 --distance_correlation_lambda 0.01 --missing_rate 4 --gpu 1
+    python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --apply_distance_correlation 1 --distance_correlation_lambda 0.003 --missing_rate 4 --gpu 1
+    python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --apply_distance_correlation 1 --distance_correlation_lambda 0.001 --missing_rate 4 --gpu 1
+    python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --apply_distance_correlation 1 --distance_correlation_lambda 0.0001 --missing_rate 4 --gpu 1
+    python main_missing.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --apply_distance_correlation 1 --distance_correlation_lambda 0.00001 --missing_rate 4 --gpu 1
 done
 
 # for i in `seq 1 10`; do

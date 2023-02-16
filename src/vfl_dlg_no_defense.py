@@ -77,7 +77,10 @@ if __name__ == '__main__':
     parser.add_argument('--mid_loss_lambda', default=0.003, type=float, help='the parameter for MID')
     parser.add_argument('--apply_distance_correlation', default=False, type=bool, help='wheather to use Distance Correlation for protection')
     parser.add_argument('--distance_correlation_lambda', default=0.003, type=float, help='the parameter for Distance Correlation')
-
+    parser.add_argument('--apply_grad_perturb', default=False, type=bool, help='wheather to use GradPerturb for protection')
+    parser.add_argument('--perturb_epsilon', default=1.0, type=float, help='the parameter DP-epsilon for GradPerturb')
+    parser.add_argument('--apply_RRwithPrior', default=False, type=bool, help='wheather to use RRwithPrior for protection')
+    parser.add_argument('--RRwithPrior_epsilon', default=1.0, type=float, help='the parameter DP-epsilon for RRwithPrior')
 
     args = parser.parse_args()
     set_seed(args.seed)
@@ -129,7 +132,10 @@ if __name__ == '__main__':
                         'autoencoder_20_0.1_1645374527','autoencoder_20_0.05_1645374482','autoencoder_20_0.0_1645374739']
         # ae_name_list = ['negative/autoencoder_20_0.5_1647127262', 'negative/autoencoder_20_1.0_1647127164']
 
-
+    # args.num_exp = 10
+    # args.num_exp = 5
+    # args.num_exp = 3
+    # args.num_exp = 1
 
     # args.exp_res_dir = f'exp_result/{args.dataset}/'
     # args.exp_res_dir = f'exp_result_2048/{args.dataset}/'
@@ -142,8 +148,12 @@ if __name__ == '__main__':
         args.exp_res_dir += 'MID/'
     if args.apply_mi:
         args.exp_res_dir += 'MI/'
+    if args.apply_RRwithPrior:
+        args.exp_res_dir += 'RRwithPrior/'
     if args.apply_distance_correlation:
         args.exp_res_dir += 'DistanceCorrelation/'
+    if args.apply_grad_perturb:
+        args.exp_res_dir += 'GradientPerturb/'    
     if args.apply_laplace:
         args.exp_res_dir += 'Laplace/'
     elif args.apply_gaussian:
@@ -189,6 +199,14 @@ if __name__ == '__main__':
         # mid_lambda_list = [0]
         for mid_loss_lambda in mid_lambda_list:
             args.mid_loss_lambda = mid_loss_lambda
+            label_leakage = vfl_dlg_mid.LabelLeakage(args)
+            label_leakage.train()
+    elif args.apply_grad_perturb:
+        perturb_list = [0.1,0.3,1.0,3.0,10.0]
+        perturb_list = [100.0,5.0,2.0]
+        # mid_lambda_list = [0]
+        for perturb_epsilon in perturb_list:
+            args.perturb_epsilon = perturb_epsilon
             label_leakage = vfl_dlg_mid.LabelLeakage(args)
             label_leakage.train()
     else:

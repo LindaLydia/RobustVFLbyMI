@@ -181,10 +181,12 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
     # plt.style.use('ggplot')
     fig, ax = plt.subplots()
 
-    # defense_name_list = ['gaussian', 'laplace', 'grad_spars', 'marvell', 'ppdl', 'laplace_noise', 'gradient_compression', 'discrete_gradients', 'autoencoder', 'autoencoder/discreteGradients', 'autoencoder/random', 'no defense']
-    defense_name_list = ['Gaussian', 'Laplace', 'GradientSparsification', 'DiscreteGradients', 'CAE', 'DCAE', 'MARVELL', 'MID', 'no defense']
-    # defense_list = ['DP-G', 'DP-L', 'GS', 'Marvell', 'PPDL', 'LN', 'GC', 'DG', 'CAE', 'CAE+DG', 'RCAE', 'w/o defense']
-    defense_list = ['DP-G', 'DP-L', 'GS', 'DG', 'CAE', 'DCAE', 'MARVELL', 'MID', 'w/o defense']
+    # # defense_name_list = ['gaussian', 'laplace', 'grad_spars', 'marvell', 'ppdl', 'laplace_noise', 'gradient_compression', 'discrete_gradients', 'autoencoder', 'autoencoder/discreteGradients', 'autoencoder/random', 'no defense']
+    # defense_name_list = ['Gaussian', 'Laplace', 'GradientSparsification', 'DiscreteGradients', 'CAE', 'DCAE', 'MARVELL', 'MID', 'no defense']
+    # # defense_list = ['DP-G', 'DP-L', 'GS', 'Marvell', 'PPDL', 'LN', 'GC', 'DG', 'CAE', 'CAE+DG', 'RCAE', 'w/o defense']
+    # defense_list = ['DP-G', 'DP-L', 'GS', 'DG', 'CAE', 'DCAE', 'MARVELL', 'MID', 'w/o defense']
+    defense_name_list = ['Gaussian', 'Laplace', 'GradientSparsification', 'DiscreteGradients', 'CAE', 'DCAE', 'MARVELL', 'DistanceCorrelation', 'GradientPerturb', 'MID', 'no defense']
+    defense_list = ['DP-G', 'DP-L', 'GS', 'DG', 'CAE', 'DCAE', 'MARVELL', 'dCor', 'GradPerturb', 'MID', 'w/o defense']
     file_name_list = ['attack_task_acc.txt', 'main_task_acc.txt']
     rec_rate_list = []
     acc_list = []
@@ -263,13 +265,15 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
 
 
     # defense ['DP-G', 'DP-L', 'GS', 'Marvell',|| 'PPDL', 'LN(DP-L)', 'GC(GS)', 'DG', 'CAE', 'CAE+DG', 'RCAE', 'w/o defense']
-    # marker_list = ['o', 'v', '^', 'x',|| 'h'(PPDL), 'D'(DG), '+'(CAE+DG), '*'(CAE), 's'(w/o defense), '1'(RCAE), '2', '3', '4'(MID)]
-    # marker_list = ['o', 'v', '^', 'x', '*', '+', 's', '1', '2', '3', '4']
-    marker_list = ['o', 'v', '^', 'D', '*', '+', 'x', '4', 's']
-    # marker_list = ['o', 'v', '^', 'D', '*', '+', 'x', '+', 's']
-    # color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728'(CAE),|| '#9467bd'(Marvell), '#8c564b'(RCAE), '#e377c2'(PPDL), '#7f7f7f'(DG), '#bcbd22'(CAE+DG), '#17becf'(MID)] # the same as the default colors
-    # color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#9467bd', '#d62728', '#bcbd22', '#8c564b', '#e377c2', '#7f7f7f', '#17becf'] # the same as the default colors
-    color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#9467bd', '#17becf'] # the same as the default colors
+    # # marker_list = ['o', 'v', '^', 'x',|| 'h'(PPDL), 'D'(DG), '+'(CAE+DG), '*'(CAE), 's'(w/o defense), '1'(RCAE), '2'(GradPerturb), '3', '4'(MID), '.'(dCor)]
+    # # marker_list = ['o', 'v', '^', 'x', '*', '+', 's', '1', '2', '3', '4']
+    # marker_list = ['o', 'v', '^', 'D', '*', '+', 'x', '4', 's']
+    # # marker_list = ['o', 'v', '^', 'D', '*', '+', 'x', '+', 's']
+    # # color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728'(CAE),|| '#9467bd'(Marvell), '#8c564b'(RCAE), '#e377c2'(PPDL), '#7f7f7f'(DG), '#bcbd22'(CAE+DG), '#ff028d'(dCor), '#ad8150'(GradPerturb), '#17becf'(MID)] # the same as the default colors
+    # # color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#9467bd', '#d62728', '#bcbd22', '#8c564b', '#e377c2', '#7f7f7f', '#17becf'] # the same as the default colors
+    # color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#9467bd', '#17becf'] # the same as the default colors
+    marker_list = ['o', 'v', '^', 'D', '*', '+', 'x', '.', '2', '4', 's']
+    color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#9467bd', '#ff028d', '#ad8150', '#17becf'] # the same as the default colors
     # offset = [0, -0.08, 0, 0, 0, 0, 0, 0, 0] #cifar10--2
     # offset = [0, -3, 0, 0, 0, 0, 0, 0, 0]
     offset = [-0.3, -0.3, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -355,7 +359,7 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
 
 dataset = 'nuswide'
 dataset = 'cifar10'
-# dataset = 'cifar100'
+dataset = 'cifar100'
 # dataset = 'mnist'
 
 # exp_type = 'multi_no_top_model'
@@ -380,11 +384,13 @@ if __name__ == '__main__':
     # draw_rec_rate_vs_numclass_div_batchsize(f'exp_result/nuswide/rec_rate_vs_numclass_div_batchsize.txt', nuswide)
     # draw_label_leakage_defense('exp_result/nuswide/dataset=nuswide,defense=gradient_sparsification,model=MLP2,num_exp=10,epochs=5000.txt', dataset)
     # draw_defense_on_main_and_dlg_task('exp_result/cifar100', 'laplace')
+    
+    # plt.style.use('ggplot')
 
     exp_dir = f'./exp_result_direction_scoring/{dataset}/'
     main_task_x_limit_dict = {
-        'cifar10':{'multi_no_top_model':[34,60],'multi_top_model':[-1,101],'binary_no_top_model':[85,95],'binary_top_model':[93.1,96.2]},
-        'cifar100':{'multi_no_top_model':[34,60],'multi_top_model':[-1,101],'binary_no_top_model':[85,95],'binary_top_model':[79,92]},
+        'cifar10':{'multi_no_top_model':[34,60],'multi_top_model':[-1,101],'binary_no_top_model':[85,95],'binary_top_model':[92.3,96.2]},
+        'cifar100':{'multi_no_top_model':[34,60],'multi_top_model':[-1,101],'binary_no_top_model':[85,95],'binary_top_model':[79,92.2]},
         'mnist':{'multi_no_top_model':[82,98],'multi_top_model':[63,98],'binary_no_top_model':[99.75,100],'binary_top_model':[99.8,100]},
         'nuswide':{'multi_no_top_model':[82,90],'multi_top_model':[63,98],'binary_no_top_model':[77,90],'binary_top_model':[77,90]}
     }
@@ -395,7 +401,7 @@ if __name__ == '__main__':
         'nuswide':{'multi_no_top_model':[-1,101],'multi_top_model':[-1,101],'binary_no_top_model':[30,70],'binary_top_model':[40,101]}
     }
     x_major_locator_dict = {
-        'cifar10':{'multi_no_top_model':2,'binary_no_top_model':2,'binary_top_model':0.6},
+        'cifar10':{'multi_no_top_model':2,'binary_no_top_model':2,'binary_top_model':0.7},
         'cifar100':{'multi_no_top_model':2,'binary_no_top_model':2,'binary_top_model':2},
         'mnist':{'multi_no_top_model':3,'multi_top_model':5,'binary_no_top_model':0.05,'binary_top_model':0.05},
         'nuswide':{'multi_no_top_model':2,'binary_no_top_model':2,'binary_top_model':3}

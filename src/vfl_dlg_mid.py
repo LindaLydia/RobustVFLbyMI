@@ -73,6 +73,10 @@ class LabelLeakage(object):
         self.mid_enlarge_model = None
         self.apply_distance_correlation = args.apply_distance_correlation
         self.distance_correlation_lambda = args.distance_correlation_lambda
+        self.apply_grad_perturb = args.apply_grad_perturb
+        self.perturb_epsilon = args.perturb_epsilon
+        self.apply_RRwithPrior = args.apply_RRwithPrior
+        self.RRwithPrior_epsilon = args.RRwithPrior_epsilon        
         # self.show_param()
 
     def show_param(self):
@@ -172,6 +176,10 @@ class LabelLeakage(object):
                         gt_data_b = torch.stack(gt_data_b).to(self.device)
                         gt_label = torch.stack(gt_label).to(self.device)
                         gt_onehot_label = gt_label  # label_to_onehot(gt_label)
+                    if self.apply_grad_perturb:
+                        gt_onehot_label = label_perturb(gt_onehot_label, self.perturb_epsilon)
+                    if self.apply_RRwithPrior:
+                        gt_onehot_label = RRwithPrior(gt_onehot_label, self.RRwithPrior_epsilon, gt_equal_probability)
                     if self.apply_encoder:
                         _, gt_onehot_label = self.encoder(gt_onehot_label)
                     # if self.apply_encoder:
@@ -240,7 +248,8 @@ class LabelLeakage(object):
                         loss = criterion(pred, gt_onehot_label) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
                     ######################## defense4: distance correlation ############################
                     if self.apply_distance_correlation:
-                        loss = criterion(pred, gt_onehot_label) + self.distance_correlation_lambda * torch.mean(torch.cdist(pred_a, gt_onehot_label, p=2))
+                        # loss = criterion(pred, gt_onehot_label) + self.distance_correlation_lambda * torch.mean(torch.cdist(pred_a, gt_onehot_label, p=2))
+                        loss = criterion(pred, gt_onehot_label) + self.distance_correlation_lambda * torch.log(tf_distance_cov_cor(pred_a, gt_onehot_label))
                     ######################## defense with loss change end ############################
                     pred_a_gradients = torch.autograd.grad(loss, pred_a, retain_graph=True)
                     # print("pred_a_gradients:", pred_a_gradients)
@@ -362,9 +371,15 @@ class LabelLeakage(object):
                     elif self.apply_mi:
                         print(f'batch_size=%d,class_num=%d,exp_id=%d,mi_loss_lambda=%lf,recovery_rate=%lf,time_used=%lf'
                               % (batch_size, num_classes, i_run, self.mi_loss_lambda,rec_rate, end_time - start_time))
+                    elif self.apply_RRwithPrior:
+                        print(f'batch_size=%d,class_num=%d,exp_id=%d,RRwithPrior_epsilon=%lf,recovery_rate=%lf,time_used=%lf'
+                              % (batch_size, num_classes, i_run, self.RRwithPrior_epsilon,rec_rate, end_time - start_time))
                     elif self.apply_distance_correlation:
                         print(f'batch_size=%d,class_num=%d,exp_id=%d,distance_correlationlambda=%lf,recovery_rate=%lf,time_used=%lf'
                               % (batch_size, num_classes, i_run, self.distance_correlation_lambda,rec_rate, end_time - start_time))
+                    elif self.apply_grad_perturb:
+                        print(f'batch_size=%d,class_num=%d,exp_id=%d,perturb_epsilon=%lf,recovery_rate=%lf,time_used=%lf'
+                              % (batch_size, num_classes, i_run, self.perturb_epsilon,rec_rate, end_time - start_time))
                     elif self.apply_discrete_gradients:
                         print(f'batch_size=%d,class_num=%d,exp_id=%d,ae_lambda=%s,recovery_rate=%lf,time_used=%lf'
                               % (batch_size, num_classes, i_run, self.ae_lambda,rec_rate, end_time - start_time))
@@ -396,8 +411,12 @@ class LabelLeakage(object):
                     exp_result = str(self.mid_loss_lambda) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history)) + 'MID'
                 elif self.apply_mi:
                     exp_result = str(self.mi_loss_lambda) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
+                elif self.apply_RRwithPrior:
+                    exp_result = str(self.RRwithPrior_epsilon) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
                 elif self.apply_distance_correlation:
                     exp_result = str(self.distance_correlation_lambda) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
+                elif self.apply_grad_perturb:
+                    exp_result = str(self.perturb_epsilon) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
                 elif self.apply_encoder:
                     exp_result = str(self.ae_lambda) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
                 elif self.apply_marvell:

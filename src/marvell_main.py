@@ -120,6 +120,10 @@ if __name__ == '__main__':
     parser.add_argument('--mid_loss_lambda', default=0.003, type=float, help='the parameter for MID')
     parser.add_argument('--apply_distance_correlation', default=False, type=bool, help='wheather to use Distance Correlation for protection')
     parser.add_argument('--distance_correlation_lambda', default=0.003, type=float, help='the parameter for Distance Correlation')
+    parser.add_argument('--apply_grad_perturb', default=False, type=bool, help='wheather to use GradPerturb for protection')
+    parser.add_argument('--perturb_epsilon', default=1.0, type=float, help='the parameter DP-epsilon for GradPerturb')
+    parser.add_argument('--apply_RRwithPrior', default=False, type=bool, help='wheather to use RRwithPrior for protection')
+    parser.add_argument('--RRwithPrior_epsilon', default=1.0, type=float, help='the parameter DP-epsilon for RRwithPrior')
 
     args = parser.parse_args()
     if args.exp_type == 'attack':
@@ -166,9 +170,15 @@ if __name__ == '__main__':
         if args.apply_mi:
             args.exp_res_dir += 'MI/'
             temp += 'MI/'
+        if args.apply_RRwithPrior:
+            args.exp_res_dir += 'RRwithPrior/'
+            temp += 'RRwithPrior/'
         if args.apply_distance_correlation:
             args.exp_res_dir += 'DistanceCorrelation/'
             temp += 'DistanceCorrelation/'
+        if args.apply_grad_perturb:
+            args.exp_res_dir += 'GradientPerturb/'
+            temp += 'GradientPerturb/'
         if args.apply_laplace:
             args.exp_res_dir += 'Laplace/'
             temp += 'Laplace/'
@@ -236,6 +246,24 @@ if __name__ == '__main__':
             marvell_s_list = [10,5,2,1,0.1]
             for marvell_s in marvell_s_list:
                 args.marvell_s = marvell_s
+                label_leakage = marvell_scoring_attack.ScoringAttack(args)
+                label_leakage.train()
+        elif args.apply_RRwithPrior:
+            epsilon_list = [8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0]
+            for RRwithPrior_epsilon in epsilon_list:
+                args.RRwithPrior_epsilon = RRwithPrior_epsilon
+                label_leakage = marvell_scoring_attack.ScoringAttack(args)
+                label_leakage.train()
+        elif args.apply_distance_correlation:
+            distance_correlation_lambda_list = [1e-1,1e-2,3e-3,1e-3,1e-4,1e-5]
+            for distance_correlation_lambda in distance_correlation_lambda_list:
+                args.distance_correlation_lambda = distance_correlation_lambda
+                label_leakage = marvell_scoring_attack.ScoringAttack(args)
+                label_leakage.train()
+        elif args.apply_grad_perturb:
+            perturb_list = [0.1,0.3,1.0,3.0,10.0]
+            for perturb_epsilon in perturb_list:
+                args.perturb_epsilon = perturb_epsilon
                 label_leakage = marvell_scoring_attack.ScoringAttack(args)
                 label_leakage.train()
         else:
@@ -315,9 +343,15 @@ if __name__ == '__main__':
         if args.apply_mi:
             path += 'MI/'
             temp += 'MI/'
+        if args.apply_RRwithPrior:
+            path += 'RRwithPrior/'
+            temp += 'RRwithPrior/'
         if args.apply_distance_correlation:
             path += 'DistanceCorrelation/'
             temp += 'DistanceCorrelation/'
+        if args.apply_grad_perturb:
+            path += 'GradientPerturb/'
+            temp += 'GradientPerturb/'
         if args.apply_laplace:
             path += 'Laplace/'
             temp += 'Laplace/'
@@ -466,6 +500,55 @@ if __name__ == '__main__':
                 append_exp_res(path[1], str(args.marvell_s) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
                 append_exp_res(path[0], str(args.marvell_s) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
                 append_exp_res(path[1], str(args.marvell_s) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+        elif args.apply_RRwithPrior:
+            epsilon_list = [8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0]
+            for RRwithPrior_epsilon in epsilon_list:
+                test_auc_list = []
+                test_acc_list = []
+                for i in range(num_exp):
+                    args.RRwithPrior_epsilon = RRwithPrior_epsilon
+                    marvell_vfl = marvell_scoring_main_auc.VFLmodel_AUC(args)
+                    test_auc, test_acc = marvell_vfl.train()
+                    test_auc_list.append(test_auc)
+                    test_acc_list.append(test_acc)
+                append_exp_res(path[0], str(args.RRwithPrior_epsilon) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[1], str(args.RRwithPrior_epsilon) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[0], str(args.RRwithPrior_epsilon) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+                append_exp_res(path[1], str(args.RRwithPrior_epsilon) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+        elif args.apply_distance_correlation:
+            distance_correlation_lambda_list = [1e-1,1e-2,3e-3,1e-3,1e-4,1e-5]
+            for distance_correlation_lambda in distance_correlation_lambda_list:
+                test_auc_list = []
+                test_acc_list = []
+                for i in range(num_exp):
+                    args.distance_correlation_lambda = distance_correlation_lambda
+                    marvell_vfl = marvell_scoring_main_auc.VFLmodel_AUC(args)
+                    # test_auc = marvell_vfl.train()
+                    # test_auc_list.append(test_auc)
+                    test_auc, test_acc = marvell_vfl.train()
+                    test_auc_list.append(test_auc)
+                    test_acc_list.append(test_acc)
+                append_exp_res(path[0], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[1], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[0], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+                append_exp_res(path[1], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+        elif args.apply_grad_perturb:
+            perturb_list = [0.1,0.3,1.0,3.0,10.0]
+            for perturb_epsilon in perturb_list:
+                test_auc_list = []
+                test_acc_list = []
+                for i in range(num_exp):
+                    args.perturb_epsilon = perturb_epsilon
+                    marvell_vfl = marvell_scoring_main_auc.VFLmodel_AUC(args)
+                    # test_auc = marvell_vfl.train()
+                    # test_auc_list.append(test_auc)
+                    test_auc, test_acc = marvell_vfl.train()
+                    test_auc_list.append(test_auc)
+                    test_acc_list.append(test_acc)
+                append_exp_res(path[0], str(args.perturb_epsilon) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[1], str(args.perturb_epsilon) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+                append_exp_res(path[0], str(args.perturb_epsilon) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+                append_exp_res(path[1], str(args.perturb_epsilon) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
         else:
             test_auc_list = []
             test_acc_list = []
@@ -481,11 +564,11 @@ if __name__ == '__main__':
                 append_exp_res(path[1], str(args.mi_loss_lambda) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
                 append_exp_res(path[0], str(args.mi_loss_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
                 append_exp_res(path[1], str(args.mi_loss_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
-            elif args.apply_distance_correlation:
-                append_exp_res(path[0], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
-                append_exp_res(path[1], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
-                append_exp_res(path[0], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
-                append_exp_res(path[1], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+            # elif args.apply_distance_correlation:
+            #     append_exp_res(path[0], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+            #     append_exp_res(path[1], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
+            #     append_exp_res(path[0], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+            #     append_exp_res(path[1], str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
             elif args.apply_discrete_gradients:
                 append_exp_res(path[0], str(args.discrete_gradients_bins) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))
                 append_exp_res(path[1], str(args.discrete_gradients_bins) + ' ' + str(np.mean(test_auc_list))+ ' AUC ' + str(test_auc_list) + ' ' + str(np.max(test_auc_list)))

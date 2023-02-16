@@ -78,6 +78,8 @@ def main():
     parser.add_argument('--apply_discrete_gradients', default=False, type=bool, help='whether to use Discrete Gradients')
     parser.add_argument('--discrete_gradients_bins', default=0, type=int, help='number of bins for discrete gradients')
     parser.add_argument('--discrete_gradients_bound', default=3e-4, type=float, help='value of bound for discrete gradients')
+    parser.add_argument('--apply_distance_correlation', default=0, type=int, help='wheather to use Distance Correlation for protection')
+    parser.add_argument('--distance_correlation_lambda', default=0.003, type=float, help='the parameter for Distance Correlation')
 
     parser.add_argument('--backdoor_scale', type=float, default=1.0, help="the color of backdoor triger")
 
@@ -87,10 +89,15 @@ def main():
 
     MISSING_RATE = args.missing_rate
 
-    args.name = 'experiment_missing_{}_{}/{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}'.format(
+    # args.name = 'experiment_missing_{}_{}/{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}'.format(
+    #     MISSING_RATE,
+    #     args.name, args.epochs, args.dataset, args.model, args.batch_size, args.name,args.backdoor, args.amplify_rate,
+    #     args.amplify_rate_output, args.dp_type, args.dp_strength, args.gradient_sparsification, args.certify, args.sigma, args.autoencoder, args.lba, args.mid, args.mid_lambda, args.apply_discrete_gradients, args.discrete_gradients_bins, args.seed,
+    #     args.use_project_head, args.random_output, args.learning_rate, time.strftime("%Y%m%d-%H%M%S"))
+    args.name = 'experiment_missing_dcor_{}_{}/{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}'.format(
         MISSING_RATE,
         args.name, args.epochs, args.dataset, args.model, args.batch_size, args.name,args.backdoor, args.amplify_rate,
-        args.amplify_rate_output, args.dp_type, args.dp_strength, args.gradient_sparsification, args.certify, args.sigma, args.autoencoder, args.lba, args.mid, args.mid_lambda, args.apply_discrete_gradients, args.discrete_gradients_bins, args.seed,
+        args.amplify_rate_output, args.dp_type, args.dp_strength, args.gradient_sparsification, args.certify, args.sigma, args.autoencoder, args.lba, args.apply_distance_correlation, args.distance_correlation_lambda, args.apply_discrete_gradients, args.discrete_gradients_bins, args.seed,
         args.use_project_head, args.random_output, args.learning_rate, time.strftime("%Y%m%d-%H%M%S"))
     utils.create_exp_dir(args.name)
 
@@ -376,9 +383,9 @@ def main():
         for model in model_list:
             active_model.train()
             model.train()
-            if args.mid:
-                args.mid_model.train()
-                args.mid_enlarge_model.train()
+        if args.mid:
+            args.mid_model.train()
+            args.mid_enlarge_model.train()
 
         for step, (trn_X, trn_y) in enumerate(train_loader):
 
@@ -446,6 +453,9 @@ def main():
                 # t_samples = args.mid_model(_samples)
                 # logits = active_model(z_up_clone, t_samples)
                 # loss = criterion(logits, target) + args.mid_lambda * (-0.5)*(1+2*torch.log(std)-mu**2 - std**2)
+            elif args.apply_distance_correlation == 1:
+                # loss = criterion(logits, target) + args.distance_correlation_lambda * torch.log(utils.tf_distance_cov_cor(z_down_clone, utils.label_to_onehot(target.long(),num_classes=NUM_CLASSES)))
+                loss = criterion(logits, target) + args.distance_correlation_lambda * utils.tf_distance_cov_cor(z_down_clone, utils.label_to_onehot(target.long(),num_classes=NUM_CLASSES))
 
 
             # loss_benign = criterion(logits[:-1],target[:-1])
@@ -606,9 +616,9 @@ def main():
         for model in model_list:
             active_model.eval()
             model.eval()
-            if args.mid:
-                args.mid_model.eval()
-                args.mid_enlarge_model.eval()
+        if args.mid:
+            args.mid_model.eval()
+            args.mid_enlarge_model.eval()
                 
 
         if args.certify != 0 and epoch >= args.certify_start_epoch:
@@ -707,6 +717,9 @@ def main():
                         # t_samples = args.mid_model(_samples)
                         # logits = active_model(z_up, t_samples)
                         # loss = criterion(logits, target) + args.mid_lambda * (-0.5)*(1+2*torch.log(std)-mu**2 - std**2)
+                    elif args.apply_distance_correlation == 1:
+                        # loss = criterion(logits, target) + args.distance_correlation_lambda * torch.log(utils.tf_distance_cov_cor(z_down, utils.label_to_onehot(target.long(),num_classes=NUM_CLASSES)))
+                        loss = criterion(logits, target) + args.distance_correlation_lambda * utils.tf_distance_cov_cor(z_down, utils.label_to_onehot(target.long(),num_classes=NUM_CLASSES))
                     
                     prec1 = utils.accuracy(logits, target, topk=(1,))
 

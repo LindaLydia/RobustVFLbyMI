@@ -91,7 +91,7 @@ class Cifar10DatasetVFL():
     def get_target_list(self):
         return self.target_list
 
-# 设置攻击对象的特殊图�?
+# 设置攻击对象的特殊图�?
 def data_poison(images, poison_number):
     target_pixel_value = [[1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0], [1.0, 0.0, 1.0, 0.0]]
     poison_list = random.sample(range(images.shape[0]), poison_number)
@@ -111,7 +111,7 @@ def data_poison(images, poison_number):
         images[idx,:,:,:] += np.random.normal(loc=0.0, scale=2.0, size=(3,16,32))
         np.putmask(images[idx,:,:,:], images[idx,:,:,:]>1.0, 1.0)
         np.putmask(images[idx,:,:,:], images[idx,:,:,:]<0.0, 0.0)
-    return images, poison_listreturn images, poison_list
+    return images, poison_list
 
 
 def visualize(images, labels, poison_list):

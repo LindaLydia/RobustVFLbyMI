@@ -85,7 +85,16 @@
 #     python main_missing_rvfr.py --name defense --dataset mnist --model mlp2 --seed $i --epoch 100 --backdoor 1 --rvfr 1 --rvfr_alpha 1.0 --quarantine_epochs 10 --rae_pretrain_epochs 100 --rae_tune_epochs 10 --missing_rate 4 --gpu 0
 # done
 
+# for i in `seq 1 10`; do
+#     python main.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 1.0 --gpu 0 --learning_rate 0.001
+#     # python main_missing.py --name defense_test0.0 --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.0 --gpu 0
+# done
+
 for i in `seq 1 10`; do
-    python main.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 1.0 --gpu 0 --learning_rate 0.001
-    # python main_missing.py --name defense_test0.0 --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --mid 1 --mid_lambda 0.0 --gpu 0
+    python main.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --apply_distance_correlation 1 --distance_correlation_lambda 0.1 --gpu 2
+    python main.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --apply_distance_correlation 1 --distance_correlation_lambda 0.01 --gpu 2
+    python main.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --apply_distance_correlation 1 --distance_correlation_lambda 0.003 --gpu 2
+    python main.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --apply_distance_correlation 1 --distance_correlation_lambda 0.001 --gpu 2
+    python main.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --apply_distance_correlation 1 --distance_correlation_lambda 0.0001 --gpu 2
+    python main.py --name defense --dataset cifar100 --model resnet18 --seed $i --epoch 100 --backdoor 1 --apply_distance_correlation 1 --distance_correlation_lambda 0.00001 --gpu 2
 done

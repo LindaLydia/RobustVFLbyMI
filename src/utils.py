@@ -18,8 +18,97 @@ import torchvision.transforms as transforms
 from datetime import datetime
 import numpy as np
 from scipy.stats import norm
+import copy
 
 tp = transforms.ToTensor()
+
+# RRwithPrior for label generation
+def RRwithPrior(real_onehot_label, epsilon, prior_probability, _seed=103):
+    prior_probability = prior_probability.cpu().numpy()
+    idx_sort = np.flipud(np.argsort(prior_probability))
+    prior_sorted = prior_probability[idx_sort]
+    tmp = np.exp(-epsilon)
+    wks = [np.sum(prior_sorted[:(k+1)]) / (1 + (k-1)*tmp)
+            for k in range(len(prior_probability))]
+    optim_k = np.argmax(wks) + 1
+    # print(f"optim_k={optim_k} for equal prior probability")
+    # assert 1 == 0
+
+    fake_onehot_label = torch.zeros(real_onehot_label.size()).float().to(real_onehot_label.device)
+    _random_seed = _seed+int(epsilon*123)
+    for i in range(real_onehot_label.size(0)):
+        y = torch.argmax(real_onehot_label[i]).item()
+        # print(f"{real_onehot_label[i]},y={y},type(y)={type(y)}")
+        adjusted_prior = np.zeros_like(prior_probability) + tmp / (1 + (optim_k-1)*tmp)
+        adjusted_prior[y] = 1 / (1 + (optim_k-1)*tmp)
+        adjusted_prior[idx_sort[optim_k:]] = 0
+        adjusted_prior /= np.sum(adjusted_prior)  # renorm in case y not in topk
+        rr_label = np.random.RandomState(seed=int(_random_seed+i)).choice(len(prior_probability), 1, p=adjusted_prior)
+        fake_onehot_label[i][rr_label] = 1.0
+    # return optim_k, rr_label
+    return fake_onehot_label
+
+# GradPerturb
+def label_perturb(real_onehot_label, scale):
+    # print(real_onehot_label.size(),type(real_onehot_label))
+    perturb_label = torch.zeros(real_onehot_label.size()).float().to(real_onehot_label.device)
+    pure_labels = torch.zeros((real_onehot_label.size(1),real_onehot_label.size(1))).float().to(real_onehot_label.device)
+    for i in range(real_onehot_label.size(1)):
+        pure_labels[i][i] += 1.0
+    u = torch.zeros((1,real_onehot_label.size(1))).float().to(real_onehot_label.device)
+    dist_laplace = torch.distributions.laplace.Laplace(0.0, (2/scale)) # sample for Laplace(2/epsilon) to garantee epsilon-dp
+    torch.cuda.manual_seed_all(97)
+    for i in range(real_onehot_label.size(0)):
+        u = dist_laplace.sample((1,real_onehot_label.size(1))).to(real_onehot_label.device)
+        perturb_label[i] = real_onehot_label[i] + torch.mm(u,pure_labels)
+        # print(f"perturb_label[{i}]={perturb_label[i]}")
+    return perturb_label
+
+
+# distance correlation
+def pairwise_dist(A, B):
+    """
+    Computes pairwise distances between each elements of A and each elements of
+    B.
+    Args:
+        A,    [m,d] matrix
+        B,    [n,d] matrix
+    Returns:
+        D,    [m,n] matrix of pairwise distances
+    """
+    # with tf.variable_scope('pairwise_dist'):
+    # squared norms of each row in A and B
+    na = torch.sum(torch.square(A), 1)
+    nb = torch.sum(torch.square(B), 1)
+
+    # na as a row and nb as a column vectors
+    na = torch.reshape(na, [-1, 1])
+    nb = torch.reshape(nb, [1, -1])
+
+    # return pairwise euclidead difference matrix
+    D = torch.sqrt(torch.maximum(na - 2 * torch.mm(A, B.T) + nb + 1e-20, torch.tensor(0.0)))
+    return D
+
+def tf_distance_cov_cor(input1, input2, debug=False):
+    # n = tf.cast(tf.shape(input1)[0], tf.float32)
+    n = torch.tensor(float(input1.size()[0]))
+    a = pairwise_dist(input1, input1)
+    b = pairwise_dist(input2, input2)
+    
+    # A = a - tf.reduce_mean(a,axis=1) - tf.expand_dims(tf.reduce_mean(a,axis=0),axis=1) + tf.reduce_mean(a)
+    A = a - torch.mean(a,axis=1) - torch.unsqueeze(torch.mean(a,axis=0),axis=1) + torch.mean(a)
+    B = b - torch.mean(b,axis=1) - torch.unsqueeze(torch.mean(b,axis=0),axis=1) + torch.mean(b)
+
+    dCovXY = torch.sqrt(torch.sum(A * B) / (n ** 2))
+    dVarXX = torch.sqrt(torch.sum(A * A) / (n ** 2))
+    dVarYY = torch.sqrt(torch.sum(B * B) / (n ** 2))
+
+    dCorXY = dCovXY / torch.sqrt(dVarXX * dVarYY)
+    if debug:
+        print(("tf distance cov: {} and cor: {}, dVarXX: {}, dVarYY:{}").format(
+            dCovXY, dCorXY,dVarXX, dVarYY))
+    # return dCovXY, dCorXY
+    return dCorXY
 
 
 # Multistep gradient
@@ -419,5 +508,9 @@ def get_images():
 
 
 if __name__ == '__main__':
-    get_rand_batch(1, 4, 8)
-
+    a = torch.tensor([1,2,3,4,5])
+    b = torch.tensor([1,2,9,4,4])
+    aa = torch.tensor([[1,2,3,4,5],[1,2,3,4,5]])
+    bb = torch.tensor([[1,2,9,4,4],[1,2,9,4,4]])
+    print(f"one:{distcorr(a,b)}")
+    print(f"two:{distcorr(aa,bb)}")

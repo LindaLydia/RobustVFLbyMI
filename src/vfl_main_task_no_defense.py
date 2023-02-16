@@ -105,6 +105,10 @@ if __name__ == '__main__':
     parser.add_argument('--mid_loss_lambda', default=1.0, type=float, help='the parameter for MID')
     parser.add_argument('--apply_distance_correlation', default=False, type=bool, help='wheather to use Distance Correlation for protection')
     parser.add_argument('--distance_correlation_lambda', default=0.003, type=float, help='the parameter for Distance Correlation')
+    parser.add_argument('--apply_grad_perturb', default=False, type=bool, help='wheather to use GradPerturb for protection')
+    parser.add_argument('--perturb_epsilon', default=1.0, type=float, help='the parameter DP-epsilon for GradPerturb')
+    parser.add_argument('--apply_RRwithPrior', default=False, type=bool, help='wheather to use RRwithPrior for protection')
+    parser.add_argument('--RRwithPrior_epsilon', default=1.0, type=float, help='the parameter DP-epsilon for RRwithPrior')
 
 
     args = parser.parse_args()
@@ -203,8 +207,12 @@ if __name__ == '__main__':
         path += 'MID/'
     if args.apply_mi:
         path += 'MI/'
+    if args.apply_RRwithPrior:
+        path += 'RRwithPrior/'
     if args.apply_distance_correlation:
         path += 'DistanceCorrelation/'
+    if args.apply_grad_perturb:
+        path += 'GradientPerturb/'
     if args.apply_laplace:
         path += 'Laplace/'
     elif args.apply_gaussian:
@@ -219,10 +227,12 @@ if __name__ == '__main__':
         os.makedirs(path)
     path += 'main_task_acc.txt'
     print(f"path={path}")
+    
     # num_exp = 10
-    # num_exp = 5
-    num_exp = 3
-    # num_exp = 1
+    num_exp = 5
+    # num_exp = 3
+    # num_exp = 2
+    num_exp = 1
 
     args.encoder = None
     # Model(pred_Z) for mid
@@ -297,13 +307,30 @@ if __name__ == '__main__':
                 #############################################
             append_exp_res(path, str(args.mid_loss_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
             # append_exp_res(path, str(args.mid_loss_lambda) + ' ' + str(np.mean(rec_acc_list))+ ' ' + str(rec_acc_list) + ' ' + str(np.max(rec_acc_list)) + ' attack')
+    elif args.apply_grad_perturb:
+        perturb_list = [0.1,0.3,1.0,3.0,10.0]
+        perturb_list = [10.0,3.0,1.0,0.3]
+        perturb_list = [1.0]
+        perturb_list = [100.0]
+        perturb_list = [5.0,2.0]
+        for perturb_epsilon in perturb_list:
+            test_acc_list = []
+            rec_acc_list = []
+            for i in range(num_exp):
+                args.perturb_epsilon = perturb_epsilon
+                set_seed(args.seed)
+                vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
+                test_acc = vfl_defence_image.train()
+                test_acc_list.append(test_acc[0])
+            append_exp_res(path, str(args.perturb_epsilon) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
     else:
         test_acc_list = []
         for _ in range(num_exp):
             if args.apply_mid or args.apply_distance_correlation:
                 vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
             else:
-                vfl_defence_image = vfl_main_task.VFLDefenceExperimentBase(args)
+                # vfl_defence_image = vfl_main_task.VFLDefenceExperimentBase(args)
+                vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
             test_acc = vfl_defence_image.train()
             test_acc_list.append(test_acc[0])
         if args.apply_mi:
@@ -318,5 +345,7 @@ if __name__ == '__main__':
             append_exp_res(path, str(args.grad_spars) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
         elif args.apply_discrete_gradients:
             append_exp_res(path, str(args.discrete_gradients_bins) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+        elif args.apply_RRwithPrior:
+            append_exp_res(path, str(args.RRwithPrior_epsilon) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
         else:
             append_exp_res(path, "bs|num_class|recovery_rate," + str(args.batch_size) + '|' + str(num_classes) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))

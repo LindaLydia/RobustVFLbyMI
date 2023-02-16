@@ -75,6 +75,10 @@ class VFLmodel_AUC(object):
         self.mid_enlarge_model = args.mid_enlarge_model
         self.apply_distance_correlation = args.apply_distance_correlation
         self.distance_correlation_lambda = args.distance_correlation_lambda
+        self.apply_grad_perturb = args.apply_grad_perturb
+        self.perturb_epsilon = args.perturb_epsilon
+        self.apply_RRwithPrior = args.apply_RRwithPrior
+        self.RRwithPrior_epsilon = args.RRwithPrior_epsilon        
 
         # wandb_project_name = f'arvell_main_project_{time.strftime("%Y%m%d-%H%M%S")}'
         # wandb.init(project=wandb_project_name)
@@ -153,6 +157,13 @@ class VFLmodel_AUC(object):
                 _, gt_one_hot_label = self.encoder(batch_label)
             else:
                 assert(encoder != None)
+        elif self.apply_grad_perturb:
+            # print(f"batch_label for marvell_main have size: {batch_label.size()}")
+            perturb_one_hot_label = label_perturb(batch_label, self.perturb_epsilon)
+            gt_one_hot_label = batch_label
+        elif self.apply_RRwithPrior:
+            gt_one_hot_label = batch_label
+            RRwP_one_hot_label = RRwithPrior(batch_label, self.RRwithPrior_epsilon, gt_equal_probability)
         else:
             gt_one_hot_label = batch_label
         # if self.apply_encoder:
@@ -188,6 +199,10 @@ class VFLmodel_AUC(object):
         ######################## defense: trainable_layer(top_model) ############################
         pred = self.active_aggregate_model(pred_a, pred_b)
         loss = criterion(pred, gt_one_hot_label)
+        if self.apply_grad_perturb:
+            loss_perturb_label = criterion(pred, perturb_one_hot_label)
+        if self.apply_RRwithPrior:
+            loss_rr_label = criterion(pred,RRwP_one_hot_label)
         ######################## defense: mi ############################
         if self.apply_mi:
             # loss = criterion(pred_b, gt_one_hot_label)
@@ -252,13 +267,17 @@ class VFLmodel_AUC(object):
 
         ######################## defense4: distance correlation ############################
         elif self.apply_distance_correlation:
-            loss = criterion(pred, gt_one_hot_label) + self.distance_correlation_lambda * torch.mean(torch.cdist(pred_a, gt_one_hot_label, p=2))
+            loss = criterion(pred, gt_one_hot_label) + self.distance_correlation_lambda * torch.log(tf_distance_cov_cor(pred_a, gt_one_hot_label))
         
         # # Optional
         # wandb.watch(model)
         
         ######################## defense with loss change end ############################
         pred_a_gradients = torch.autograd.grad(loss, pred_a, retain_graph=True)
+        if self.apply_grad_perturb:
+            pred_a_gradients = torch.autograd.grad(loss_perturb_label, pred_a, retain_graph=True)
+        if self.apply_RRwithPrior:
+            pred_a_gradients = torch.autograd.grad(loss_rr_label, pred_a, retain_graph=True)
         pred_a_gradients_clone = pred_a_gradients[0].detach().clone()
         pred_b_gradients = torch.autograd.grad(loss, pred_b, retain_graph=True)
         pred_b_gradients_clone = pred_b_gradients[0].detach().clone()
@@ -369,11 +388,11 @@ class VFLmodel_AUC(object):
         model_optimizer.step()
 
         predict_prob = F.softmax(pred, dim=-1)
-        # print(torch.argmax(gt_one_hot_label,dim=-1), torch.argmax(gt_one_hot_label,dim=-1).size())
+        # print(torch.argmax(batch_label,dim=-1), torch.argmax(batch_label,dim=-1).size())
         # print(torch.argmax(predict_prob,dim=-1).size())
-        suc_cnt = torch.sum(torch.argmax(predict_prob, dim=-1) == torch.argmax(gt_one_hot_label, dim=-1)).item()
+        suc_cnt = torch.sum(torch.argmax(predict_prob, dim=-1) == torch.argmax(batch_label, dim=-1)).item()
         train_acc = suc_cnt / predict_prob.shape[0]
-        auc = roc_auc_score(y_true=torch.argmax(gt_one_hot_label, dim=-1).cpu().numpy(), y_score=torch.argmax(predict_prob, dim=-1).cpu().numpy())
+        auc = roc_auc_score(y_true=torch.argmax(batch_label, dim=-1).cpu().numpy(), y_score=torch.argmax(predict_prob, dim=-1).cpu().numpy())
         return loss.item(), (auc,train_acc)
 
     def train(self):

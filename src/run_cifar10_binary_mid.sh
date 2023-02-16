@@ -43,5 +43,8 @@
 # python vfl_main_task_no_defense.py --apply_laplace True --dataset_name cifar10 --epochs 160 --gpu 2
 # python vfl_main_task_no_defense.py --apply_grad_spar True --dataset_name cifar10 --epochs 160 --gpu 2
 
-python vfl_main_task_no_defense_binary.py --dataset_name cifar100 --apply_mid True --epochs 60 --gpu 0
-python vfl_dlg_no_defense.py --dataset cifar100 --apply_mid True --gpu 0
+# python vfl_main_task_no_defense_binary.py --dataset_name cifar100 --apply_mid True --epochs 60 --gpu 0
+# python vfl_dlg_no_defense.py --dataset cifar100 --apply_mid True --gpu 0
+
+python vfl_main_task_no_defense.py --apply_grad_perturb True --dataset_name cifar10 --epochs 160
+python vfl_dlg_no_defense.py --apply_grad_perturb True --dataset cifar10
