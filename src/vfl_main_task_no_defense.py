@@ -15,9 +15,6 @@ from utils import get_labeled_data
 from vfl_main_task import VFLDefenceExperimentBase
 import vfl_main_task
 import vfl_main_task_mid
-import vfl_main_task_mid_passive
-import vfl_main_task_mid_with_attack
-import vfl_main_task_mid_alternate_with_attack
 from utils import append_exp_res
 
 BOTTLENECK_SCALE = 1
