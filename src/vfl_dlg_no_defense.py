@@ -134,7 +134,7 @@ if __name__ == '__main__':
 
     # args.num_exp = 10
     # args.num_exp = 5
-    # args.num_exp = 3
+    args.num_exp = 3
     # args.num_exp = 1
 
     # args.exp_res_dir = f'exp_result/{args.dataset}/'

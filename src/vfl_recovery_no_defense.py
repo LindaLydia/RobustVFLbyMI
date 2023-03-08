@@ -13,11 +13,7 @@ from models.autoencoder import AutoEncoder
 from models.vision import LeNet5, MLP2, resnet18, MID_layer, MID_enlarge_layer, GlobalPreModel_NN
 from utils import get_labeled_data
 from vfl_main_task import VFLDefenceExperimentBase
-import vfl_main_task
-import vfl_main_task_mid
-import vfl_main_task_mid_passive
-import vfl_main_task_mid_with_attack
-import vfl_main_task_mid_alternate_with_attack
+import vfl_recovery
 from utils import append_exp_res
 
 BOTTLENECK_SCALE = 1
@@ -94,7 +90,7 @@ if __name__ == '__main__':
     parser.add_argument('--discrete_gradients_bound', default=3e-4, type=float, help='value of bound for discrete gradients')
     
     parser.add_argument('--gpu', default=0, type=int, help='gpu_id')
-    parser.add_argument('--epochs', default=100, type=int, help='')
+    parser.add_argument('--epochs', default=60, type=int, help='')
     parser.add_argument('--lr', default=0.001, type=float, help='learning rate')
     parser.add_argument('--batch_size', default=2048, type=int, help='')
     parser.add_argument('--acc_top_k', default=5, type=int, help='')
@@ -112,6 +108,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--apply_dravl', default=False, type=bool, help='wheather to use DRAVL for protection')
     parser.add_argument('--dravl_w', default=1.0, type=float, help='the weigth for DRAVL loss')
+   
+    parser.add_argument('--unknownVarLambda', default=0.25, type=float, help='the parameter for regularizing the varial of generated data')
 
 
     args = parser.parse_args()
@@ -128,42 +126,55 @@ if __name__ == '__main__':
         half_dim = 16
         num_classes = 100
         # num_classes = 2
-        train_dst = datasets.CIFAR100("../../../share_dataset/", download=True, train=True, transform=transform)
-        data, label = fetch_data_and_label(train_dst, num_classes)
-        train_dst = SimpleDataset(data, label)
+        # train_dst = datasets.CIFAR100("../../../share_dataset/", download=True, train=True, transform=transform)
+        # data, label = fetch_data_and_label(train_dst, num_classes)
+        # train_dst = SimpleDataset(data, label)
         test_dst = datasets.CIFAR100("../../../share_dataset/", download=True, train=False, transform=transform)
         data, label = fetch_data_and_label(test_dst, num_classes)
-        test_dst = SimpleDataset(data, label)
+        half_length = len(label) // 2
+        train_dst = SimpleDataset(data[half_length:], label[half_length:])
+        test_dst = SimpleDataset(data[:half_length], label[:half_length])
+        # test_dst = SimpleDataset(data, label)    
     elif args.dataset_name == "cifar20":
         half_dim = 16
         num_classes = 20
         # num_classes = 2
-        train_dst = datasets.CIFAR100("../../../share_dataset/", download=True, train=True, transform=transform)
-        data, label = fetch_data_and_label(train_dst, num_classes)
-        train_dst = SimpleDataset(data, label)
+        # train_dst = datasets.CIFAR100("../../../share_dataset/", download=True, train=True, transform=transform)
+        # data, label = fetch_data_and_label(train_dst, num_classes)
+        # train_dst = SimpleDataset(data, label)
         test_dst = datasets.CIFAR100("../../../share_dataset/", download=True, train=False, transform=transform)
         data, label = fetch_data_and_label(test_dst, num_classes)
-        test_dst = SimpleDataset(data, label)
+        half_length = len(label) // 2
+        train_dst = SimpleDataset(data[half_length:], label[half_length:])
+        test_dst = SimpleDataset(data[:half_length], label[:half_length])
+        # test_dst = SimpleDataset(data, label)
     elif args.dataset_name == "cifar10":
         half_dim = 16
         num_classes = 10
         # num_classes = 2
-        train_dst = datasets.CIFAR10("../../../share_dataset/", download=True, train=True, transform=transform)
-        data, label = fetch_data_and_label(train_dst, num_classes)
-        train_dst = SimpleDataset(data, label)
+        # train_dst = datasets.CIFAR10("../../../share_dataset/", download=True, train=True, transform=transform)
+        # data, label = fetch_data_and_label(train_dst, num_classes)
+        # train_dst = SimpleDataset(data, label)
         test_dst = datasets.CIFAR10("../../../share_dataset/", download=True, train=False, transform=transform)
         data, label = fetch_data_and_label(test_dst, num_classes)
-        test_dst = SimpleDataset(data, label)
+        half_length = len(label) // 2
+        train_dst = SimpleDataset(data[half_length:], label[half_length:])
+        test_dst = SimpleDataset(data[:half_length], label[:half_length])
+        # test_dst = SimpleDataset(data, label)
     elif args.dataset_name == "mnist":
         half_dim = 14
         num_classes = 10
         # num_classes = 2
-        train_dst = datasets.MNIST("~/.torch", download=True, train=True, transform=transform_fn)
-        data, label = fetch_data_and_label(train_dst, num_classes)
-        train_dst = SimpleDataset(data, label)
+        # train_dst = datasets.MNIST("~/.torch", download=True, train=True, transform=transform_fn)
+        # data, label = fetch_data_and_label(train_dst, num_classes)
+        # train_dst = SimpleDataset(data, label)
         test_dst = datasets.MNIST("~/.torch", download=True, train=False, transform=transform_fn)
         data, label = fetch_data_and_label(test_dst, num_classes)
-        test_dst = SimpleDataset(data, label)
+        half_length = len(label) // 2
+        train_dst = SimpleDataset(data[half_length:], label[half_length:])
+        test_dst = SimpleDataset(data[:half_length], label[:half_length])
+        print(data[0])
+        # test_dst = SimpleDataset(data, label)
     elif args.dataset_name == 'nuswide':
         half_dim = [634, 1000]
         num_classes = 5
@@ -191,12 +202,14 @@ if __name__ == '__main__':
         train_len = int(len(samples) * 0.6)
         test_len = int(len(samples) * 0.2)
         total_len = int(len(samples))
-        expset = SimpleDataset(samples,labels)
-        trainset, remainset = torch.utils.data.random_split(expset, [train_len, total_len-train_len])
-        testset, predictset = torch.utils.data.random_split(remainset, [test_len, len(remainset)-test_len])
-        train_dst = predictset
-        test_dst = testset
-    
+        # expset = SimpleDataset(samples,labels)
+        # trainset, remainset = torch.utils.data.random_split(expset, [train_len, total_len-train_len])
+        # testset, predictset = torch.utils.data.random_split(remainset, [test_len, len(remainset)-test_len])
+        # train_dst = predictset
+        # test_dst = testset
+        train_dst = SimpleDataset(samples[(train_len+test_len):],labels[(train_len+test_len):])
+        test_dst = SimpleDataset(samples[train_len:(train_len+test_len)],labels[train_len:(train_len+test_len)])
+
     args.train_dataset = train_dst
     args.val_dataset = test_dst
     args.half_dim = half_dim
@@ -257,12 +270,13 @@ if __name__ == '__main__':
         path += 'DRAVL/'
     if not os.path.exists(path):
         os.makedirs(path)
-    path += 'main_task_acc.txt'
+    args.path = path
+    path += 'recovery_acc.txt'
     print(f"path={path}")
     
     # num_exp = 10
     num_exp = 5
-    # num_exp = 3
+    num_exp = 3
     # num_exp = 2
     num_exp = 1
 
@@ -278,7 +292,8 @@ if __name__ == '__main__':
 
     if args.apply_encoder:
         for ae_name in ae_name_list:
-            test_acc_list = []
+            test_psnr_list = []
+            test_mse_list = []
             for i in range(num_exp):
                 dim = args.num_classes
                 encoder = AutoEncoder(input_dim=dim, encode_dim=2 + dim * 6).to(args.device)
@@ -286,59 +301,72 @@ if __name__ == '__main__':
                 args.encoder = encoder
                 _lambda = ae_name.split('_')[2]
                 print(f'num_exp:{i + 1}, epochs:{args.epochs}, batchsize:{args.batch_size}, lambda:{_lambda}')
-                vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
+                vfl_defence_image = vfl_recovery.FeatureRecovery(args)
                 test_acc = vfl_defence_image.train()
-                test_acc_list.append(test_acc[0])
-            append_exp_res(path, str(_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+                test_psnr_list.append(test_acc[0])
+                test_mse_list.append(test_acc[1])
+            append_exp_res(path, str(_lambda) + ' ' + str(np.mean(test_psnr_list))+ ' PSNR ' + str(test_psnr_list) + ' ' + str(np.max(test_psnr_list)))
+            append_exp_res(path, str(_lambda) + ' ' + str(np.mean(test_mse_list))+ ' MSE ' + str(test_mse_list) + ' ' + str(np.max(test_mse_list)))
     elif args.apply_laplace or args.apply_gaussian:
         # dp_strength_list = [0.00005, 0.0001, 0.0005, 0.001, 0.01, 0.1]
-        dp_strength_list = [0.00001, 0.0001, 0.001, 0.01, 0.1, 1]
+        # dp_strength_list = [0.00001, 0.0001, 0.001, 0.01, 0.1, 1]
+        dp_strength_list = [1, 0.1, 0.01, 0.001, 0.0001, 0.00001]
         # dp_strength_list = [0.000001,0.0000001,0.0000001]#0.00001
         for dp_strength in dp_strength_list:
-            test_acc_list = []
+            test_psnr_list = []
+            test_mse_list = []
             for i in range(num_exp):
                 args.dp_strength = dp_strength
-                vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
+                vfl_defence_image = vfl_recovery.FeatureRecovery(args)
                 test_acc = vfl_defence_image.train()
-                test_acc_list.append(test_acc[0])
-            append_exp_res(path, str(dp_strength) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+                test_psnr_list.append(test_acc[0])
+                test_mse_list.append(test_acc[1])
+            append_exp_res(path, str(dp_strength) + ' ' + str(np.mean(test_psnr_list))+ ' PSNR ' + str(test_psnr_list) + ' ' + str(np.max(test_psnr_list)))
+            append_exp_res(path, str(dp_strength) + ' ' + str(np.mean(test_mse_list))+ ' MSE ' + str(test_mse_list) + ' ' + str(np.max(test_mse_list)))
     elif args.apply_grad_spar:
         gradient_sparsification_list = [90, 95, 96, 97, 98, 99]
         # gradient_sparsification_list = [10,5,1]
         for grad_spars in gradient_sparsification_list:
-            test_acc_list = []
+            test_psnr_list = []
+            test_mse_list = []
             for i in range(num_exp):
                 args.grad_spars = grad_spars
-                vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
+                vfl_defence_image = vfl_recovery.FeatureRecovery(args)
                 test_acc = vfl_defence_image.train()
-                test_acc_list.append(test_acc[0])
-            append_exp_res(path, str(grad_spars) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+                test_psnr_list.append(test_acc[0])
+                test_mse_list.append(test_acc[1])
+            append_exp_res(path, str(grad_spars) + ' ' + str(np.mean(test_psnr_list))+ ' PSNR ' + str(test_psnr_list) + ' ' + str(np.max(test_psnr_list)))
+            append_exp_res(path, str(grad_spars) + ' ' + str(np.mean(test_mse_list))+ ' MSE ' + str(test_mse_list) + ' ' + str(np.max(test_mse_list)))
     elif args.apply_mid:
         # mid_lambda_list = [0.0,1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
         # mid_lambda_list = [1,1e-1,1e-2,1e-3]
-        mid_lambda_list = [0.0,1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,10,100]
-        # mid_lambda_list = [100,10,1,1e-1,1e-2,1e-3,1e-4]
+        mid_lambda_list = [100,10,1,1e-1,1e-2,1e-3,1e-4,1e-5,1e-6,1e-7,1e-8,1e-9,0.0]
+        # mid_lambda_list = [1e-6,1e-3,1e-1,1]
         # mid_lambda_list = [0]
         for mid_loss_lambda in mid_lambda_list:
-            test_acc_list = []
+            test_psnr_list = []
+            test_mse_list = []
             rec_acc_list = []
             for i in range(num_exp):
                 args.mid_loss_lambda = mid_loss_lambda
                 set_seed(args.seed)
                 #############################################
-                vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
+                vfl_defence_image = vfl_recovery.FeatureRecovery(args)
                 # vfl_defence_image = vfl_main_task_mid_passive.VFLDefenceExperimentBase(args)
                 test_acc = vfl_defence_image.train()
-                test_acc_list.append(test_acc[0])
+                test_psnr_list.append(test_acc[0])
+                test_mse_list.append(test_acc[1])
                 #############################################
                 # # vfl_defence_image = vfl_main_task_mid_with_attack.VFLDefenceExperimentBase(args)
                 # vfl_defence_image = vfl_main_task_mid_alternate_with_attack.VFLDefenceExperimentBase(args)
                 # # append_exp_res(path, "alternate")
                 # test_acc = vfl_defence_image.train()
-                # test_acc_list.append(test_acc[0])
+                # test_psnr_list.append(test_acc[0])
+                # test_mse_list.append(test_acc[1])
                 # rec_acc_list.append(test_acc[2])
                 #############################################
-            append_exp_res(path, str(args.mid_loss_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+            append_exp_res(path, str(args.mid_loss_lambda) + ' ' + str(np.mean(test_psnr_list))+ ' PSNR ' + str(test_psnr_list) + ' ' + str(np.max(test_psnr_list)))
+            append_exp_res(path, str(args.mid_loss_lambda) + ' ' + str(np.mean(test_mse_list))+ ' MSE ' + str(test_mse_list) + ' ' + str(np.max(test_mse_list)))
             # append_exp_res(path, str(args.mid_loss_lambda) + ' ' + str(np.mean(rec_acc_list))+ ' ' + str(rec_acc_list) + ' ' + str(np.max(rec_acc_list)) + ' attack')
     elif args.apply_grad_perturb:
         perturb_list = [0.1,0.3,1.0,3.0,10.0]
@@ -347,52 +375,66 @@ if __name__ == '__main__':
         perturb_list = [100.0]
         perturb_list = [5.0,2.0]
         for perturb_epsilon in perturb_list:
-            test_acc_list = []
+            test_psnr_list = []
+            test_mse_list = []
             rec_acc_list = []
             for i in range(num_exp):
                 args.perturb_epsilon = perturb_epsilon
                 set_seed(args.seed)
-                vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
+                vfl_defence_image = vfl_recovery.FeatureRecovery(args)
                 test_acc = vfl_defence_image.train()
-                test_acc_list.append(test_acc[0])
-            append_exp_res(path, str(args.perturb_epsilon) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+                test_psnr_list.append(test_acc[0])
+                test_mse_list.append(test_acc[1])
+            append_exp_res(path, str(args.perturb_epsilon) + ' ' + str(np.mean(test_psnr_list))+ ' PSNR ' + str(test_psnr_list) + ' ' + str(np.max(test_psnr_list)))
+            append_exp_res(path, str(args.perturb_epsilon) + ' ' + str(np.mean(test_mse_list))+ ' MSE ' + str(test_mse_list) + ' ' + str(np.max(test_mse_list)))
     elif args.apply_dravl:
         dravl_w_list = [0.0001,0.01,1.0,100.0,10000.0]
-        # dravl_w_list = [0.0001,0.01,100.0,10000.0]
         # dravl_w_list = [1.0]
         for dravl_w in dravl_w_list:
-            test_acc_list = []
+            test_psnr_list = []
+            test_mse_list = []
             rec_acc_list = []
             for i in range(num_exp):
                 args.dravl_w = dravl_w
                 set_seed(args.seed)
-                vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
+                vfl_defence_image = vfl_recovery.FeatureRecovery(args)
                 test_acc = vfl_defence_image.train()
-                test_acc_list.append(test_acc[0])
-            append_exp_res(path, str(args.dravl_w) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+                test_psnr_list.append(test_acc[0])
+                test_mse_list.append(test_acc[1])
+            append_exp_res(path, str(args.dravl_w) + ' ' + str(np.mean(test_psnr_list))+ ' PSNR ' + str(test_psnr_list) + ' ' + str(np.max(test_psnr_list)))
+            append_exp_res(path, str(args.dravl_w) + ' ' + str(np.mean(test_mse_list))+ ' MSE ' + str(test_mse_list) + ' ' + str(np.max(test_mse_list)))
     else:
-        test_acc_list = []
+        test_psnr_list = []
+        test_mse_list = []
         for _ in range(num_exp):
             if args.apply_mid or args.apply_distance_correlation:
-                vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
+                vfl_defence_image = vfl_recovery.FeatureRecovery(args)
             else:
-                # vfl_defence_image = vfl_main_task.VFLDefenceExperimentBase(args)
-                vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
+                vfl_defence_image = vfl_recovery.FeatureRecovery(args)
             test_acc = vfl_defence_image.train()
-            test_acc_list.append(test_acc[0])
+            test_psnr_list.append(test_acc[0])
+            test_mse_list.append(test_acc[1])
         if args.apply_mi:
-            append_exp_res(path, str(args.mi_loss_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+            append_exp_res(path, str(args.mi_loss_lambda) + ' ' + str(np.mean(test_psnr_list))+ ' PSNR ' + str(test_psnr_list) + ' ' + str(np.max(test_psnr_list)))
+            append_exp_res(path, str(args.mi_loss_lambda) + ' ' + str(np.mean(test_mse_list))+ ' MSE ' + str(test_mse_list) + ' ' + str(np.max(test_mse_list)))
         elif args.apply_mid:
-            append_exp_res(path, str(args.mid_loss_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+            append_exp_res(path, str(args.mid_loss_lambda) + ' ' + str(np.mean(test_psnr_list))+ ' PSNR ' + str(test_psnr_list) + ' ' + str(np.max(test_psnr_list)))
+            append_exp_res(path, str(args.mid_loss_lambda) + ' ' + str(np.mean(test_mse_list))+ ' MSE ' + str(test_mse_list) + ' ' + str(np.max(test_mse_list)))
         elif args.apply_distance_correlation:
-            append_exp_res(path, str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+            append_exp_res(path, str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_psnr_list))+ ' PSNR ' + str(test_psnr_list) + ' ' + str(np.max(test_psnr_list)))
+            append_exp_res(path, str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_mse_list))+ ' MSE ' + str(test_mse_list) + ' ' + str(np.max(test_mse_list)))
         elif args.apply_laplace or args.apply_gaussian:
-            append_exp_res(path, str(args.dp_strength) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+            append_exp_res(path, str(args.dp_strength) + ' ' + str(np.mean(test_psnr_list))+ ' PSNR ' + str(test_psnr_list) + ' ' + str(np.max(test_psnr_list)))
+            append_exp_res(path, str(args.dp_strength) + ' ' + str(np.mean(test_mse_list))+ ' MSE ' + str(test_mse_list) + ' ' + str(np.max(test_mse_list)))
         elif args.apply_grad_spar:
-            append_exp_res(path, str(args.grad_spars) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+            append_exp_res(path, str(args.grad_spars) + ' ' + str(np.mean(test_psnr_list))+ ' PSNR ' + str(test_psnr_list) + ' ' + str(np.max(test_psnr_list)))
+            append_exp_res(path, str(args.grad_spars) + ' ' + str(np.mean(test_mse_list))+ ' MSE ' + str(test_mse_list) + ' ' + str(np.max(test_mse_list)))
         elif args.apply_discrete_gradients:
-            append_exp_res(path, str(args.discrete_gradients_bins) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+            append_exp_res(path, str(args.discrete_gradients_bins) + ' ' + str(np.mean(test_psnr_list))+ ' PSNR ' + str(test_psnr_list) + ' ' + str(np.max(test_psnr_list)))
+            append_exp_res(path, str(args.discrete_gradients_bins) + ' ' + str(np.mean(test_mse_list))+ ' MSE ' + str(test_mse_list) + ' ' + str(np.max(test_mse_list)))
         elif args.apply_RRwithPrior:
-            append_exp_res(path, str(args.RRwithPrior_epsilon) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+            append_exp_res(path, str(args.RRwithPrior_epsilon) + ' ' + str(np.mean(test_psnr_list))+ ' PSNR ' + str(test_psnr_list) + ' ' + str(np.max(test_psnr_list)))
+            append_exp_res(path, str(args.RRwithPrior_epsilon) + ' ' + str(np.mean(test_mse_list))+ ' MSE ' + str(test_mse_list) + ' ' + str(np.max(test_mse_list)))
         else:
-            append_exp_res(path, "bs|num_class|recovery_rate," + str(args.batch_size) + '|' + str(num_classes) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+            append_exp_res(path, "bs|num_class|recovery_rate," + str(args.batch_size) + '|' + str(num_classes) + ' ' + str(np.mean(test_psnr_list))+ ' PSNR ' + str(test_psnr_list) + ' ' + str(np.max(test_psnr_list)))
+            append_exp_res(path, "bs|num_class|recovery_rate," + str(args.batch_size) + '|' + str(num_classes) + ' ' + str(np.mean(test_mse_list))+ ' MSE ' + str(test_mse_list) + ' ' + str(np.max(test_mse_list)))

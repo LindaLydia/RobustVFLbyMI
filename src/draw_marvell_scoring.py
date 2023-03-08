@@ -185,8 +185,8 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
     # defense_name_list = ['Gaussian', 'Laplace', 'GradientSparsification', 'DiscreteGradients', 'CAE', 'DCAE', 'MARVELL', 'MID', 'no defense']
     # # defense_list = ['DP-G', 'DP-L', 'GS', 'Marvell', 'PPDL', 'LN', 'GC', 'DG', 'CAE', 'CAE+DG', 'RCAE', 'w/o defense']
     # defense_list = ['DP-G', 'DP-L', 'GS', 'DG', 'CAE', 'DCAE', 'MARVELL', 'MID', 'w/o defense']
-    defense_name_list = ['Gaussian', 'Laplace', 'GradientSparsification', 'DiscreteGradients', 'CAE', 'DCAE', 'MARVELL', 'DistanceCorrelation', 'GradientPerturb', 'MID', 'no defense']
-    defense_list = ['DP-G', 'DP-L', 'GS', 'DG', 'CAE', 'DCAE', 'MARVELL', 'dCor', 'GradPerturb', 'MID', 'w/o defense']
+    defense_name_list = ['Gaussian', 'Laplace', 'GradientSparsification', 'DiscreteGradients', 'CAE', 'DCAE', 'MARVELL', 'RRwithPrior', 'DistanceCorrelation', 'GradientPerturb', 'MID', 'no defense']
+    defense_list = ['DP-G', 'DP-L', 'GS', 'DG', 'CAE', 'DCAE', 'MARVELL', 'RRwP', 'dCor', 'GradPerturb', 'MID', 'w/o defense']
     file_name_list = ['attack_task_acc.txt', 'main_task_acc.txt']
     rec_rate_list = []
     acc_list = []
@@ -272,12 +272,16 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
     # # color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728'(CAE),|| '#9467bd'(Marvell), '#8c564b'(RCAE), '#e377c2'(PPDL), '#7f7f7f'(DG), '#bcbd22'(CAE+DG), '#ff028d'(dCor), '#ad8150'(GradPerturb), '#17becf'(MID)] # the same as the default colors
     # # color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#9467bd', '#d62728', '#bcbd22', '#8c564b', '#e377c2', '#7f7f7f', '#17becf'] # the same as the default colors
     # color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#9467bd', '#17becf'] # the same as the default colors
-    marker_list = ['o', 'v', '^', 'D', '*', '+', 'x', '.', '2', '4', 's']
-    color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#9467bd', '#ff028d', '#ad8150', '#17becf'] # the same as the default colors
+    marker_list = ['o', 'v', '^', 'D', '*', '+', 'x', '3', '.', '2', '4', 's']
+    color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#9467bd', '#71e204', '#ff028d', '#ad8150', '#17becf'] # the same as the default colors
     # offset = [0, -0.08, 0, 0, 0, 0, 0, 0, 0] #cifar10--2
     # offset = [0, -3, 0, 0, 0, 0, 0, 0, 0]
-    offset = [-0.3, -0.3, 0, 0, 0, 0, 0, 0, 0, 0]
-    for i in range(len(defense_list)):
+    offset = [-0.3, -0.3, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+    _i = len(defense_list)-1
+    ax.scatter(acc_list[_i], rec_rate_list[_i], label=defense_list[_i], marker=marker_list[_i], s=150, color='black')
+    for i in range(len(defense_list)-1):
+    # for i in range(len(defense_list)):
         # print(param_list[i])
         if i == len(defense_list)-1:
             ax.scatter(acc_list[i], rec_rate_list[i], label=defense_list[i], marker=marker_list[i], s=150, color='black')
@@ -338,7 +342,9 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
     # ax.set_ylabel(label_y, fontsize=16, fontdict={'family' : 'SimSun', 'weight':800})
     ax.tick_params(axis='x', labelsize=14)
     ax.tick_params(axis='y', labelsize=14)
-    ax.legend(fontsize=14)  
+
+    ax.legend(fontsize=14)
+
     ax.set_xlim(x_limit)
     ax.set_ylim(y_limit)
     x_major_locator = mtick.MultipleLocator(x_major_locator)
@@ -359,7 +365,7 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
 
 dataset = 'nuswide'
 dataset = 'cifar10'
-dataset = 'cifar100'
+# dataset = 'cifar100'
 # dataset = 'mnist'
 
 # exp_type = 'multi_no_top_model'

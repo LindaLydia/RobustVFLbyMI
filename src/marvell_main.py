@@ -250,6 +250,7 @@ if __name__ == '__main__':
                 label_leakage.train()
         elif args.apply_RRwithPrior:
             epsilon_list = [8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0]
+            epsilon_list = [9.0,10.0,12.0,15.0,20.0,30.0]
             for RRwithPrior_epsilon in epsilon_list:
                 args.RRwithPrior_epsilon = RRwithPrior_epsilon
                 label_leakage = marvell_scoring_attack.ScoringAttack(args)
@@ -502,6 +503,7 @@ if __name__ == '__main__':
                 append_exp_res(path[1], str(args.marvell_s) + ' ' + str(np.mean(test_acc_list))+ ' ACC ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
         elif args.apply_RRwithPrior:
             epsilon_list = [8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0]
+            epsilon_list = [9.0,10.0,12.0,15.0,20.0,30.0]
             for RRwithPrior_epsilon in epsilon_list:
                 test_auc_list = []
                 test_acc_list = []

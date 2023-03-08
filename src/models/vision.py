@@ -14,6 +14,65 @@ def weights_init(m):
     if hasattr(m, "bias"):
         m.bias.data.uniform_(-0.5, 0.5)
 
+
+class Reconstructor_DRAVL(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super(Reconstructor_DRAVL, self).__init__()
+        self.dense = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(input_dim, output_dim, bias=False),
+            nn.Sigmoid()
+        )
+
+    def forward(self,x):
+        return self.dense(x)
+
+
+class GlobalPreModel_NN(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super(GlobalPreModel_NN, self).__init__()
+        self.dense = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(input_dim, 300),
+            #nn.Dropout(),
+            nn.ReLU(),
+            nn.Linear(300, 200),
+            #nn.Dropout(),
+            nn.ReLU(),
+            nn.Linear(200, 100),
+            #nn.Dropout(),
+            nn.ReLU(),
+            nn.Linear(100, output_dim)
+        )
+
+    def forward(self, x):
+        return self.dense(x)
+
+
+class Generator(nn.Module):
+    def __init__(self, latent_dim, target_dim):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(latent_dim, 600), 
+            nn.LayerNorm(600),
+            nn.ReLU(),
+            
+            nn.Linear(600, 200), 
+            nn.LayerNorm(200),
+            nn.ReLU(),
+            
+            nn.Linear(200, 100),
+            nn.LayerNorm(100),
+            nn.ReLU(),
+            
+            nn.Linear(100, target_dim),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
 class MID_layer(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(MID_layer, self).__init__()

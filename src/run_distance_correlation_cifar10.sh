@@ -31,14 +31,22 @@
 # python vfl_main_task_no_defense.py --dataset_name cifar10 --epochs 1
 
 
-python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 1.0 --dataset cifar10 --gpu 3
-python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 2.0 --dataset cifar10 --gpu 3
-python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 4.0 --dataset cifar10 --gpu 3
-python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 3.0 --dataset cifar10 --gpu 3
-python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 5.0 --dataset cifar10 --gpu 3
-python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 6.0 --dataset cifar10 --gpu 3
-python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 7.0 --dataset cifar10 --gpu 3
-python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 8.0 --dataset cifar10 --gpu 3
+# python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 1.0 --dataset cifar10 --gpu 3
+# python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 2.0 --dataset cifar10 --gpu 3
+# python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 4.0 --dataset cifar10 --gpu 3
+# python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 3.0 --dataset cifar10 --gpu 3
+# python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 5.0 --dataset cifar10 --gpu 3
+# python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 6.0 --dataset cifar10 --gpu 3
+# python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 7.0 --dataset cifar10 --gpu 3
+# python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 8.0 --dataset cifar10 --gpu 3
+# python vfl_main_task_no_defense.py --dataset_name cifar10 --epochs 160 --apply_RRwithPrior True --RRwithPrior_epsilon 30.0 --gpu 0
+# python vfl_main_task_no_defense.py --dataset_name cifar10 --epochs 160 --apply_RRwithPrior True --RRwithPrior_epsilon 20.0 --gpu 0
+# python vfl_main_task_no_defense.py --dataset_name cifar10 --epochs 160 --apply_RRwithPrior True --RRwithPrior_epsilon 15.0 --gpu 0
+# python vfl_main_task_no_defense.py --dataset_name cifar10 --epochs 160 --apply_RRwithPrior True --RRwithPrior_epsilon 10.0 --gpu 0
+python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 30.0 --dataset cifar10 --gpu 0
+python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 20.0 --dataset cifar10 --gpu 0
+python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 15.0 --dataset cifar10 --gpu 0
+python vfl_dlg_no_defense.py --apply_RRwithPrior True --RRwithPrior_epsilon 10.0 --dataset cifar10 --gpu 0
 
 
 

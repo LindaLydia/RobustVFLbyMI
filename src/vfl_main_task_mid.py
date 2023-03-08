@@ -6,7 +6,7 @@ from tqdm import tqdm
 import numpy as np
 import time
 
-from models.vision import resnet18, MLP2, ActivePartyWithTrainableLayer, ActivePartyWithoutTrainableLayer
+from models.vision import resnet18, MLP2, ActivePartyWithTrainableLayer, ActivePartyWithoutTrainableLayer, Reconstructor_DRAVL
 from utils import *
 
 import tensorflow as tf
@@ -18,6 +18,7 @@ from marvell_model import (
     KL_gradient_perturb
 )
 import marvell_shared_values as shared_var
+import dravl_utils
 
 BOTTLENECK_SCALE = 1
 tf.compat.v1.enable_eager_execution() 
@@ -74,12 +75,18 @@ class VFLDefenceExperimentBase(object):
         self.apply_grad_perturb = args.apply_grad_perturb
         self.perturb_epsilon = args.perturb_epsilon
         self.apply_RRwithPrior = args.apply_RRwithPrior
-        self.RRwithPrior_epsilon = args.RRwithPrior_epsilon        
+        self.RRwithPrior_epsilon = args.RRwithPrior_epsilon 
+
+        self.apply_dravl = args.apply_dravl
+        self.dravl_w = args.dravl_w       
 
     def fetch_parties_data(self, data):
         if self.dataset_name == 'nuswide':
             data_a = data[0]
             data_b = data[1]
+        elif self.dataset_name == 'credit':
+            data_a = data[:,:self.half_dim[0]]
+            data_b = data[:,self.half_dim[0]:]
         else:
             data_a = data[:, :, :self.half_dim, :]
             data_b = data[:, :, self.half_dim:, :]
@@ -95,6 +102,10 @@ class VFLDefenceExperimentBase(object):
         elif self.dataset_name == 'nuswide':
             net_a = self.models_dict[self.dataset_name](self.half_dim[0], num_classes).to(self.device)
             net_b = self.models_dict[self.dataset_name](self.half_dim[1], num_classes).to(self.device)
+        elif self.dataset_name == 'credit':
+            net_a = self.models_dict[self.dataset_name](self.half_dim[0], num_classes).to(self.device)
+            net_b = self.models_dict[self.dataset_name](self.half_dim[1], num_classes).to(self.device)
+            # self.net_total = self.models_dict[self.dataset_name](self.half_dim[0]+self.half_dim[1], num_classes).to(self.device)
         return net_a, net_b
 
     def label_to_one_hot(self, target, num_classes=10):
@@ -207,6 +218,7 @@ class VFLDefenceExperimentBase(object):
         ######################## defense start ############################
         ######################## defense: trainable_layer(top_model) ############################
         pred = self.active_aggregate_model(pred_a, pred_b)
+        # pred = self.net_total(torch.cat((batch_data_a,batch_data_b), dim=1))
         loss = criterion(pred, gt_one_hot_label)
         if self.apply_grad_perturb:
             loss_perturb_label = criterion(pred,perturb_one_hot_label)
@@ -255,12 +267,24 @@ class VFLDefenceExperimentBase(object):
             # loss for continuous form of reparameterization
             loss = criterion(pred, gt_one_hot_label) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
             # print("loss: ", loss)
-
-
         ######################## defense4: distance correlation ############################
         elif self.apply_distance_correlation:
             # loss = criterion(pred, gt_one_hot_label) + self.distance_correlation_lambda * torch.mean(torch.cdist(pred_a, gt_one_hot_label, p=2))
             loss = criterion(pred, gt_one_hot_label) + self.distance_correlation_lambda * torch.log(tf_distance_cov_cor(pred_a, gt_one_hot_label))
+        ######################## defense5: dravl ############################
+        elif self.apply_dravl:
+            protected_emb_GRL = dravl_utils.GradientReversalLayer.apply(pred_b) # identical mapping in forwarding, but apply negative gradient in backwarding
+            reconstructed_emb = self.reconstruction(protected_emb_GRL)
+            reconstructed_emb_for_noise = self.reconstruction(pred_b)
+
+            rec_loss = 1.0 * dravl_utils.reconstruction_loss(reconstructed_emb, batch_data_b.to(self.device))
+            rec_noise_loss = 1.0 * dravl_utils.reconstruction_stablizer_noise(reconstructed_emb_for_noise)          
+            _, dist_cor = dravl_utils.tf_distance_cov_cor(batch_data_b.to(self.device), pred_b, debug=False)
+            dist_loss = 1000.0 * torch.log(dist_cor)
+            
+            dravl_loss = rec_loss + rec_noise_loss + dist_loss            
+            loss = criterion(pred, gt_one_hot_label) + self.dravl_w * dravl_loss
+
         ######################## defense with loss change end ############################
         pred_a_gradients = torch.autograd.grad(loss, pred_a, retain_graph=True)
         if self.apply_grad_perturb:
@@ -355,7 +379,13 @@ class VFLDefenceExperimentBase(object):
             pred_Z_gradients_clone = pred_Z_gradients[0].detach().clone()
             weights_grad_enlarge_a = torch.autograd.grad(loss, pred_a_double, retain_graph=True)
             weights_grad_enlarge_a_clone = weights_grad_enlarge_a[0].detach().clone()
+        if self.apply_dravl:
+            weights_reconstruction = torch.autograd.grad(loss, self.reconstruction.parameters(), retain_graph=True)
+            weights_reconstruction_clone = weights_reconstruction[0].detach().clone()
+        
         model_optimizer.zero_grad()
+        if self.apply_dravl:
+            self.reconstruction_optimizer.zero_grad()
 
         # update passive party(attacker) model
         weights_grad_a = torch.autograd.grad(pred_a, net_a.parameters(), grad_outputs=pred_a_gradients_clone)
@@ -378,7 +408,15 @@ class VFLDefenceExperimentBase(object):
                 if w.requires_grad:
                     w.grad = g.detach()
             # print("weights_grad_Z:",weights_grad_Z)
+        if self.apply_dravl:
+            for w, g in zip(self.reconstruction.parameters(), weights_reconstruction):
+                if w.requires_grad:
+                    w.grad = g.detach()
+            self.reconstruction_optimizer.step()
         model_optimizer.step()
+        # self.total_model_optimizer.zero_grad()
+        # loss.backward()
+        # self.total_model_optimizer.step()
 
         predict_prob = F.softmax(pred, dim=-1)
         suc_cnt = torch.sum(torch.argmax(predict_prob, dim=-1) == torch.argmax(batch_label, dim=-1)).item()
@@ -392,11 +430,14 @@ class VFLDefenceExperimentBase(object):
 
         # for num_classes in self.num_class_list:
         # n_minibatches = len(train_loader)
+        print_every = 1
         if self.dataset_name == 'cifar100' or self.dataset_name == 'cifar10':
             print_every = 1
         elif self.dataset_name == 'mnist':
             print_every = 1
         elif self.dataset_name == 'nuswide':
+            print_every = 1
+        elif self.dataset_name == 'credit':
             print_every = 1
         # net_a refers to passive model, net_b refers to active model
         net_a, net_b = self.build_models(self.num_classes)
@@ -409,6 +450,13 @@ class VFLDefenceExperimentBase(object):
         if self.apply_mid:
             self.mid_model = self.mid_model.to(self.device)
             self.mid_enlarge_model = self.mid_enlarge_model.to(self.device)
+        if self.apply_dravl:
+            # self.discriminator_optimizer = tf.keras.optimizers.Adam(self.dravl_args.dis_lr)
+            # self.reconstruction = dravl_utils.make_reconstruction_model()
+            HALF_DIM = self.half_dim if type(self.half_dim) == int else self.half_dim[-1]
+            CHANNEL = 3 if 'cifar' in self.dataset_name else 1
+            self.reconstruction = Reconstructor_DRAVL(input_dim=self.num_classes, output_dim=HALF_DIM*HALF_DIM*2*CHANNEL).to(self.device)
+            self.reconstruction_optimizer = torch.optim.Adam(self.reconstruction.parameters(), lr=1e-3, weight_decay=0.001)
         if self.apply_trainable_layer:
             if self.apply_mid:
                 model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()) + list(self.active_aggregate_model.parameters()) + list(self.mid_model.parameters()) + list(self.mid_enlarge_model.parameters()), lr=self.lr)
@@ -419,6 +467,7 @@ class VFLDefenceExperimentBase(object):
                 model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()) + list(self.mid_model.parameters()) + list(self.mid_enlarge_model.parameters()), lr=self.lr)
             else:
                 model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()), lr=self.lr)
+        # self.total_model_optimizer = torch.optim.Adam(self.net_total.parameters(), lr=self.lr)
         criterion = cross_entropy_for_onehot
 
         start_time = time.time()
@@ -430,9 +479,12 @@ class VFLDefenceExperimentBase(object):
             for i, (gt_data, gt_label) in enumerate(tqdm_train):
                 net_a.train()
                 net_b.train()
+                # self.net_total.train()
                 if self.apply_mid:
                     self.mid_model.train()
                     self.mid_enlarge_model.train()
+                if self.apply_dravl:
+                    self.reconstruction.train()
                 gt_data_a, gt_data_b = self.fetch_parties_data(gt_data)
                 gt_one_hot_label = self.label_to_one_hot(gt_label, self.num_classes)
                 gt_one_hot_label = gt_one_hot_label.to(self.device)
@@ -445,9 +497,12 @@ class VFLDefenceExperimentBase(object):
                     # print("validate and test")
                     net_a.eval()
                     net_b.eval()
+                    # self.net_total.eval()
                     if self.apply_mid:
                         self.mid_model.eval()
                         self.mid_enlarge_model.eval()
+                    if self.apply_dravl:
+                        self.reconstruction.eval()
                     suc_cnt = 0
                     sample_cnt = 0
 
@@ -505,10 +560,50 @@ class VFLDefenceExperimentBase(object):
                         postfix['train_acc'] = '{:.2f}%'.format(train_acc * 100)
                         postfix['test_acc'] = '{:.2f}%'.format(test_acc * 100)
                         tqdm_train.set_postfix(postfix)
-                        print('Epoch {}% \t train_loss:{:.2f} train_acc:{:.2f} test_acc:{:.2f}'.format(
-                            i_epoch, loss, train_acc, test_acc))
+                        # print('Epoch {}% \t train_loss:{:.2f} train_acc:{:.2f} test_acc:{:.2f}'.format(
+                        #     i_epoch, loss, train_acc, test_acc))
         end_time = time.time()
         print(f"time used = {end_time-start_time}")
+
+        # save models
+        if self.apply_trainable_layer:
+            if self.apply_mid:
+                torch.save((net_a.state_dict(),net_b.state_dict(),self.active_aggregate_model.state_dict(),
+                            self.mid_model.state_dict(),self.mid_enlarge_model.state_dict()), 
+                            f"./saved_models/{self.dataset_name}/top/mid_{self.mid_loss_lambda}.pkl")
+            else:
+                if self.apply_gaussian:
+                    torch.save((net_a.state_dict(),net_b.state_dict(),self.active_aggregate_model.state_dict()),
+                                f"./saved_models/{self.dataset_name}/top/gaussian_{self.dp_strength}.pkl")
+                if self.apply_dravl:
+                    torch.save((net_a.state_dict(),net_b.state_dict(),self.active_aggregate_model.state_dict()),
+                                f"./saved_models/{self.dataset_name}/top/dravl_{self.dravl_w}.pkl")
+                else:
+                    torch.save((net_a.state_dict(),net_b.state_dict(),self.active_aggregate_model.state_dict()),
+                                f"./saved_models/{self.dataset_name}/top/normal_{self.mid_loss_lambda}.pkl")
+        else:
+            if self.apply_mid:
+                torch.save((net_a.state_dict(),net_b.state_dict(),
+                            self.mid_model.state_dict(),self.mid_enlarge_model.state_dict()), 
+                            f"./saved_models/{self.dataset_name}/no_top/mid_{self.mid_loss_lambda}.pkl")
+            else:
+                if self.apply_gaussian:
+                    torch.save((net_a.state_dict(),net_b.state_dict()),
+                                f"./saved_models/{self.dataset_name}/no_top/gaussian_{self.dp_strength}.pkl")
+                if self.apply_dravl:
+                    torch.save((net_a.state_dict(),net_b.state_dict()),
+                                f"./saved_models/{self.dataset_name}/no_top/dravl_{self.dravl_w}.pkl")
+                else:
+                    torch.save((net_a.state_dict(),net_b.state_dict()),
+                                f"./saved_models/{self.dataset_name}/no_top/normal_{self.mid_loss_lambda}.pkl")
+        
+        # torch.save((self.net_total.state_dict()),
+        #             f"./saved_models/{self.dataset_name}/no_top/total_{self.mid_loss_lambda}.pkl")
+
+        # new_model = Model()                                                    # 调用模型Model
+        # new_model.load_state_dict(torch.load("./data/model_parameter.pkl"))    # 加载模型参数     
+        # new_model.forward(input)
+
         # assert 1 == 0
         return test_acc, test_acc_topk
 

@@ -865,37 +865,6 @@ def plot_scatter_plot_for_paper_smaller(input_file, target_dir, marker=False):
     y.pop('none', None)
     print(x)
     fig, ax = plt.subplots(nrows=1, ncols=2, sharex=False, sharey=False, squeeze=False, figsize=(15,6))
-    # ax[0][1] = fig.add_axes([7.5,0,0.5,0.5])
-    # marker_list = ['o'(DP-G), 'v'(DP-L), '^'(GS), 'D'(DG), '*'(CAE), '1'(DCAE), '4'(MID)]
-    # color_list = ['#1f77b4'(DP-G), '#ff7f0e'(DP-L), '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#17becf']
-    # marker_list = ['o', 'v', '^', 'D', '*', '1', '4']
-    # color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#17becf']
-    marker_list = ['o', 'v', '^', 'h', '4']
-    color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#e377c2', '#17becf']
-    method_name_dict = {'gaussian': 'DP-G', 'laplace': 'DP-L', 'gradient_sparsification': 'GS', 'certifyFL': 'CFL', 'dsgd': 'DG', 'autoencoder': 'CAE', 'autoencoder+dsgd': 'DCAE', 'mid': 'MID', 'rvfr': 'RVFR'}
-    print(type(x))
-    for i, key in enumerate(x):
-        print("key is", key)
-        if key == 'none':
-            continue
-        # ax.scatter(x[key], y[key], label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=150)
-        # ax.plot(x[key], y[key], '--', linewidth=4, color=color_list[i])
-        temp = list(map(lambda a: max(a[0]-a[1],0.0), zip(x[key],y[key])))
-        # temp = list(map(lambda a: a[0]-a[1], zip(x[key],y[key])))
-        ax[0][0].scatter(x[key], temp, label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=150)
-        ax[0][0].plot(x[key], temp, '--', linewidth=4, color=color_list[i])
-        if marker:
-            for j, txt in enumerate(label[key]):
-                # ax[0][0].annotate(txt, (x[key][j], y[key][j]))
-                ax[0][0].annotate(txt, (x[key][j], temp[j]))
-        # ax[0][1] = fig.add_axes([7.5,0,0.5,0.5])
-        if key == 'mid' or key== 'rvfr':
-            ax[0][1].scatter(x[key], temp, label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=150)
-            ax[0][1].plot(x[key], temp, '--', linewidth=4, color=color_list[i])
-            if marker:
-                for j, txt in enumerate(label[key]):
-                    # ax[0][1].annotate(txt, (x[key][j], y[key][j]))
-                    ax[0][1].annotate(txt, (x[key][j], temp[j]))
 
     # add baseline point
     # if 'mnist' in input_file:
@@ -934,6 +903,38 @@ def plot_scatter_plot_for_paper_smaller(input_file, target_dir, marker=False):
             # ax.scatter([0.5],[5.0], label='w/o defense', marker='s', color='k', s=150)
             ax[0][0].scatter([0.5],[0.5-5.0], label='w/o defense', marker='s', color='k', s=150)
             # ax.scatter([0.5],[100-5.0], label='w/o defense', marker='s', color='k', s=150)
+
+    # ax[0][1] = fig.add_axes([7.5,0,0.5,0.5])
+    # marker_list = ['o'(DP-G), 'v'(DP-L), '^'(GS), 'D'(DG), '*'(CAE), '1'(DCAE), '4'(MID)]
+    # color_list = ['#1f77b4'(DP-G), '#ff7f0e'(DP-L), '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#17becf']
+    # marker_list = ['o', 'v', '^', 'D', '*', '1', '4']
+    # color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#7f7f7f', '#d62728', '#bcbd22', '#17becf']
+    marker_list = ['o', 'v', '^', 'h', '4']
+    color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#e377c2', '#17becf']
+    method_name_dict = {'gaussian': 'DP-G', 'laplace': 'DP-L', 'gradient_sparsification': 'GS', 'certifyFL': 'CFL', 'dsgd': 'DG', 'autoencoder': 'CAE', 'autoencoder+dsgd': 'DCAE', 'mid': 'MID', 'rvfr': 'RVFR'}
+    print(type(x))
+    for i, key in enumerate(x):
+        print("key is", key)
+        if key == 'none':
+            continue
+        # ax.scatter(x[key], y[key], label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=150)
+        # ax.plot(x[key], y[key], '--', linewidth=4, color=color_list[i])
+        temp = list(map(lambda a: max(a[0]-a[1],0.0), zip(x[key],y[key])))
+        # temp = list(map(lambda a: a[0]-a[1], zip(x[key],y[key])))
+        ax[0][0].scatter(x[key], temp, label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=150)
+        ax[0][0].plot(x[key], temp, '--', linewidth=4, color=color_list[i])
+        if marker:
+            for j, txt in enumerate(label[key]):
+                # ax[0][0].annotate(txt, (x[key][j], y[key][j]))
+                ax[0][0].annotate(txt, (x[key][j], temp[j]))
+        # ax[0][1] = fig.add_axes([7.5,0,0.5,0.5])
+        if key == 'mid' or key== 'rvfr':
+            ax[0][1].scatter(x[key], temp, label=method_name_dict[key], marker=marker_list[i], color=color_list[i], s=150)
+            ax[0][1].plot(x[key], temp, '--', linewidth=4, color=color_list[i])
+            if marker:
+                for j, txt in enumerate(label[key]):
+                    # ax[0][1].annotate(txt, (x[key][j], y[key][j]))
+                    ax[0][1].annotate(txt, (x[key][j], temp[j]))
 
 
     ax[0][0].set_xlabel('Main task accuracy', fontsize=16)

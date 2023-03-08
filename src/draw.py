@@ -266,8 +266,11 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
     # offset = [0, -0.08, 0, 0, 0, 0, 0, 0, 0] #cifar10--2
     # offset = [0, -3, 0, 0, 0, 0, 0, 0, 0]
     offset = [-0.3, -0.3, 0, 0, 0, 0, 0, 0, 0, 0]
-    for i in range(len(defense_list)):
-        # print(param_list[i])
+    
+    _i = len(defense_list)-1
+    ax.scatter(acc_list[_i], rec_rate_list[_i], label=defense_list[_i], marker=marker_list[_i], s=150, color='black')
+    for i in range(len(defense_list)-1):
+    # for i in range(len(defense_list)):
         if i == len(defense_list)-1:
             ax.scatter(acc_list[i], rec_rate_list[i], label=defense_list[i], marker=marker_list[i], s=150, color='black')
         elif len(acc_list[i])>0:
@@ -326,8 +329,8 @@ def draw_defense_on_main_and_dlg_task_using_scatter(dir, x_limit, y_limit, x_maj
     # ax.set_ylabel(label_y, fontsize=16, fontdict={'family' : 'SimSun', 'weight':800})
     ax.tick_params(axis='x', labelsize=14)
     ax.tick_params(axis='y', labelsize=14)
-    ax.legend(fontsize=14) # (0,0) is at down-left and (0,1) is up-left
-    ax.legend(fontsize=14, bbox_to_anchor=(0.67,0.78),ncol=2) # (0,0) is at down-left and (0,1) is up-left
+    # ax.legend(fontsize=14) # (0,0) is at down-left and (0,1) is up-left
+    ax.legend(fontsize=12, bbox_to_anchor=(0.67,0.78),ncol=2) # (0,0) is at down-left and (0,1) is up-left
     ax.set_xlim(x_limit)
     ax.set_ylim(y_limit)
     # print(f"x_major_locator={x_major_locator},y_major_locator={y_major_locator}")
