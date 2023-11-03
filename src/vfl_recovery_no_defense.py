@@ -91,7 +91,7 @@ if __name__ == '__main__':
     
     parser.add_argument('--gpu', default=0, type=int, help='gpu_id')
     parser.add_argument('--epochs', default=60, type=int, help='')
-    parser.add_argument('--lr', default=0.001, type=float, help='learning rate')
+    parser.add_argument('--lr', default=0.0001, type=float, help='learning rate') # default given by GRN paper (Feature Inference Attack on Model Predictions in Vertical Federated Learning)
     parser.add_argument('--batch_size', default=2048, type=int, help='')
     parser.add_argument('--acc_top_k', default=5, type=int, help='')
     parser.add_argument('--apply_mi', default=False, type=bool, help='wheather to use MutualInformation-loss instead of CrossEntropy-loss')
@@ -126,55 +126,55 @@ if __name__ == '__main__':
         half_dim = 16
         num_classes = 100
         # num_classes = 2
-        # train_dst = datasets.CIFAR100("../../../share_dataset/", download=True, train=True, transform=transform)
-        # data, label = fetch_data_and_label(train_dst, num_classes)
-        # train_dst = SimpleDataset(data, label)
+        train_dst = datasets.CIFAR100("../../../share_dataset/", download=True, train=True, transform=transform)
+        data, label = fetch_data_and_label(train_dst, num_classes)
+        train_dst = SimpleDataset(data, label)
         test_dst = datasets.CIFAR100("../../../share_dataset/", download=True, train=False, transform=transform)
         data, label = fetch_data_and_label(test_dst, num_classes)
-        half_length = len(label) // 2
-        train_dst = SimpleDataset(data[half_length:], label[half_length:])
-        test_dst = SimpleDataset(data[:half_length], label[:half_length])
-        # test_dst = SimpleDataset(data, label)    
+        # half_length = len(label) // 2
+        # train_dst = SimpleDataset(data[half_length:], label[half_length:])
+        # test_dst = SimpleDataset(data[:half_length], label[:half_length])
+        test_dst = SimpleDataset(data, label)    
     elif args.dataset_name == "cifar20":
         half_dim = 16
         num_classes = 20
         # num_classes = 2
-        # train_dst = datasets.CIFAR100("../../../share_dataset/", download=True, train=True, transform=transform)
-        # data, label = fetch_data_and_label(train_dst, num_classes)
-        # train_dst = SimpleDataset(data, label)
+        train_dst = datasets.CIFAR100("../../../share_dataset/", download=True, train=True, transform=transform)
+        data, label = fetch_data_and_label(train_dst, num_classes)
+        train_dst = SimpleDataset(data, label)
         test_dst = datasets.CIFAR100("../../../share_dataset/", download=True, train=False, transform=transform)
         data, label = fetch_data_and_label(test_dst, num_classes)
-        half_length = len(label) // 2
-        train_dst = SimpleDataset(data[half_length:], label[half_length:])
-        test_dst = SimpleDataset(data[:half_length], label[:half_length])
-        # test_dst = SimpleDataset(data, label)
+        # half_length = len(label) // 2
+        # train_dst = SimpleDataset(data[half_length:], label[half_length:])
+        # test_dst = SimpleDataset(data[:half_length], label[:half_length])
+        test_dst = SimpleDataset(data, label)
     elif args.dataset_name == "cifar10":
         half_dim = 16
         num_classes = 10
         # num_classes = 2
-        # train_dst = datasets.CIFAR10("../../../share_dataset/", download=True, train=True, transform=transform)
-        # data, label = fetch_data_and_label(train_dst, num_classes)
-        # train_dst = SimpleDataset(data, label)
+        train_dst = datasets.CIFAR10("../../../share_dataset/", download=True, train=True, transform=transform)
+        data, label = fetch_data_and_label(train_dst, num_classes)
+        train_dst = SimpleDataset(data, label)
         test_dst = datasets.CIFAR10("../../../share_dataset/", download=True, train=False, transform=transform)
         data, label = fetch_data_and_label(test_dst, num_classes)
-        half_length = len(label) // 2
-        train_dst = SimpleDataset(data[half_length:], label[half_length:])
-        test_dst = SimpleDataset(data[:half_length], label[:half_length])
-        # test_dst = SimpleDataset(data, label)
+        # half_length = len(label) // 2
+        # train_dst = SimpleDataset(data[half_length:], label[half_length:])
+        # test_dst = SimpleDataset(data[:half_length], label[:half_length])
+        test_dst = SimpleDataset(data, label)
     elif args.dataset_name == "mnist":
         half_dim = 14
         num_classes = 10
         # num_classes = 2
-        # train_dst = datasets.MNIST("~/.torch", download=True, train=True, transform=transform_fn)
-        # data, label = fetch_data_and_label(train_dst, num_classes)
-        # train_dst = SimpleDataset(data, label)
+        train_dst = datasets.MNIST("~/.torch", download=True, train=True, transform=transform_fn)
+        data, label = fetch_data_and_label(train_dst, num_classes)
+        train_dst = SimpleDataset(data, label)
         test_dst = datasets.MNIST("~/.torch", download=True, train=False, transform=transform_fn)
         data, label = fetch_data_and_label(test_dst, num_classes)
-        half_length = len(label) // 2
-        train_dst = SimpleDataset(data[half_length:], label[half_length:])
-        test_dst = SimpleDataset(data[:half_length], label[:half_length])
-        print(data[0])
-        # test_dst = SimpleDataset(data, label)
+        # half_length = len(label) // 2
+        # train_dst = SimpleDataset(data[half_length:], label[half_length:])
+        # test_dst = SimpleDataset(data[:half_length], label[:half_length])
+        # print(data[0])
+        test_dst = SimpleDataset(data, label)
     elif args.dataset_name == 'nuswide':
         half_dim = [634, 1000]
         num_classes = 5
@@ -275,10 +275,10 @@ if __name__ == '__main__':
     print(f"path={path}")
     
     # num_exp = 10
-    num_exp = 5
+    # num_exp = 5
     num_exp = 3
     # num_exp = 2
-    num_exp = 1
+    # num_exp = 1
 
     args.encoder = None
     # Model(pred_Z) for mid
@@ -436,5 +436,5 @@ if __name__ == '__main__':
             append_exp_res(path, str(args.RRwithPrior_epsilon) + ' ' + str(np.mean(test_psnr_list))+ ' PSNR ' + str(test_psnr_list) + ' ' + str(np.max(test_psnr_list)))
             append_exp_res(path, str(args.RRwithPrior_epsilon) + ' ' + str(np.mean(test_mse_list))+ ' MSE ' + str(test_mse_list) + ' ' + str(np.max(test_mse_list)))
         else:
-            append_exp_res(path, "bs|num_class|recovery_rate," + str(args.batch_size) + '|' + str(num_classes) + ' ' + str(np.mean(test_psnr_list))+ ' PSNR ' + str(test_psnr_list) + ' ' + str(np.max(test_psnr_list)))
-            append_exp_res(path, "bs|num_class|recovery_rate," + str(args.batch_size) + '|' + str(num_classes) + ' ' + str(np.mean(test_mse_list))+ ' MSE ' + str(test_mse_list) + ' ' + str(np.max(test_mse_list)))
+            append_exp_res(path, "bs|num_class|lr|epoch|recovery_rate," + str(args.batch_size) + '|' + str(num_classes) + '|' + str(args.lr) + '|' + str(args.epochs) + ' ' + str(np.mean(test_psnr_list))+ ' PSNR ' + str(test_psnr_list) + ' ' + str(np.max(test_psnr_list)))
+            append_exp_res(path, "bs|num_class|lr|epoch|recovery_rate," + str(args.batch_size) + '|' + str(num_classes) + '|' + str(args.lr) + '|' + str(args.epochs) + ' ' + str(np.mean(test_mse_list))+ ' MSE ' + str(test_mse_list) + ' ' + str(np.max(test_mse_list)))

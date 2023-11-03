@@ -8,6 +8,7 @@ from models.autoencoder import AutoEncoder
 from vfl_dlg import *
 import vfl_dlg
 import vfl_dlg_mid
+import vfl_dlg_mid_backup
 from models.vision import *
 from utils import *
 
@@ -35,6 +36,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', default='mnist', type=str, help='the dataset which the experiment is based on')
     parser.add_argument('--num_exp', default=10, type=int , help='the number of random experiments')
+    parser.add_argument('--k', default=2, type=int, help='number of participants')
     parser.add_argument('--lr', default=0.05, type=float, help='learning rate')
     parser.add_argument('--early_stop', default=False, type=bool, help='whether to use early stop')
     parser.add_argument('--early_stop_param', default=0.0001, type=float, help='stop training when the loss <= early_stop_param')
@@ -134,12 +136,13 @@ if __name__ == '__main__':
 
     # args.num_exp = 10
     # args.num_exp = 5
-    args.num_exp = 3
+    args.num_exp = 3 if (args.k != 2) else 100
     # args.num_exp = 1
 
     # args.exp_res_dir = f'exp_result/{args.dataset}/'
     # args.exp_res_dir = f'exp_result_2048/{args.dataset}/'
-    args.exp_res_dir = f'exp_result_2048/{args.dataset}/'
+    # args.exp_res_dir = f'exp_result_2048/{args.dataset}/'
+    args.exp_res_dir = f'exp_result_2048_{self.k}/{args.dataset}/'
     # args.exp_res_dir = f'exp_result_binary/{args.dataset}/'
     # all the route can be concatenated
     if args.apply_trainable_layer:
@@ -182,31 +185,46 @@ if __name__ == '__main__':
             label_leakage.train()
     elif args.apply_laplace or args.apply_gaussian:
         # dp_strength_list = [0.00005, 0.0001, 0.0005, 0.001, 0.01, 0.1]
-        dp_strength_list = [0.0001, 0.001, 0.01, 0.1]
-        dp_strength_list = [0.000001,0.0000001,0.0000001]#0.00001
+        dp_strength_list = [0.000001, 0.0001, 0.001, 0.01, 0.1, 1.0]
+        # dp_strength_list = [0.000001,0.0000001,0.0000001]#0.00001
         for dp_strength in dp_strength_list:
             args.dp_strength = dp_strength
             label_leakage = vfl_dlg_mid.LabelLeakage(args)
             label_leakage.train()
     elif args.apply_grad_spar:
-        gradient_sparsification_list = [90, 95, 96, 97, 98, 99]
+        gradient_sparsification_list = [90, 95, 96, 97, 98, 99, 99.5, 99.9]
         for grad_spars in gradient_sparsification_list:
             args.grad_spars = grad_spars
             label_leakage = vfl_dlg_mid.LabelLeakage(args)
             label_leakage.train()
     elif args.apply_mid:
-        mid_lambda_list = [0,1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
-        # mid_lambda_list = [0]
+        mid_lambda_list = [0,1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1,100,1000,10000]
         for mid_loss_lambda in mid_lambda_list:
             args.mid_loss_lambda = mid_loss_lambda
             label_leakage = vfl_dlg_mid.LabelLeakage(args)
+            # label_leakage = vfl_dlg_mid_backup.LabelLeakage(args)
             label_leakage.train()
     elif args.apply_grad_perturb:
-        perturb_list = [0.1,0.3,1.0,3.0,10.0]
-        perturb_list = [100.0,5.0,2.0]
+        # perturb_list = [0.1,0.3,1.0,3.0,10.0]
+        # perturb_list = [100.0,5.0,2.0]
+        perturb_list = [100.0,10.0,5.0,3.0,2.0,1.0,0.3,0.1]
         # mid_lambda_list = [0]
         for perturb_epsilon in perturb_list:
             args.perturb_epsilon = perturb_epsilon
+            label_leakage = vfl_dlg_mid.LabelLeakage(args)
+            label_leakage.train()
+    elif args.apply_RRwithPrior:
+        RRwithPrior_epsilon_list = [2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.10, 10.0, 20.0, 30.0]
+        # mid_lambda_list = [0]
+        for RRwithPrior_epsilon in RRwithPrior_epsilon_list:
+            args.RRwithPrior_epsilon = RRwithPrior_epsilon
+            label_leakage = vfl_dlg_mid.LabelLeakage(args)
+            label_leakage.train()
+    elif args.apply_distance_correlation:
+        distance_correlation_lambda_list = [0.1, 0.01, 3e-3, 1e-3, 1e-4, 1e-5, 1e-6]
+        # mid_lambda_list = [0]
+        for distance_correlation_lambda in distance_correlation_lambda_list:
+            args.distance_correlation_lambda = distance_correlation_lambda
             label_leakage = vfl_dlg_mid.LabelLeakage(args)
             label_leakage.train()
     else:

@@ -93,6 +93,7 @@ if __name__ == '__main__':
     parser.add_argument('--discrete_gradients_bins', default=12, type=int, help='number of bins for discrete gradients')
     parser.add_argument('--discrete_gradients_bound', default=3e-4, type=float, help='value of bound for discrete gradients')
     
+    parser.add_argument('--k', default=2, type=int, help='number of participants')
     parser.add_argument('--gpu', default=0, type=int, help='gpu_id')
     parser.add_argument('--epochs', default=100, type=int, help='')
     parser.add_argument('--lr', default=0.001, type=float, help='learning rate')
@@ -229,7 +230,8 @@ if __name__ == '__main__':
 
     # path = f'./exp_result/{args.dataset_name}/'
     # path = f'./exp_result_2048_new/{args.dataset_name}/'
-    path = f'./exp_result_2048/{args.dataset_name}/'
+    # path = f'./exp_result_2048/{args.dataset_name}/'
+    path = f'./exp_result_2048_{self.k}/{args.dataset_name}/'
     # path = f'./exp_result_binary/{args.dataset_name}/'
     if args.apply_trainable_layer:
         path += '_top_model/'
@@ -261,10 +263,10 @@ if __name__ == '__main__':
     print(f"path={path}")
     
     # num_exp = 10
-    num_exp = 5
-    # num_exp = 3
+    # num_exp = 5
+    num_exp = 3
     # num_exp = 2
-    num_exp = 1
+    # num_exp = 1
 
     args.encoder = None
     # Model(pred_Z) for mid
@@ -292,7 +294,7 @@ if __name__ == '__main__':
             append_exp_res(path, str(_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
     elif args.apply_laplace or args.apply_gaussian:
         # dp_strength_list = [0.00005, 0.0001, 0.0005, 0.001, 0.01, 0.1]
-        dp_strength_list = [0.00001, 0.0001, 0.001, 0.01, 0.1, 1]
+        dp_strength_list = [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1]
         # dp_strength_list = [0.000001,0.0000001,0.0000001]#0.00001
         for dp_strength in dp_strength_list:
             test_acc_list = []
@@ -303,7 +305,7 @@ if __name__ == '__main__':
                 test_acc_list.append(test_acc[0])
             append_exp_res(path, str(dp_strength) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
     elif args.apply_grad_spar:
-        gradient_sparsification_list = [90, 95, 96, 97, 98, 99]
+        gradient_sparsification_list = [90, 95, 96, 97, 98, 99, 99.5, 99.9]
         # gradient_sparsification_list = [10,5,1]
         for grad_spars in gradient_sparsification_list:
             test_acc_list = []
@@ -314,10 +316,12 @@ if __name__ == '__main__':
                 test_acc_list.append(test_acc[0])
             append_exp_res(path, str(grad_spars) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
     elif args.apply_mid:
-        # mid_lambda_list = [0.0,1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1]
+        mid_lambda_list = [0.0,1e-9,1e-6,1e-3,1,100,10000]
+        mid_lambda_list = [0.0,1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1,100,10000]
         # mid_lambda_list = [1,1e-1,1e-2,1e-3]
-        mid_lambda_list = [0.0,1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,10,100]
+        # mid_lambda_list = [0.0,1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,10,100]
         # mid_lambda_list = [100,10,1,1e-1,1e-2,1e-3,1e-4]
+        # mid_lambda_list = [1000,1000]
         # mid_lambda_list = [0]
         for mid_loss_lambda in mid_lambda_list:
             test_acc_list = []
@@ -341,11 +345,12 @@ if __name__ == '__main__':
             append_exp_res(path, str(args.mid_loss_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
             # append_exp_res(path, str(args.mid_loss_lambda) + ' ' + str(np.mean(rec_acc_list))+ ' ' + str(rec_acc_list) + ' ' + str(np.max(rec_acc_list)) + ' attack')
     elif args.apply_grad_perturb:
-        perturb_list = [0.1,0.3,1.0,3.0,10.0]
-        perturb_list = [10.0,3.0,1.0,0.3]
-        perturb_list = [1.0]
-        perturb_list = [100.0]
-        perturb_list = [5.0,2.0]
+        # perturb_list = [0.1,0.3,1.0,3.0,10.0]
+        # perturb_list = [10.0,3.0,1.0,0.3]
+        # perturb_list = [1.0]
+        # perturb_list = [100.0]
+        # perturb_list = [5.0,2.0]
+        perturb_list = [100.0,10.0,5.0,3.0,2.0,1.0,0.3,0.1]
         for perturb_epsilon in perturb_list:
             test_acc_list = []
             rec_acc_list = []
@@ -356,6 +361,32 @@ if __name__ == '__main__':
                 test_acc = vfl_defence_image.train()
                 test_acc_list.append(test_acc[0])
             append_exp_res(path, str(args.perturb_epsilon) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+    elif args.apply_RRwithPrior:
+        RRwithPrior_epsilon_list = [2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.10, 10.0, 20.0, 30.0]
+        # mid_lambda_list = [0]
+        for RRwithPrior_epsilon in RRwithPrior_epsilon_list:
+            test_acc_list = []
+            rec_acc_list = []
+            for i in range(num_exp):
+                args.RRwithPrior_epsilon = RRwithPrior_epsilon
+                set_seed(args.seed)
+                vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
+                test_acc = vfl_defence_image.train()
+                test_acc_list.append(test_acc[0])
+            append_exp_res(path, str(args.RRwithPrior_epsilon) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+    elif args.apply_distance_correlation:
+        distance_correlation_lambda_list = [0.1, 0.01, 3e-3, 1e-3, 1e-4, 1e-5, 1e-6]
+        # mid_lambda_list = [0]
+        for distance_correlation_lambda in distance_correlation_lambda_list:
+            test_acc_list = []
+            rec_acc_list = []
+            for i in range(num_exp):
+                args.distance_correlation_lambda = distance_correlation_lambda
+                set_seed(args.seed)
+                vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
+                test_acc = vfl_defence_image.train()
+                test_acc_list.append(test_acc[0])
+            append_exp_res(path, str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
     elif args.apply_dravl:
         dravl_w_list = [0.0001,0.01,1.0,100.0,10000.0]
         # dravl_w_list = [0.0001,0.01,100.0,10000.0]

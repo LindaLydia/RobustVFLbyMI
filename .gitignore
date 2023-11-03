@@ -12,6 +12,8 @@ trained_models/
 wandb*/
 wandb/
 src/saved_models/
+src/saved_loss/
+src/_saved_loss/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

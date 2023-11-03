@@ -305,10 +305,14 @@ class ActivePartyWithoutTrainableLayer(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, pred_a, pred_b):
-        pred = pred_a + pred_b
-        return pred
-
+    # def forward(self, pred_a, pred_b):
+    #     pred = pred_a + pred_b
+    #     return pred
+    def forward(self, z_list):
+        out = z_list[0]
+        for i in range(len(z_list)-1):
+            out = out.add(z_list[i+1])
+        return out
 
 class ActivePartyWithTrainableLayer(nn.Module):
 
@@ -316,8 +320,11 @@ class ActivePartyWithTrainableLayer(nn.Module):
         super().__init__()
         self.classifier_head = nn.Linear(hidden_dim, output_dim)
 
-    def forward(self, pred_a, pred_b):
-        out = torch.cat([pred_a, pred_b], dim=1) # out = [dim0, dim1_a+dim1_b], dim0 is number of samples
+    # def forward(self, pred_a, pred_b):
+    #     out = torch.cat([pred_a, pred_b], dim=1) # out = [dim0, dim1_a+dim1_b], dim0 is number of samples
+    #     return self.classifier_head(out)
+    def forward(self, z_list):
+        out = torch.cat(z_list, dim=1)
         return self.classifier_head(out)
 
     # def get_prediction(self, z0, z_list):

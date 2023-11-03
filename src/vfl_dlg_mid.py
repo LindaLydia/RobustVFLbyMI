@@ -33,6 +33,7 @@ class LabelLeakage(object):
         self.model = args.model
         self.num_exp = args.num_exp
         self.epochs = args.epochs
+        self.k = args.k
         self.lr = args.lr
         self.early_stop = args.early_stop
         self.early_stop_param = args.early_stop_param
@@ -122,8 +123,8 @@ class LabelLeakage(object):
         for batch_size in self.batch_size_list:
             for num_classes in self.num_class_list:
                 if self.apply_mid:
-                    self.mid_model = MID_layer(num_classes*BOTTLENECK_SCALE, num_classes).to(self.device)
-                    self.mid_enlarge_model = MID_enlarge_layer(num_classes,num_classes*2*BOTTLENECK_SCALE).to(self.device)
+                    self.mid_model = [MID_layer(num_classes*BOTTLENECK_SCALE, num_classes).to(self.device) for _ in range(self.k-1)]
+                    self.mid_enlarge_model = [MID_enlarge_layer(num_classes,num_classes*2*BOTTLENECK_SCALE).to(self.device) for _ in range(self.k-1)]
                 classes = [None] * num_classes
                 gt_equal_probability = torch.from_numpy(np.array([1/num_classes]*num_classes)).to(self.device)
                 print("gt_equal_probability:", gt_equal_probability)
@@ -161,19 +162,35 @@ class LabelLeakage(object):
                             gt_label.append(all_label[sample_idx])
                         gt_data = torch.stack(gt_data).to(self.device)
                         half_size = list(gt_data.size())[-1] // 2
-                        gt_data_a = gt_data[:, :, :half_size, :]
-                        gt_data_b = gt_data[:, :, half_size:, :]
+                        # gt_data_a = gt_data[:, :, :half_size, :]
+                        # gt_data_b = gt_data[:, :, half_size:, :]
+                        if self.k == 2:
+                            gt_data_separate = [gt_data[:, :, :half_size, :], gt_data[:, :, half_size:, :]]
+                        elif self.k == 4:
+                            gt_data_separate = [gt_data[:, :, :half_size, :half_size], gt_data[:, :, :half_size, half_size:], \
+                                                 gt_data[:, :, half_size:, :half_size], gt_data[:, :, half_size:, half_size:]]
+                        elif self.k == 25:
+                            if list(gt_data.size())[-1] == 32:
+                                bins = [0,4,8,13,18,23,28]
+                            else:
+                                bins = [0,5,10,15,20,26,32]
+                            gt_data_separate = []
+                            for _i in range(5):
+                                for _j in range(5):
+                                    gt_data_separate.append(gt_data[:, :, bins[_i]:bins[_i+1], bins[_j]:bins[_j+1]])
                         gt_label = torch.stack(gt_label).to(self.device)
                         gt_onehot_label = gt_label  # label_to_onehot(gt_label)
                     elif self.dataset == 'nuswide':
+                        assert self.k == 2, "none supporting number of participants k"
                         gt_data_a, gt_data_b, gt_label = [], [], []
                         for i in range(0, batch_size):
                             sample_idx = torch.randint(len(x_image), size=(1,)).item()
                             gt_data_a.append(torch.tensor(x_text[sample_idx], dtype=torch.float32))
                             gt_data_b.append(torch.tensor(x_image[sample_idx], dtype=torch.float32))
                             gt_label.append(torch.tensor(Y[sample_idx], dtype=torch.float32))
-                        gt_data_a = torch.stack(gt_data_a).to(self.device)
-                        gt_data_b = torch.stack(gt_data_b).to(self.device)
+                        # gt_data_a = torch.stack(gt_data_a).to(self.device)
+                        # gt_data_b = torch.stack(gt_data_b).to(self.device)
+                        gt_data_separate = [torch.stack(gt_data_a).to(self.device), torch.stack(gt_data_b).to(self.device)]
                         gt_label = torch.stack(gt_label).to(self.device)
                         gt_onehot_label = gt_label  # label_to_onehot(gt_label)
                     if self.apply_grad_perturb:
@@ -191,33 +208,43 @@ class LabelLeakage(object):
                     #     _, gt_onehot_label = self.encoder(gt_data_a)
                     # set model
                     if self.model == 'MLP2':
-                        net_a = MLP2(np.prod(list(gt_data_a.size())[1:]), num_classes).to(self.device)
-                        net_b = MLP2(np.prod(list(gt_data_b.size())[1:]), num_classes).to(self.device)
+                        # net_a = MLP2(np.prod(list(gt_data_a.size())[1:]), num_classes).to(self.device)
+                        # net_b = MLP2(np.prod(list(gt_data_b.size())[1:]), num_classes).to(self.device)
+                        nets = [MLP2(np.prod(list(gt_data_separate[ik].size())[1:]), num_classes).to(self.device) for ik in range(self.k)]
+                        # print("nets[0]", nets[0])
+                        # print("nets[0]", nets[1])
                     elif self.model == 'resnet18':
-                        net_a = resnet18(num_classes).to(self.device)
-                        net_b = resnet18(num_classes).to(self.device)
+                        # net_a = resnet18(num_classes).to(self.device)
+                        # net_b = resnet18(num_classes).to(self.device)
+                        nets = [resnet18(num_classes).to(self.device) for _ in range(self.k)]
                     
                     # ......if args.apply_certify != 0 and epoch >= args.certify_start_epoch:
                     #     .....
 
                     criterion = cross_entropy_for_onehot
-                    pred_a = net_a(gt_data_a) # for passive party: H_p, Z
-                    pred_b = net_b(gt_data_b) # for active party
+                    # pred_a = net_a(gt_data_a) # for passive party: H_p, Z
+                    # pred_b = net_b(gt_data_b) # for active party
+                    preds = [nets[ik](gt_data_separate[ik]) for ik in range(self.k)]
                     ######################## defense start ############################
                     ######################## defense1: trainable layer ############################
                     if self.apply_trainable_layer:
-                        active_aggregate_model = ActivePartyWithTrainableLayer(hidden_dim=num_classes * 2, output_dim=num_classes)
-                        dummy_active_aggregate_model = ActivePartyWithTrainableLayer(hidden_dim=num_classes * 2, output_dim=num_classes)
+                        active_aggregate_model = ActivePartyWithTrainableLayer(hidden_dim=num_classes * self.k, output_dim=num_classes)
+                        dummy_active_aggregate_model = ActivePartyWithTrainableLayer(hidden_dim=num_classes * self.k, output_dim=num_classes)
                     else:
                         active_aggregate_model = ActivePartyWithoutTrainableLayer()
                         dummy_active_aggregate_model = ActivePartyWithoutTrainableLayer()
                     active_aggregate_model = active_aggregate_model.to(self.device)
                     dummy_active_aggregate_model = dummy_active_aggregate_model.to(self.device)
-                    pred = active_aggregate_model(pred_a, pred_b)
+                    pred = active_aggregate_model(preds)
                     loss = criterion(pred, gt_onehot_label)
+                    # print("preds[0]", preds[0])
+                    # print("preds[1]", preds[1])
+                    # print("pred", pred)
+                    # print("loss", loss)
                     ######################## defense3: mutual information defense ############################
                     if self.apply_mid:
-                        epsilon = torch.empty((pred_a.size()[0],pred_a.size()[1]*BOTTLENECK_SCALE))
+                        # epsilon = torch.empty((pred_a.size()[0],pred_a.size()[1]*BOTTLENECK_SCALE))
+                        epsilon = [torch.empty((preds[ik].size()[0],preds[ik].size()[1]*BOTTLENECK_SCALE)) for ik in range(self.k-1)]
                         
                         # # discrete form of reparameterization
                         # torch.nn.init.uniform(epsilon) # epsilon is initialized
@@ -227,33 +254,75 @@ class LabelLeakage(object):
                         # pred_Z = F.softmax(pred_Z / torch.tensor(self.mid_tau).to(self.device), -1)
                         
                         # continuous form of reparameterization
-                        torch.nn.init.normal(epsilon, mean=0, std=1) # epsilon is initialized
-                        epsilon = epsilon.to(self.device)
+                        # torch.nn.init.normal(epsilon, mean=0, std=1) # epsilon is initialized
+                        # epsilon = epsilon.to(self.device)
+                        for ie, _e in enumerate(epsilon):
+                            torch.nn.init.normal(_e, mean=0, std=1) # epsilon is initialized
+                            epsilon[ie] = _e.to(self.device)
                         # # pred_a.size() = (batch_size, class_num)
-                        pred_a_double = self.mid_enlarge_model(pred_a)
-                        mu, std = pred_a_double[:,:num_classes*BOTTLENECK_SCALE], pred_a_double[:,num_classes*BOTTLENECK_SCALE:]
-                        std = F.softplus(std-5) # ? F.softplus(std-5)
-                        # print("mu, std: ", mu.size(), std.size())
-                        # print(pred_a.size(), pred_a_double.size(), mu.size(), std.size(), epsilon.size())
-                        pred_Z = mu+std*epsilon
-                        # assert(pred_Z.size()==pred_a.size())
-                        # print(pred_Z.size())
-                        pred_Z = pred_Z.to(self.device)
+                        # pred_a_double = self.mid_enlarge_model(pred_a)
+                        # mu, std = pred_a_double[:,:num_classes*BOTTLENECK_SCALE], pred_a_double[:,num_classes*BOTTLENECK_SCALE:]
+                        # std = F.softplus(std-5) # ? F.softplus(std-5)
+                        # # print("mu, std: ", mu.size(), std.size())
+                        # # print(pred_a.size(), pred_a_double.size(), mu.size(), std.size(), epsilon.size())
+                        # pred_Z = mu+std*epsilon
+                        # # assert(pred_Z.size()==pred_a.size())
+                        # # print(pred_Z.size())
+                        # pred_Z = pred_Z.to(self.device)
+                        # pred_Z = self.mid_model(pred_Z)
+                        # pred = active_aggregate_model(pred_Z)
+                        # # # loss for discrete form of reparameterization
+                        # # loss = criterion(pred, gt_onehot_label) + self.mid_loss_lambda * entropy_for_probability_vector(pred_a)
+                        # # loss for continuous form of reparameterization
+                        # loss = criterion(pred, gt_onehot_label) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
                         
-                        pred_Z = self.mid_model(pred_Z)
-                        pred = active_aggregate_model(pred_Z, F.softmax(pred_b))
+                        # loss = criterion(pred, gt_onehot_label)
+                        pred_a_double = [self.mid_enlarge_model[ik](preds[ik]) for ik in range(self.k-1)]
+                        pred_Z = []
+                        # std_list = []
+                        # mu_list = []
+                        std_list = [None] * (self.k-1)
+                        mu_list = [None] * (self.k-1)
+                        for ik in range(self.k-1):
+                            # mu, std = pred_a_double[ik][:,:num_classes*BOTTLENECK_SCALE], pred_a_double[ik][:,num_classes*BOTTLENECK_SCALE:]
+                            # mu_list.append(mu)
+                            # std_list.append(std)
+                            # std = F.softplus(std-5) # ? F.softplus(std-5)
+                            mu_list[ik], std_list[ik] = pred_a_double[ik][:,:num_classes*BOTTLENECK_SCALE], pred_a_double[ik][:,num_classes*BOTTLENECK_SCALE:]
+                            std_list[ik] = F.softplus(std_list[ik]-5) # ? F.softplus(std-5)
+                            # loss += self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
+                            # print("mu, std: ", mu.size(), std.size())
+                            # print(pred_a.size(), pred_a_double.size(), mu.size(), std.size(), epsilon.size())
+                            # pred_Z.append(mu+std*epsilon[ik])
+                            pred_Z.append(mu_list[ik]+std_list[ik]*epsilon[ik])
+                            # print(f"mu[{ik}], std[{ik}]", mu_list[ik], std_list[ik])
+                            # print(f"pred_Z[{ik}]", pred_Z[ik], pred_Z[ik])
+                            pred_Z[ik] = pred_Z[ik].to(self.device)
+                            pred_Z[ik] = self.mid_model[ik](pred_Z[ik])
+                            # print(f"pred_Z[{ik}]", pred_Z[ik], pred_Z[ik])
+                        pred_Z.append(F.softmax(preds[-1], dim=-1))
+                        
                         # # loss for discrete form of reparameterization
                         # loss = criterion(pred, gt_onehot_label) + self.mid_loss_lambda * entropy_for_probability_vector(pred_a)
                         # loss for continuous form of reparameterization
-                        loss = criterion(pred, gt_onehot_label) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
+                        pred = active_aggregate_model(pred_Z)
+                        loss = criterion(pred, gt_onehot_label)
+                        for ik in range(self.k-1):
+                            loss += self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std_list[ik])-mu_list[ik]**2 - std_list[ik]**2),1))
+                        # print("final_loss", loss)
                     ######################## defense4: distance correlation ############################
                     if self.apply_distance_correlation:
                         # loss = criterion(pred, gt_onehot_label) + self.distance_correlation_lambda * torch.mean(torch.cdist(pred_a, gt_onehot_label, p=2))
-                        loss = criterion(pred, gt_onehot_label) + self.distance_correlation_lambda * torch.log(tf_distance_cov_cor(pred_a, gt_onehot_label))
+                        loss = criterion(pred, gt_onehot_label)
+                        for ik in range(self.k-1):
+                            loss += self.distance_correlation_lambda * torch.log(tf_distance_cov_cor(preds[ik], gt_onehot_label))
                     ######################## defense with loss change end ############################
-                    pred_a_gradients = torch.autograd.grad(loss, pred_a, retain_graph=True)
+                    # pred_a_gradients = torch.autograd.grad(loss, pred_a, retain_graph=True)
+                    # # print("pred_a_gradients:", pred_a_gradients)
+                    # pred_a_gradients_clone = pred_a_gradients[0].detach().clone()
+                    pred_a_gradients = [torch.autograd.grad(loss, preds[ik], retain_graph=True) for ik in range(self.k-1)]
                     # print("pred_a_gradients:", pred_a_gradients)
-                    pred_a_gradients_clone = pred_a_gradients[0].detach().clone()
+                    pred_a_gradients_clone = [pred_a_gradients[ik][0].detach().clone() for ik in range(self.k-1)]
                     ######################## defense2: dp ############################
                     if self.apply_laplace and self.dp_strength != 0 or self.apply_gaussian and self.dp_strength != 0:
                         location = 0.0
@@ -261,28 +330,31 @@ class LabelLeakage(object):
                         if self.apply_laplace:
                             with torch.no_grad():
                                 scale = self.dp_strength
-                                # clip 2-norm per sample
-                                norm_factor_a = torch.div(torch.max(torch.norm(pred_a_gradients_clone, dim=1)),threshold + 1e-6).clamp(min=1.0)
-                                # add laplace noise
                                 dist_a = torch.distributions.laplace.Laplace(location, scale)
-                                pred_a_gradients_clone = torch.div(pred_a_gradients_clone, norm_factor_a) + \
-                                           dist_a.sample(pred_a_gradients_clone.shape).to(self.device)
+                                for ik in range(self.k-1):
+                                    # clip 2-norm per sample
+                                    norm_factor_a = torch.div(torch.max(torch.norm(pred_a_gradients_clone[ik], dim=1)),threshold + 1e-6).clamp(min=1.0)
+                                    # add laplace noise
+                                    pred_a_gradients_clone[ik] = torch.div(pred_a_gradients_clone[ik], norm_factor_a) + \
+                                            dist_a.sample(pred_a_gradients_clone[ik].shape).to(self.device)
                         elif self.apply_gaussian:
                             with torch.no_grad():
                                 scale = self.dp_strength
-                                norm_factor_a = torch.div(torch.max(torch.norm(pred_a_gradients_clone, dim=1)),
-                                                           threshold + 1e-6).clamp(min=1.0)
-                                pred_a_gradients_clone = torch.div(pred_a_gradients_clone, norm_factor_a) + \
-                                                       torch.normal(location, scale, pred_a_gradients_clone.shape).to(self.device)
+                                for ik in range(self.k-1):
+                                    norm_factor_a = torch.div(torch.max(torch.norm(pred_a_gradients_clone[ik], dim=1)),
+                                                            threshold + 1e-6).clamp(min=1.0)
+                                    pred_a_gradients_clone[ik] = torch.div(pred_a_gradients_clone[ik], norm_factor_a) + \
+                                                        torch.normal(location, scale, pred_a_gradients_clone[ik].shape).to(self.device)
                     ######################## defense3: gradient sparsification ############################
                     elif self.apply_grad_spar and self.grad_spars != 0:
                         with torch.no_grad():
                             percent = self.grad_spars / 100.0
-                            up_thr = torch.quantile(torch.abs(pred_a_gradients_clone), percent)
-                            active_up_gradients_res = torch.where(
-                                torch.abs(pred_a_gradients_clone).double() < up_thr.item(),
-                                pred_a_gradients_clone.double(), float(0.)).to(self.device)
-                            pred_a_gradients_clone = pred_a_gradients_clone - active_up_gradients_res
+                            for ik in range(self.k-1):
+                                up_thr = torch.quantile(torch.abs(pred_a_gradients_clone[ik]), percent)
+                                active_up_gradients_res = torch.where(
+                                    torch.abs(pred_a_gradients_clone[ik]).double() < up_thr.item(),
+                                    pred_a_gradients_clone[ik].double(), float(0.)).to(self.device)
+                                pred_a_gradients_clone[ik] = pred_a_gradients_clone[ik] - active_up_gradients_res
                     # ######################## defense4: marvell ############################
                     # elif self.apply_marvell and self.marvell_s != 0 and num_classes == 2:
                     #     # for marvell, change label to [0,1]
@@ -308,11 +380,12 @@ class LabelLeakage(object):
                     #     dp = DPLaplacianNoiseApplyer(beta=self.noise_scale)
                     #     pred_a_gradients_clone = dp.laplace_mech(pred_a_gradients_clone)
                     elif self.apply_discrete_gradients:
-                        pred_a_gradients_clone = multistep_gradient(pred_a_gradients_clone, bins_num=self.discrete_gradients_bins, bound_abs=self.discrete_gradients_bound)
+                        for ik in range(self.k-1):
+                            pred_a_gradients_clone[ik] = multistep_gradient(pred_a_gradients_clone[ik], bins_num=self.discrete_gradients_bins, bound_abs=self.discrete_gradients_bound)
                     ######################## defense end #################################################### defense3: mid ############################
-                    original_dy_dx = torch.autograd.grad(pred_a, net_a.parameters(), grad_outputs=pred_a_gradients_clone)
+                    original_dy_dx = [torch.autograd.grad(preds[ik], nets[ik].parameters(), grad_outputs=pred_a_gradients_clone[ik]) for ik in range(self.k-1)]
 
-                    dummy_pred_b = torch.randn(pred_b.size()).to(self.device).requires_grad_(True)
+                    dummy_pred_b = torch.randn(preds[-1].size()).to(self.device).requires_grad_(True)
                     dummy_label = torch.randn(gt_onehot_label.size()).to(self.device).requires_grad_(True)
 
                     if self.apply_trainable_layer:
@@ -323,14 +396,17 @@ class LabelLeakage(object):
                     for iters in range(1, self.epochs + 1):
                         def closure():
                             optimizer.zero_grad()
-                            dummy_pred = dummy_active_aggregate_model(net_a(gt_data_a), dummy_pred_b)
+                            # dummy_pred = dummy_active_aggregate_model(net_a(gt_data_a), dummy_pred_b)
+                            dummy_pred = dummy_active_aggregate_model([nets[ik](gt_data_separate[ik]) for ik in range(self.k-1)]+[dummy_pred_b])
 
                             dummy_onehot_label = F.softmax(dummy_label, dim=-1)
                             dummy_loss = criterion(dummy_pred, dummy_onehot_label)
-                            dummy_dy_dx_a = torch.autograd.grad(dummy_loss, net_a.parameters(), create_graph=True)
+                            # dummy_dy_dx_a = torch.autograd.grad(dummy_loss, net_a.parameters(), create_graph=True)
+                            dummy_dy_dx_a = [torch.autograd.grad(dummy_loss, nets[ik].parameters(), create_graph=True) for ik in range(self.k-1)]
                             grad_diff = 0
-                            for (gx, gy) in zip(dummy_dy_dx_a, original_dy_dx):
-                                grad_diff += ((gx - gy) ** 2).sum()
+                            for ik in range(self.k-1):
+                                for (gx, gy) in zip(dummy_dy_dx_a[ik], original_dy_dx[ik]):
+                                    grad_diff += ((gx - gy) ** 2).sum()
                             grad_diff.backward()
                             return grad_diff
 

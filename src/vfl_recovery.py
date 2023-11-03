@@ -208,7 +208,7 @@ class FeatureRecovery(object):
         #     loss_rr_label = criterion(pred,RRwP_one_hot_label)
         ######################## defense3: mid ############################
         if self.apply_mid:
-            print("mid in training (dummy calculation) for different prediction")
+            # print("mid in training (dummy calculation) for different prediction")
             # pred_Z = Somefunction(pred_a)
             # print("pred_a.size(): ",pred_a.size())
             epsilon = torch.empty((pred_a.size()[0],pred_a.size()[1]*BOTTLENECK_SCALE))
@@ -273,7 +273,7 @@ class FeatureRecovery(object):
         #     ground_truth_loss_rr_label = criterion(ground_truth_pred,RRwP_one_hot_label)
         ######################## defense3: mid ############################
         if self.apply_mid:
-            print("mid in training (ground_truth calculation) for different prediction")
+            # print("mid in training (ground_truth calculation) for different prediction")
             # pred_Z = Somefunction(pred_a)
             # print("pred_a.size(): ",pred_a.size())
             epsilon = torch.empty((ground_truth_pred_a.size()[0],ground_truth_pred_a.size()[1]*BOTTLENECK_SCALE))
@@ -319,7 +319,7 @@ class FeatureRecovery(object):
 
         # print(unknown_var_loss, ((pred.detach() - ground_truth_pred.detach())**2).sum())
         # print((pred.detach() - ground_truth_pred.detach())[-5:])
-        loss = (((F.softmax(pred,dim=-1).detach() - F.softmax(ground_truth_pred,dim=-1).detach())**2).sum() + self.unknownVarLambda * unknown_var_loss * 1000)
+        loss = (((F.softmax(pred,dim=-1) - F.softmax(ground_truth_pred,dim=-1))**2).sum() + self.unknownVarLambda * unknown_var_loss * 0.25)
         # _w = copy.deepcopy(list(self.netG.parameters()))
         # gradient = torch.autograd.grad(loss, self.netG.parameters(), retain_graph=True)
         # print(f"gradient for netG: {gradient}")
@@ -366,7 +366,7 @@ class FeatureRecovery(object):
         # load trained models
         if self.apply_trainable_layer:
             if self.apply_mid:
-                models_params = torch.load(f"./saved_models/{self.dataset_name}/top/mid_{self.mid_loss_lambda}.pkl")
+                models_params = torch.load(f"./saved_models/{self.dataset_name}/top/mid_{self.mid_loss_lambda}.pkl",map_location=self.device)
                 net_a.load_state_dict(models_params[0])
                 net_b.load_state_dict(models_params[1])
                 self.active_aggregate_model.load_state_dict(models_params[2])
@@ -379,12 +379,12 @@ class FeatureRecovery(object):
                 self.mid_enlarge_model.eval()
             else:
                 if self.apply_gaussian:
-                    models_params = torch.load(f"./saved_models/{self.dataset_name}/top/gaussian_{self.dp_strength}.pkl")
+                    models_params = torch.load(f"./saved_models/{self.dataset_name}/top/gaussian_{self.dp_strength}.pkl",map_location=self.device)
                 if self.apply_dravl:
-                    print(f"./saved_models/{self.dataset_name}/top/dravl_{self.dravl_w}.pkl")
-                    models_params = torch.load(f"./saved_models/{self.dataset_name}/top/dravl_{self.dravl_w}.pkl")
+                    print(f"./saved_models/{self.dataset_name}/top/dravl_{self.dravl_w}.pkl",map_location=self.device)
+                    models_params = torch.load(f"./saved_models/{self.dataset_name}/top/dravl_{self.dravl_w}.pkl",map_location=self.device)
                 else:
-                    models_params = torch.load(f"./saved_models/{self.dataset_name}/top/normal_{self.mid_loss_lambda}.pkl")
+                    models_params = torch.load(f"./saved_models/{self.dataset_name}/top/normal_{self.mid_loss_lambda}.pkl",map_location=self.device)
                 net_a.load_state_dict(models_params[0])
                 net_b.load_state_dict(models_params[1])
                 self.active_aggregate_model.load_state_dict(models_params[2])
@@ -393,7 +393,7 @@ class FeatureRecovery(object):
                 self.active_aggregate_model.eval()
         else:
             if self.apply_mid:
-                models_params = torch.load(f"./saved_models/{self.dataset_name}/no_top/mid_{self.mid_loss_lambda}.pkl")
+                models_params = torch.load(f"./saved_models/{self.dataset_name}/no_top/mid_{self.mid_loss_lambda}.pkl",map_location=self.device)
                 net_a.load_state_dict(models_params[0])
                 net_b.load_state_dict(models_params[1])
                 self.mid_model.load_state_dict(models_params[2])
@@ -404,18 +404,18 @@ class FeatureRecovery(object):
                 self.mid_enlarge_model.eval()
             else:
                 if self.apply_gaussian:
-                    models_params = torch.load(f"./saved_models/{self.dataset_name}/no_top/gaussian_{self.dp_strength}.pkl")
+                    models_params = torch.load(f"./saved_models/{self.dataset_name}/no_top/gaussian_{self.dp_strength}.pkl",map_location=self.device)
                 if self.apply_dravl:
                     print(f"./saved_models/{self.dataset_name}/no_top/dravl_{self.dravl_w}.pkl")
-                    models_params = torch.load(f"./saved_models/{self.dataset_name}/no_top/dravl_{self.dravl_w}.pkl")
+                    models_params = torch.load(f"./saved_models/{self.dataset_name}/no_top/dravl_{self.dravl_w}.pkl",map_location=self.device)
                 else:
-                    models_params = torch.load(f"./saved_models/{self.dataset_name}/no_top/normal_{self.mid_loss_lambda}.pkl")
+                    models_params = torch.load(f"./saved_models/{self.dataset_name}/no_top/normal_{self.mid_loss_lambda}.pkl",map_location=self.device)
                 net_a.load_state_dict(models_params[0])
                 net_b.load_state_dict(models_params[1])
                 net_a.eval()
                 net_b.eval()
         # new_model.forward(input)
-        # model_params = torch.load(f"./saved_models/{self.dataset_name}/no_top/total_{self.mid_loss_lambda}.pkl")
+        # model_params = torch.load(f"./saved_models/{self.dataset_name}/no_top/total_{self.mid_loss_lambda}.pkl",map_location=self.device)
         # self.net_total.load_state_dict(model_params)
         # self.net_total.eval()
 
@@ -426,7 +426,7 @@ class FeatureRecovery(object):
         else:
             self.netG = Generator(self.half_dim*self.half_dim*2*2, self.half_dim*self.half_dim*2)
         self.netG = self.netG.to(self.device)
-        self.optimizerG = torch.optim.Adam(self.netG.parameters(), lr = 0.0001)
+        self.optimizerG = torch.optim.Adam(self.netG.parameters(), lr=self.lr)
         # if self.apply_trainable_layer:
         #     if self.apply_mid:
         #         model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()) + list(self.active_aggregate_model.parameters()) + list(self.mid_model.parameters()) + list(self.mid_enlarge_model.parameters()), lr=self.lr)
@@ -437,14 +437,15 @@ class FeatureRecovery(object):
         #         model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()) + list(self.mid_model.parameters()) + list(self.mid_enlarge_model.parameters()), lr=self.lr)
         #     else:
         #         model_optimizer = torch.optim.Adam(list(net_a.parameters()) + list(net_b.parameters()), lr=self.lr)
-        criterion = cross_entropy_for_onehot
+        criterion = nn.MSELoss()
 
         start_time = time.time()
         test_acc = 0.0
         test_acc_topk = 0.0
         for i_epoch in range(self.epochs):
             self.netG.train()
-            tqdm_train = tqdm(val_loader, desc='Training Generator with testset (epoch #{})'.format(i_epoch + 1))
+            tqdm_train = tqdm(train_loader, desc='Training Generator with testset (epoch #{})'.format(i_epoch + 1))
+            # tqdm_train = tqdm(val_loader, desc='Training Generator with testset (epoch #{})'.format(i_epoch + 1))
             postfix = {'train_loss': 0.0, 'train_acc': 0.0, 'test_acc': 0.0}
             loss = 0.0
             for i, (gt_data, gt_label) in enumerate(tqdm_train):
@@ -455,6 +456,7 @@ class FeatureRecovery(object):
                 # ====== train batch ======
                 loss, train_acc = self.train_batch(gt_data_a, gt_data_b, gt_one_hot_label,
                                               net_a, net_b, self.encoder, self.optimizerG, criterion)
+            
             # validation
             if (i_epoch + 1) % print_every == 0:
                 # print("validate and test")
@@ -464,11 +466,14 @@ class FeatureRecovery(object):
 
                 MSE = []
                 PSNR = []
+
                 with torch.no_grad():
                     # enc_result_matrix = np.zeros((self.num_classes, self.num_classes), dtype=int)
                     # result_matrix = np.zeros((self.num_classes, self.num_classes), dtype=int)
-                    gt_val_data= torch.tensor(self.train_dataset.data, dtype=torch.float32)
-                    gt_val_label = torch.tensor(self.train_dataset.labels, dtype=torch.long)
+                    # gt_val_data= torch.tensor(self.train_dataset.data, dtype=torch.float32)
+                    # gt_val_label = torch.tensor(self.train_dataset.labels, dtype=torch.long)
+                    gt_val_data= torch.tensor(self.val_dataset.data, dtype=torch.float32)
+                    gt_val_label = torch.tensor(self.val_dataset.labels, dtype=torch.long)
 
                 # for gt_val_data, gt_val_label in val_loader:
                     gt_val_one_hot_label = self.label_to_one_hot(gt_val_label, self.num_classes)

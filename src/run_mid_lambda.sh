@@ -120,8 +120,8 @@
 
 # waiting
 # python vfl_dlg_no_defense.py --apply_mid True --dataset cifar100 --gpu 0
-python vfl_dlg_no_defense.py --apply_gaussian True --dataset cifar100 --gpu 0
-python vfl_dlg_no_defense.py --apply_laplace True --dataset cifar100 --gpu 0
+# python vfl_dlg_no_defense.py --apply_gaussian True --dataset cifar100 --gpu 0
+# python vfl_dlg_no_defense.py --apply_laplace True --dataset cifar100 --gpu 0
 # python vfl_dlg_no_defense.py --apply_grad_spar True --dataset cifar100 --gpu 0
 
 # # debug2, runing on air-node-07
@@ -131,8 +131,8 @@ python vfl_dlg_no_defense.py --apply_laplace True --dataset cifar100 --gpu 0
 # python vfl_main_task_no_defense.py --apply_grad_spar True --dataset_name cifar10 --epochs 160 --gpu 2
 
 # python vfl_dlg_no_defense.py --apply_mid True --dataset cifar10 --gpu 0
-python vfl_dlg_no_defense.py --apply_gaussian True --dataset cifar10 --gpu 0
-python vfl_dlg_no_defense.py --apply_laplace True --dataset cifar10 --gpu 0
+# python vfl_dlg_no_defense.py --apply_gaussian True --dataset cifar10 --gpu 0
+# python vfl_dlg_no_defense.py --apply_laplace True --dataset cifar10 --gpu 0
 # python vfl_dlg_no_defense.py --apply_grad_spar True --dataset cifar10 --gpu 0
 
 # python vfl_main_task_no_defense.py --dataset_name cifar100 --epochs 160 --gpu 1
@@ -148,3 +148,10 @@ python vfl_dlg_no_defense.py --apply_laplace True --dataset cifar10 --gpu 0
 # python vfl_main_task_no_defense.py --apply_gaussian True --dataset_name cifar10 --epochs 160 --gpu 2
 # python vfl_main_task_no_defense.py --apply_laplace True --dataset_name cifar10 --epochs 160 --gpu 2
 # python vfl_main_task_no_defense.py --apply_grad_spar True --dataset_name cifar10 --epochs 160 --gpu 2
+
+
+# python vfl_main_task_no_defense.py --apply_mid True --epochs 40 --gpu 1
+# python vfl_main_task_no_defense.py --epochs 40 --gpu 1
+
+
+python vfl_dlg_no_defense.py --dataset cifar10 --apply_mid True
