@@ -129,6 +129,7 @@ if __name__ == '__main__':
         ae_name_list = ['autoencoder_10_1.0_1642396548', 'autoencoder_10_0.5_1642396797',\
                         'autoencoder_10_0.1_1642396928', 'autoencoder_10_0.0_1631093149']
         # ae_name_list = ['negative/autoencoder_10_0.5_1645982479','negative/autoencoder_10_1.0_1645982367']
+        # ae_name_list = ['autoencoder_10_0.1_1642396928', 'autoencoder_10_0.0_1631093149']
     elif args.dataset == 'cifar100':
         ae_name_list = ['autoencoder_20_1.0_1645374675','autoencoder_20_0.5_1645374585',\
                         'autoencoder_20_0.1_1645374527','autoencoder_20_0.05_1645374482','autoencoder_20_0.0_1645374739']
@@ -142,7 +143,7 @@ if __name__ == '__main__':
     # args.exp_res_dir = f'exp_result/{args.dataset}/'
     # args.exp_res_dir = f'exp_result_2048/{args.dataset}/'
     # args.exp_res_dir = f'exp_result_2048/{args.dataset}/'
-    args.exp_res_dir = f'exp_result_2048_{self.k}/{args.dataset}/'
+    args.exp_res_dir = f'exp_result_2048_{args.k}/{args.dataset}/'
     # args.exp_res_dir = f'exp_result_binary/{args.dataset}/'
     # all the route can be concatenated
     if args.apply_trainable_layer:

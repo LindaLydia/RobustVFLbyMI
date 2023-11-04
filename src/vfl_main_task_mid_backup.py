@@ -220,6 +220,10 @@ class VFLDefenceExperimentBase(object):
         pred = self.active_aggregate_model([pred_a, pred_b])
         # pred = self.net_total(torch.cat((batch_data_a,batch_data_b), dim=1))
         loss = criterion(pred, gt_one_hot_label)
+        print("preds[0]", pred_a)
+        print("preds[1]", pred_b)
+        print("pred", pred)
+        print("loss", loss)
         if self.apply_grad_perturb:
             loss_perturb_label = criterion(pred,perturb_one_hot_label)
         if self.apply_RRwithPrior:
@@ -250,6 +254,7 @@ class VFLDefenceExperimentBase(object):
             epsilon = epsilon.to(self.device)
             # # pred_a.size() = (batch_size, class_num)
             pred_a_double = self.mid_enlarge_model(pred_a)
+            print("pred_a_double[0]", pred_a_double)
             # mu, std = norm.fit(pred_a.cpu().detach().numpy())
             mu, std = pred_a_double[:,:self.num_classes*BOTTLENECK_SCALE], pred_a_double[:,self.num_classes*BOTTLENECK_SCALE:]
             std = F.softplus(std-0.5) # ? F.softplus(std-5)
@@ -258,8 +263,12 @@ class VFLDefenceExperimentBase(object):
             pred_Z = mu+std*epsilon
             # assert(pred_Z.size()==pred_a.size())
             pred_Z = pred_Z.to(self.device)
+            print("mu", mu)
+            print("std", std)
+            print("pred_Z [before]", pred_Z)
 
             pred_Z = self.mid_model(pred_Z)
+            print("pred_Z [after]", pred_Z)
             # pred = self.active_aggregate_model([pred_Z, F.softmax(pred_b)])
             pred = self.active_aggregate_model([pred_Z, pred_b])
             # # loss for discrete form of reparameterization
@@ -578,8 +587,8 @@ class VFLDefenceExperimentBase(object):
                     postfix['train_acc'] = '{:.2f}%'.format(train_acc * 100)
                     postfix['test_acc'] = '{:.2f}%'.format(test_acc * 100)
                     tqdm_train.set_postfix(postfix)
-                    # print('Epoch {}% \t train_loss:{:.2f} train_acc:{:.2f} test_acc:{:.2f}'.format(
-                    #     i_epoch, loss, train_acc, test_acc))
+                    print('Epoch {}% \t train_loss:{:.2f} train_acc:{:.2f} test_acc:{:.2f}'.format(
+                        i_epoch, loss, train_acc, test_acc))
             epoch_loss_list.append(np.sum(np.array(batch_loss_list)*np.array(batch_size_list))/np.sum(np.array(batch_size_list)))  
             epoch_test_loss_list.append(np.sum(np.array(test_loss_list)*np.array(test_batch_size_list))/np.sum(np.array(test_batch_size_list)))
         end_time = time.time()
@@ -587,48 +596,48 @@ class VFLDefenceExperimentBase(object):
 
         epoch_loss_list = np.array(epoch_loss_list)
         step_loss_list = np.array(step_loss_list)
-        if self.apply_mid:
-            np.save(f'./saved_loss/{self.dataset_name}/epoch_loss/mid_{self.mid_loss_lambda}_train.npy',epoch_loss_list)
-            np.save(f'./saved_loss/{self.dataset_name}/step_loss/mid_{self.mid_loss_lambda}_train.npy',step_loss_list)
-            np.save(f'./saved_loss/{self.dataset_name}/epoch_loss/mid_{self.mid_loss_lambda}_test.npy',epoch_test_loss_list)
-            np.save(f'./saved_loss/{self.dataset_name}/step_loss/mid_{self.mid_loss_lambda}_test.npy',step_test_loss_list)
-        else:
-            np.save(f'./saved_loss/{self.dataset_name}/epoch_loss/normal_train.npy',epoch_loss_list)
-            np.save(f'./saved_loss/{self.dataset_name}/step_loss/normal_train.npy',step_loss_list)
-            np.save(f'./saved_loss/{self.dataset_name}/epoch_loss/normal_test.npy',epoch_test_loss_list)
-            np.save(f'./saved_loss/{self.dataset_name}/step_loss/normal_test.npy',step_test_loss_list)
+        # if self.apply_mid:
+        #     np.save(f'./saved_loss/{self.dataset_name}/epoch_loss/mid_{self.mid_loss_lambda}_train.npy',epoch_loss_list)
+        #     np.save(f'./saved_loss/{self.dataset_name}/step_loss/mid_{self.mid_loss_lambda}_train.npy',step_loss_list)
+        #     np.save(f'./saved_loss/{self.dataset_name}/epoch_loss/mid_{self.mid_loss_lambda}_test.npy',epoch_test_loss_list)
+        #     np.save(f'./saved_loss/{self.dataset_name}/step_loss/mid_{self.mid_loss_lambda}_test.npy',step_test_loss_list)
+        # else:
+        #     np.save(f'./saved_loss/{self.dataset_name}/epoch_loss/normal_train.npy',epoch_loss_list)
+        #     np.save(f'./saved_loss/{self.dataset_name}/step_loss/normal_train.npy',step_loss_list)
+        #     np.save(f'./saved_loss/{self.dataset_name}/epoch_loss/normal_test.npy',epoch_test_loss_list)
+        #     np.save(f'./saved_loss/{self.dataset_name}/step_loss/normal_test.npy',step_test_loss_list)
 
-        # save models
-        if self.apply_trainable_layer:
-            if self.apply_mid:
-                torch.save((net_a.state_dict(),net_b.state_dict(),self.active_aggregate_model.state_dict(),
-                            self.mid_model.state_dict(),self.mid_enlarge_model.state_dict()), 
-                            f"./saved_models/{self.dataset_name}/top/mid_{self.mid_loss_lambda}.pkl")
-            else:
-                if self.apply_gaussian:
-                    torch.save((net_a.state_dict(),net_b.state_dict(),self.active_aggregate_model.state_dict()),
-                                f"./saved_models/{self.dataset_name}/top/gaussian_{self.dp_strength}.pkl")
-                if self.apply_dravl:
-                    torch.save((net_a.state_dict(),net_b.state_dict(),self.active_aggregate_model.state_dict()),
-                                f"./saved_models/{self.dataset_name}/top/dravl_{self.dravl_w}.pkl")
-                else:
-                    torch.save((net_a.state_dict(),net_b.state_dict(),self.active_aggregate_model.state_dict()),
-                                f"./saved_models/{self.dataset_name}/top/normal_{self.mid_loss_lambda}.pkl")
-        else:
-            if self.apply_mid:
-                torch.save((net_a.state_dict(),net_b.state_dict(),
-                            self.mid_model.state_dict(),self.mid_enlarge_model.state_dict()), 
-                            f"./saved_models/{self.dataset_name}/no_top/mid_{self.mid_loss_lambda}.pkl")
-            else:
-                if self.apply_gaussian:
-                    torch.save((net_a.state_dict(),net_b.state_dict()),
-                                f"./saved_models/{self.dataset_name}/no_top/gaussian_{self.dp_strength}.pkl")
-                if self.apply_dravl:
-                    torch.save((net_a.state_dict(),net_b.state_dict()),
-                                f"./saved_models/{self.dataset_name}/no_top/dravl_{self.dravl_w}.pkl")
-                else:
-                    torch.save((net_a.state_dict(),net_b.state_dict()),
-                                f"./saved_models/{self.dataset_name}/no_top/normal_{self.mid_loss_lambda}.pkl")
+        # # save models
+        # if self.apply_trainable_layer:
+        #     if self.apply_mid:
+        #         torch.save((net_a.state_dict(),net_b.state_dict(),self.active_aggregate_model.state_dict(),
+        #                     self.mid_model.state_dict(),self.mid_enlarge_model.state_dict()), 
+        #                     f"./saved_models/{self.dataset_name}/top/mid_{self.mid_loss_lambda}.pkl")
+        #     else:
+        #         if self.apply_gaussian:
+        #             torch.save((net_a.state_dict(),net_b.state_dict(),self.active_aggregate_model.state_dict()),
+        #                         f"./saved_models/{self.dataset_name}/top/gaussian_{self.dp_strength}.pkl")
+        #         if self.apply_dravl:
+        #             torch.save((net_a.state_dict(),net_b.state_dict(),self.active_aggregate_model.state_dict()),
+        #                         f"./saved_models/{self.dataset_name}/top/dravl_{self.dravl_w}.pkl")
+        #         else:
+        #             torch.save((net_a.state_dict(),net_b.state_dict(),self.active_aggregate_model.state_dict()),
+        #                         f"./saved_models/{self.dataset_name}/top/normal_{self.mid_loss_lambda}.pkl")
+        # else:
+        #     if self.apply_mid:
+        #         torch.save((net_a.state_dict(),net_b.state_dict(),
+        #                     self.mid_model.state_dict(),self.mid_enlarge_model.state_dict()), 
+        #                     f"./saved_models/{self.dataset_name}/no_top/mid_{self.mid_loss_lambda}.pkl")
+        #     else:
+        #         if self.apply_gaussian:
+        #             torch.save((net_a.state_dict(),net_b.state_dict()),
+        #                         f"./saved_models/{self.dataset_name}/no_top/gaussian_{self.dp_strength}.pkl")
+        #         if self.apply_dravl:
+        #             torch.save((net_a.state_dict(),net_b.state_dict()),
+        #                         f"./saved_models/{self.dataset_name}/no_top/dravl_{self.dravl_w}.pkl")
+        #         else:
+        #             torch.save((net_a.state_dict(),net_b.state_dict()),
+        #                         f"./saved_models/{self.dataset_name}/no_top/normal_{self.mid_loss_lambda}.pkl")
         
         # torch.save((self.net_total.state_dict()),
         #             f"./saved_models/{self.dataset_name}/no_top/total_{self.mid_loss_lambda}.pkl")

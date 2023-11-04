@@ -117,7 +117,7 @@ class VFLDefenceExperimentBase(object):
                 data_separate = [data[:, :, :self.half_dim, :], data[:, :, self.half_dim:, :]]
             elif self.k == 4:
                 data_separate = [data[:, :, :self.half_dim, :self.half_dim], data[:, :, :self.half_dim, self.half_dim:], \
-                                        data[:, :, self.half_dim:, :self.half_dim], data[:, :, self.half_dim:, self.half_dim:]]
+                                 data[:, :, self.half_dim:, :self.half_dim], data[:, :, self.half_dim:, self.half_dim:]]
             elif self.k == 25:
                 data_separate = []
                 for _i in range(5):
@@ -185,32 +185,6 @@ class VFLDefenceExperimentBase(object):
             _random[i] = F.softmax(_random[i], dim=-1)
             # print("after softmax: _random[i]", _random[i])
         return self.encoder(_random)
-
-    def MIDBottleneckGeneration(self, X):
-        # # discrete form of reparameterization
-        # torch.nn.init.uniform(epsilon) # epsilon is initialized
-        # epsilon = - torch.log(epsilon + torch.tensor(1e-07))
-        # epsilon = - torch.log(epsilon + torch.tensor(1e-07)) # prevent if epsilon=0.0
-        # pred_Z = F.softmax(pred_a) + epsilon.to(self.device)
-        # pred_Z = F.softmax(pred_Z / torch.tensor(self.mid_tau).to(self.device), -1)
-        
-        # continuous form of reparameterization
-        epsilon = torch.empty((X.size()[0],X.size()[1]*BOTTLENECK_SCALE))
-        torch.nn.init.normal(epsilon, mean=0, std=1) # epsilon is initialized
-        epsilon = epsilon.to(self.device)
-        # X.size() = (batch_size, class_num)
-        pred_a_double = self.mid_enlarge_model(X)
-        # mu, std = norm.fit(X.cpu().detach().numpy())
-        mu, std = pred_a_double[:,:self.num_classes*BOTTLENECK_SCALE], pred_a_double[:,self.num_classes*BOTTLENECK_SCALE:]
-        std = F.softplus(std-0.5) # ? F.softplus(std-5)
-        # std = F.softplus(std-5) # ? F.softplus(std-5)
-        # print("mu, std: ", mu.size(), std.size())
-        pred_Z = mu+std*epsilon
-        # assert(pred_Z.size()==X.size())
-        pred_Z = pred_Z.to(self.device)
-
-        pred_Z = self.mid_model(pred_Z)
-        return pred_Z.clone(), mu, std
     
     # def train_batch(self, batch_data_a, batch_data_b, batch_label, net_a, net_b, encoder, model_optimizer, criterion):
     def train_batch(self, batch_data_list, batch_label, nets, encoder, model_optimizer, criterion):
@@ -263,6 +237,10 @@ class VFLDefenceExperimentBase(object):
         # pred = self.active_aggregate_model([pred_a, pred_b])
         pred = self.active_aggregate_model(preds)
         loss = criterion(pred, gt_one_hot_label)
+        # print("preds[0]", preds[0])
+        # print("preds[1]", preds[1])
+        # print("pred", pred)
+        # print("loss", loss)
         if self.apply_grad_perturb:
             loss_perturb_label = criterion(pred,perturb_one_hot_label)
         if self.apply_RRwithPrior:
@@ -315,6 +293,7 @@ class VFLDefenceExperimentBase(object):
             # loss = criterion(pred, gt_one_hot_label) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
             # # print("loss: ", loss)
             pred_a_double = [self.mid_enlarge_model[ik](preds[ik]) for ik in range(self.k-1)]
+            # print("pred_a_double[0]", pred_a_double[0])
             pred_Z = []
             std_list = [None] * (self.k-1)
             mu_list = [None] * (self.k-1)
@@ -324,8 +303,12 @@ class VFLDefenceExperimentBase(object):
                 std_list[ik] = F.softplus(std_list[ik]-0.5) # ? F.softplus(std-5)
                 pred_Z.append(mu_list[ik]+std_list[ik]*epsilon[ik])
                 pred_Z[ik] = pred_Z[ik].to(self.device)
+                # print("mu", mu_list[ik])
+                # print("std", std_list[ik])
+                # print("pred_Z [before]", pred_Z[ik])
                 pred_Z[ik] = self.mid_model[ik](pred_Z[ik])
-            pred_Z.append(F.softmax(preds[-1], dim=-1))
+                # print("pred_Z [after]", pred_Z[ik])
+            pred_Z.append(preds[-1])
             pred = self.active_aggregate_model(pred_Z)
             loss = criterion(pred, gt_one_hot_label)
             for ik in range(self.k-1):
@@ -683,7 +666,7 @@ class VFLDefenceExperimentBase(object):
                                 test_logit_Z.append(mu_list[ik]+std_list[ik]*epsilon[ik])
                                 test_logit_Z[ik] = test_logit_Z[ik].to(self.device)
                                 test_logit_Z[ik] = self.mid_model[ik](test_logit_Z[ik])
-                            test_logit_Z.append(F.softmax(test_logit_list[-1], dim=-1))
+                            test_logit_Z.append(test_logit_list[-1])
                             test_logit = self.active_aggregate_model(test_logit_Z)
                             loss = criterion(test_logit, gt_val_one_hot_label)
                             for ik in range(self.k-1):
@@ -709,8 +692,8 @@ class VFLDefenceExperimentBase(object):
                     postfix['train_acc'] = '{:.2f}%'.format(train_acc * 100)
                     postfix['test_acc'] = '{:.2f}%'.format(test_acc * 100)
                     tqdm_train.set_postfix(postfix)
-                    # print('Epoch {}% \t train_loss:{:.2f} train_acc:{:.2f} test_acc:{:.2f}'.format(
-                    #     i_epoch, loss, train_acc, test_acc))
+                    print('Epoch {}% \t train_loss:{:.2f} train_acc:{:.2f} test_acc:{:.2f}'.format(
+                        i_epoch, loss, train_acc, test_acc))
             epoch_loss_list.append(np.sum(np.array(batch_loss_list)*np.array(batch_size_list))/np.sum(np.array(batch_size_list)))  
             epoch_test_loss_list.append(np.sum(np.array(test_loss_list)*np.array(test_batch_size_list))/np.sum(np.array(test_batch_size_list)))
         end_time = time.time()

@@ -15,6 +15,7 @@ from utils import get_labeled_data
 from vfl_main_task import VFLDefenceExperimentBase
 import vfl_main_task
 import vfl_main_task_mid
+import vfl_main_task_mid_backup
 import vfl_main_task_mid_passive
 import vfl_main_task_mid_with_attack
 import vfl_main_task_mid_alternate_with_attack
@@ -223,6 +224,7 @@ if __name__ == '__main__':
         ae_name_list = ['autoencoder_10_1.0_1642396548', 'autoencoder_10_0.5_1642396797',\
                         'autoencoder_10_0.1_1642396928', 'autoencoder_10_0.0_1631093149']
         # ae_name_list = ['negative/autoencoder_10_0.5_1645982479','negative/autoencoder_10_1.0_1645982367']
+        # ae_name_list = ['autoencoder_10_0.1_1642396928', 'autoencoder_10_0.0_1631093149']
     elif args.dataset_name == 'cifar100':
         ae_name_list = ['autoencoder_20_1.0_1645374675','autoencoder_20_0.5_1645374585',\
                         'autoencoder_20_0.1_1645374527','autoencoder_20_0.05_1645374482','autoencoder_20_0.0_1645374739']
@@ -231,7 +233,7 @@ if __name__ == '__main__':
     # path = f'./exp_result/{args.dataset_name}/'
     # path = f'./exp_result_2048_new/{args.dataset_name}/'
     # path = f'./exp_result_2048/{args.dataset_name}/'
-    path = f'./exp_result_2048_{self.k}/{args.dataset_name}/'
+    path = f'./exp_result_2048_{args.k}/{args.dataset_name}/'
     # path = f'./exp_result_binary/{args.dataset_name}/'
     if args.apply_trainable_layer:
         path += '_top_model/'
@@ -331,6 +333,7 @@ if __name__ == '__main__':
                 set_seed(args.seed)
                 #############################################
                 vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
+                # vfl_defence_image = vfl_main_task_mid_backup.VFLDefenceExperimentBase(args)
                 # vfl_defence_image = vfl_main_task_mid_passive.VFLDefenceExperimentBase(args)
                 test_acc = vfl_defence_image.train()
                 test_acc_list.append(test_acc[0])
