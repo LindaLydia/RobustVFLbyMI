@@ -194,6 +194,7 @@ if __name__ == '__main__':
             label_leakage.train()
     elif args.apply_grad_spar:
         gradient_sparsification_list = [90, 95, 96, 97, 98, 99, 99.5, 99.9]
+        # gradient_sparsification_list = [99.9]
         for grad_spars in gradient_sparsification_list:
             args.grad_spars = grad_spars
             label_leakage = vfl_dlg_mid.LabelLeakage(args)

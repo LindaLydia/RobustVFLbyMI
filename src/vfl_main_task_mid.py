@@ -301,6 +301,7 @@ class VFLDefenceExperimentBase(object):
                 mu_list[ik], std_list[ik] = pred_a_double[ik][:,:self.num_classes*BOTTLENECK_SCALE], pred_a_double[ik][:,self.num_classes*BOTTLENECK_SCALE:]
                 # std_list[ik] = F.softplus(std_list[ik]-5) # ? F.softplus(std-5)
                 std_list[ik] = F.softplus(std_list[ik]-0.5) # ? F.softplus(std-5)
+                # std_list[ik] = F.softplus(std_list[ik]-0.05) # ? F.softplus(std-5)
                 pred_Z.append(mu_list[ik]+std_list[ik]*epsilon[ik])
                 pred_Z[ik] = pred_Z[ik].to(self.device)
                 # print("mu", mu_list[ik])
@@ -663,6 +664,7 @@ class VFLDefenceExperimentBase(object):
                                 mu_list[ik], std_list[ik] = test_logit_a_double[ik][:,:self.num_classes*BOTTLENECK_SCALE], test_logit_a_double[ik][:,self.num_classes*BOTTLENECK_SCALE:]
                                 # std_list[ik] = F.softplus(std_list[ik]-5) # ? F.softplus(std-5)
                                 std_list[ik] = F.softplus(std_list[ik]-0.5) # ? F.softplus(std-5)
+                                # std_list[ik] = F.softplus(std_list[ik]-0.05) # ? F.softplus(std-5)
                                 test_logit_Z.append(mu_list[ik]+std_list[ik]*epsilon[ik])
                                 test_logit_Z[ik] = test_logit_Z[ik].to(self.device)
                                 test_logit_Z[ik] = self.mid_model[ik](test_logit_Z[ik])

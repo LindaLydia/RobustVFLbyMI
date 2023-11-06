@@ -267,7 +267,7 @@ if __name__ == '__main__':
     # num_exp = 10
     # num_exp = 5
     num_exp = 3
-    # num_exp = 2
+    num_exp = 2
     # num_exp = 1
 
     args.encoder = None
@@ -378,8 +378,10 @@ if __name__ == '__main__':
                 test_acc_list.append(test_acc[0])
             append_exp_res(path, str(args.RRwithPrior_epsilon) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
     elif args.apply_distance_correlation:
-        distance_correlation_lambda_list = [0.1, 0.01, 3e-3, 1e-3, 1e-4, 1e-5, 1e-6]
+        # distance_correlation_lambda_list = [0.1, 0.01, 3e-3, 1e-3, 1e-4, 1e-5, 1e-6]
+        distance_correlation_lambda_list = [1e-6, 1e-5, 1e-4, 1e-3, 3e-3, 0.01, 0.1]
         # mid_lambda_list = [0]
+        num_exp = 1
         for distance_correlation_lambda in distance_correlation_lambda_list:
             test_acc_list = []
             rec_acc_list = []

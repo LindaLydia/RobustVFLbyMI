@@ -1,0 +1,2 @@
+python vfl_main_task_no_defense.py --dataset_name cifar10 --epoch 10 --apply_mid True --k 25 --gpu 0 --lr 0.0005
+python vfl_main_task_no_defense.py --dataset_name cifar10 --epoch 30 --apply_mid True --k 25 --gpu 0 --lr 0.0005
