@@ -267,7 +267,7 @@ if __name__ == '__main__':
     # num_exp = 10
     # num_exp = 5
     num_exp = 3
-    # num_exp = 2
+    num_exp = 2
     # num_exp = 1
 
     args.encoder = None

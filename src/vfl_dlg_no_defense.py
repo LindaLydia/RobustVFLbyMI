@@ -223,6 +223,7 @@ if __name__ == '__main__':
             label_leakage.train()
     elif args.apply_distance_correlation:
         distance_correlation_lambda_list = [0.1, 0.01, 3e-3, 1e-3, 1e-4, 1e-5, 1e-6]
+        distance_correlation_lambda_list = [1e-6, 1e-5, 1e-4, 1e-3, 3e-3, 0.01, 0.1]
         # mid_lambda_list = [0]
         for distance_correlation_lambda in distance_correlation_lambda_list:
             args.distance_correlation_lambda = distance_correlation_lambda
