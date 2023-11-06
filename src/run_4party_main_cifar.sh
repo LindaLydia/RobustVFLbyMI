@@ -30,15 +30,15 @@
 # python vfl_main_task_no_defense.py --apply_grad_perturb True --epoch 20 --k 25 --gpu 5
 # python vfl_main_task_no_defense.py --apply_distance_correlation True --epoch 20 --k 25 --gpu 5
 
-python vfl_main_task_no_defense.py --dataset_name cifar10 --epochs 60 --k 4 --gpu 5
-# python vfl_main_task_no_defense.py --apply_mid True --dataset_name cifar10 --epochs 60 --k 4 --gpu 5
-python vfl_main_task_no_defense.py --apply_encoder True --dataset_name cifar10 --epochs 60 --k 4 --gpu 5
-python vfl_main_task_no_defense.py --apply_laplace True --dataset_name cifar10 --epochs 60 --k 4 --gpu 5
-python vfl_main_task_no_defense.py --apply_gaussian True --dataset_name cifar10 --epochs 60 --k 4 --gpu 5
-python vfl_main_task_no_defense.py --apply_grad_spar True --dataset_name cifar10 --epochs 60 --k 4 --gpu 5
-python vfl_main_task_no_defense.py --apply_RRwithPrior True --dataset_name cifar10 --epochs 60 --k 4 --gpu 5
-python vfl_main_task_no_defense.py --apply_grad_perturb True --dataset_name cifar10 --epochs 60 --k 4 --gpu 5
-python vfl_main_task_no_defense.py --apply_distance_correlation True --dataset_name cifar10 --epochs 60 --k 4 --gpu 5
+# python vfl_main_task_no_defense.py --dataset_name cifar10 --epochs 60 --k 4 --gpu 5
+python vfl_main_task_no_defense.py --apply_mid True --dataset_name cifar10 --epochs 60 --k 4 --gpu 6
+# python vfl_main_task_no_defense.py --apply_encoder True --dataset_name cifar10 --epochs 60 --k 4 --gpu 6
+# python vfl_main_task_no_defense.py --apply_laplace True --dataset_name cifar10 --epochs 60 --k 4 --gpu 6
+# python vfl_main_task_no_defense.py --apply_gaussian True --dataset_name cifar10 --epochs 60 --k 4 --gpu 6
+# python vfl_main_task_no_defense.py --apply_grad_spar True --dataset_name cifar10 --epochs 60 --k 4 --gpu 6
+python vfl_main_task_no_defense.py --apply_RRwithPrior True --dataset_name cifar10 --epochs 60 --k 4 --gpu 6
+python vfl_main_task_no_defense.py --apply_grad_perturb True --dataset_name cifar10 --epochs 60 --k 4 --gpu 6
+python vfl_main_task_no_defense.py --apply_distance_correlation True --dataset_name cifar10 --epochs 60 --k 4 --gpu 6
 
 # python vfl_main_task_no_defense.py --dataset_name cifar10 --epochs 60 --k 25 --gpu 5
 # python vfl_main_task_no_defense.py --apply_mid True --dataset_name cifar10 --epochs 60 --k 25 --gpu 5
