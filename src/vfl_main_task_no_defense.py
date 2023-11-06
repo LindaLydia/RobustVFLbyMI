@@ -15,6 +15,7 @@ from utils import get_labeled_data
 from vfl_main_task import VFLDefenceExperimentBase
 import vfl_main_task
 import vfl_main_task_mid
+import vfl_main_task_mid_aggregate
 import vfl_main_task_mid_backup
 import vfl_main_task_mid_passive
 import vfl_main_task_mid_with_attack
@@ -114,7 +115,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--apply_dravl', default=False, type=bool, help='wheather to use DRAVL for protection')
     parser.add_argument('--dravl_w', default=1.0, type=float, help='the weigth for DRAVL loss')
-
+    parser.add_argument('--mid_aggregate', default=False, type=bool, help="apply mid model on aggregated H")
 
     args = parser.parse_args()
     set_seed(args.seed)
@@ -233,7 +234,7 @@ if __name__ == '__main__':
     # path = f'./exp_result/{args.dataset_name}/'
     # path = f'./exp_result_2048_new/{args.dataset_name}/'
     # path = f'./exp_result_2048/{args.dataset_name}/'
-    path = f'./exp_result_2048_{args.k}/{args.dataset_name}/'
+    path = f'./exp_result_2048_{args.k}/{args.dataset_name}/' if not args.mid_aggregate else f'./exp_result_2048_{args.k}/aggregate/{args.dataset_name}/'
     # path = f'./exp_result_binary/{args.dataset_name}/'
     if args.apply_trainable_layer:
         path += '_top_model/'
@@ -268,7 +269,7 @@ if __name__ == '__main__':
     # num_exp = 5
     num_exp = 3
     # num_exp = 2
-    num_exp = 1
+    # num_exp = 1
 
     args.encoder = None
     # Model(pred_Z) for mid
@@ -332,7 +333,10 @@ if __name__ == '__main__':
                 args.mid_loss_lambda = mid_loss_lambda
                 set_seed(args.seed)
                 #############################################
-                vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
+                if not args.mid_aggregate:
+                    vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
+                else:
+                    vfl_defence_image = vfl_main_task_mid_aggregate.VFLDefenceExperimentBase(args)
                 # vfl_defence_image = vfl_main_task_mid_backup.VFLDefenceExperimentBase(args)
                 # vfl_defence_image = vfl_main_task_mid_passive.VFLDefenceExperimentBase(args)
                 test_acc = vfl_defence_image.train()

@@ -77,9 +77,7 @@ class LabelLeakage(object):
         self.apply_grad_perturb = args.apply_grad_perturb
         self.perturb_epsilon = args.perturb_epsilon
         self.apply_RRwithPrior = args.apply_RRwithPrior
-        self.RRwithPrior_epsilon = args.RRwithPrior_epsilon  
-
-        self.attack_corrupt = args.attack_corrupt      
+        self.RRwithPrior_epsilon = args.RRwithPrior_epsilon        
         # self.show_param()
 
     def show_param(self):
@@ -125,8 +123,10 @@ class LabelLeakage(object):
         for batch_size in self.batch_size_list:
             for num_classes in self.num_class_list:
                 if self.apply_mid:
-                    self.mid_model = [MID_layer(num_classes*BOTTLENECK_SCALE, num_classes).to(self.device) for _ in range(self.k-1)]
-                    self.mid_enlarge_model = [MID_enlarge_layer(num_classes,num_classes*2*BOTTLENECK_SCALE).to(self.device) for _ in range(self.k-1)]
+                    self.mid_model = MID_layer(num_classes*BOTTLENECK_SCALE, num_classes).to(self.device)
+                    self.mid_enlarge_model = MID_enlarge_layer(num_classes,num_classes*2*BOTTLENECK_SCALE).to(self.device)
+                    # self.mid_model = [MID_layer(num_classes*BOTTLENECK_SCALE, num_classes).to(self.device) for _ in range(self.k-1)]
+                    # self.mid_enlarge_model = [MID_enlarge_layer(num_classes,num_classes*2*BOTTLENECK_SCALE).to(self.device) for _ in range(self.k-1)]
                 classes = [None] * num_classes
                 gt_equal_probability = torch.from_numpy(np.array([1/num_classes]*num_classes)).to(self.device)
                 print("gt_equal_probability:", gt_equal_probability)
@@ -245,8 +245,8 @@ class LabelLeakage(object):
                     # print("loss", loss)
                     ######################## defense3: mutual information defense ############################
                     if self.apply_mid:
-                        # epsilon = torch.empty((pred_a.size()[0],pred_a.size()[1]*BOTTLENECK_SCALE))
-                        epsilon = [torch.empty((preds[ik].size()[0],preds[ik].size()[1]*BOTTLENECK_SCALE)) for ik in range(self.k-1)]
+                        epsilon = torch.empty((preds[0].size()[0],preds[0].size()[1]*BOTTLENECK_SCALE))
+                        # epsilon = [torch.empty((preds[ik].size()[0],preds[ik].size()[1]*BOTTLENECK_SCALE)) for ik in range(self.k-1)]
                         
                         # # discrete form of reparameterization
                         # torch.nn.init.uniform(epsilon) # epsilon is initialized
@@ -256,61 +256,32 @@ class LabelLeakage(object):
                         # pred_Z = F.softmax(pred_Z / torch.tensor(self.mid_tau).to(self.device), -1)
                         
                         # continuous form of reparameterization
-                        # torch.nn.init.normal(epsilon, mean=0, std=1) # epsilon is initialized
-                        # epsilon = epsilon.to(self.device)
-                        for ie, _e in enumerate(epsilon):
-                            torch.nn.init.normal(_e, mean=0, std=1) # epsilon is initialized
-                            epsilon[ie] = _e.to(self.device)
+                        torch.nn.init.normal(epsilon, mean=0, std=1) # epsilon is initialized
+                        epsilon = epsilon.to(self.device)
+                        # for ie, _e in enumerate(epsilon):
+                        #     torch.nn.init.normal(_e, mean=0, std=1) # epsilon is initialized
+                        #     epsilon[ie] = _e.to(self.device)
+                        
+                        out = preds[0]
+                        for i in range(len(preds)-2):
+                            out = out.add(preds[i+1])
+                        pred_a_double = self.mid_enlarge_model(out)
                         # # pred_a.size() = (batch_size, class_num)
                         # pred_a_double = self.mid_enlarge_model(pred_a)
-                        # mu, std = pred_a_double[:,:num_classes*BOTTLENECK_SCALE], pred_a_double[:,num_classes*BOTTLENECK_SCALE:]
-                        # std = F.softplus(std-5) # ? F.softplus(std-5)
-                        # # print("mu, std: ", mu.size(), std.size())
-                        # # print(pred_a.size(), pred_a_double.size(), mu.size(), std.size(), epsilon.size())
-                        # pred_Z = mu+std*epsilon
-                        # # assert(pred_Z.size()==pred_a.size())
-                        # # print(pred_Z.size())
-                        # pred_Z = pred_Z.to(self.device)
-                        # pred_Z = self.mid_model(pred_Z)
-                        # pred = active_aggregate_model(pred_Z)
-                        # # # loss for discrete form of reparameterization
-                        # # loss = criterion(pred, gt_onehot_label) + self.mid_loss_lambda * entropy_for_probability_vector(pred_a)
-                        # # loss for continuous form of reparameterization
-                        # loss = criterion(pred, gt_onehot_label) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
-                        
-                        # loss = criterion(pred, gt_onehot_label)
-                        pred_a_double = [self.mid_enlarge_model[ik](preds[ik]) for ik in range(self.k-1)]
-                        pred_Z = []
-                        # std_list = []
-                        # mu_list = []
-                        std_list = [None] * (self.k-1)
-                        mu_list = [None] * (self.k-1)
-                        for ik in range(self.k-1):
-                            # mu, std = pred_a_double[ik][:,:num_classes*BOTTLENECK_SCALE], pred_a_double[ik][:,num_classes*BOTTLENECK_SCALE:]
-                            # mu_list.append(mu)
-                            # std_list.append(std)
-                            # std = F.softplus(std-5) # ? F.softplus(std-5)
-                            mu_list[ik], std_list[ik] = pred_a_double[ik][:,:num_classes*BOTTLENECK_SCALE], pred_a_double[ik][:,num_classes*BOTTLENECK_SCALE:]
-                            std_list[ik] = F.softplus(std_list[ik]-5) # ? F.softplus(std-5)
-                            # loss += self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
-                            # print("mu, std: ", mu.size(), std.size())
-                            # print(pred_a.size(), pred_a_double.size(), mu.size(), std.size(), epsilon.size())
-                            # pred_Z.append(mu+std*epsilon[ik])
-                            pred_Z.append(mu_list[ik]+std_list[ik]*epsilon[ik])
-                            # print(f"mu[{ik}], std[{ik}]", mu_list[ik], std_list[ik])
-                            # print(f"pred_Z[{ik}]", pred_Z[ik], pred_Z[ik])
-                            pred_Z[ik] = pred_Z[ik].to(self.device)
-                            pred_Z[ik] = self.mid_model[ik](pred_Z[ik])
-                            # print(f"pred_Z[{ik}]", pred_Z[ik], pred_Z[ik])
-                        pred_Z.append(F.softmax(preds[-1], dim=-1))
-                        
+                        mu, std = pred_a_double[:,:num_classes*BOTTLENECK_SCALE], pred_a_double[:,num_classes*BOTTLENECK_SCALE:]
+                        std = F.softplus(std-5) # ? F.softplus(std-5)
+                        # print("mu, std: ", mu.size(), std.size())
+                        # print(pred_a.size(), pred_a_double.size(), mu.size(), std.size(), epsilon.size())
+                        pred_Z = mu+std*epsilon
+                        # assert(pred_Z.size()==pred_a.size())
+                        # print(pred_Z.size())
+                        pred_Z = pred_Z.to(self.device)
+                        pred_Z = self.mid_model(pred_Z)
+                        pred = active_aggregate_model(pred_Z)
                         # # loss for discrete form of reparameterization
                         # loss = criterion(pred, gt_onehot_label) + self.mid_loss_lambda * entropy_for_probability_vector(pred_a)
                         # loss for continuous form of reparameterization
-                        pred = active_aggregate_model(pred_Z)
-                        loss = criterion(pred, gt_onehot_label)
-                        for ik in range(self.k-1):
-                            loss += self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std_list[ik])-mu_list[ik]**2 - std_list[ik]**2),1))
+                        loss = criterion(pred, gt_onehot_label) + self.mid_loss_lambda * torch.mean(torch.sum((-0.5)*(1+2*torch.log(std)-mu**2 - std**2),1))
                         # print("final_loss", loss)
                     ######################## defense4: distance correlation ############################
                     if self.apply_distance_correlation:
@@ -385,10 +356,7 @@ class LabelLeakage(object):
                         for ik in range(self.k-1):
                             pred_a_gradients_clone[ik] = multistep_gradient(pred_a_gradients_clone[ik], bins_num=self.discrete_gradients_bins, bound_abs=self.discrete_gradients_bound)
                     ######################## defense end #################################################### defense3: mid ############################
-                    if self.attack_corrupt:
-                        original_dy_dx = [torch.autograd.grad(preds[ik], nets[ik].parameters(), grad_outputs=pred_a_gradients_clone[ik]) for ik in range(self.k-1)]
-                    else:
-                        original_dy_dx = [torch.autograd.grad(preds[int((self.k-1)//2)], nets[int((self.k-1)//2)].parameters(), grad_outputs=pred_a_gradients_clone[int((self.k-1)//2)])]
+                    original_dy_dx = [torch.autograd.grad(preds[ik], nets[ik].parameters(), grad_outputs=pred_a_gradients_clone[ik]) for ik in range(self.k-1)]
 
                     dummy_pred_b = torch.randn(preds[-1].size()).to(self.device).requires_grad_(True)
                     dummy_label = torch.randn(gt_onehot_label.size()).to(self.device).requires_grad_(True)
@@ -406,16 +374,12 @@ class LabelLeakage(object):
 
                             dummy_onehot_label = F.softmax(dummy_label, dim=-1)
                             dummy_loss = criterion(dummy_pred, dummy_onehot_label)
-                            if self.attack_corrupt:
-                                # dummy_dy_dx_a = torch.autograd.grad(dummy_loss, net_a.parameters(), create_graph=True)
-                                dummy_dy_dx_a = [torch.autograd.grad(dummy_loss, nets[ik].parameters(), create_graph=True) for ik in range(self.k-1)]
-                            else:
-                                # dummy_dy_dx_a = torch.autograd.grad(dummy_loss, net_a.parameters(), create_graph=True)
-                                dummy_dy_dx_a = [torch.autograd.grad(dummy_loss, nets[int((self.k-1)//2)].parameters(), create_graph=True)]
+                            # dummy_dy_dx_a = torch.autograd.grad(dummy_loss, net_a.parameters(), create_graph=True)
+                            dummy_dy_dx_a = [torch.autograd.grad(dummy_loss, nets[ik].parameters(), create_graph=True) for ik in range(self.k-1)]
                             grad_diff = 0
-                            for ik in range(len(dummy_dy_dx_a)): # len(dummy_dy_dx_a)==self.k-1 if self.attack_corrupt else 1
+                            for ik in range(self.k-1):
                                 for (gx, gy) in zip(dummy_dy_dx_a[ik], original_dy_dx[ik]):
-                                    grad_diff += ((gx - gy) ** 2).sum()                          
+                                    grad_diff += ((gx - gy) ** 2).sum()
                             grad_diff.backward()
                             return grad_diff
 
@@ -508,7 +472,7 @@ class LabelLeakage(object):
                     exp_result = str(self.marvell_s) + ' ' + str(avg_rec_rate) + ' ' + str(recovery_rate_history) + ' ' + str(np.max(recovery_rate_history))
                 else:
                     exp_result = f"bs|num_class|recovery_rate,%d|%d| %lf %s %lf" % (batch_size, num_classes, avg_rec_rate, str(recovery_rate_history), np.max(recovery_rate_history))
-                exp_result += f' corrupt={self.attack_corrupt}'
+
                 append_exp_res(self.exp_res_path, exp_result)
                 print(exp_result)
 

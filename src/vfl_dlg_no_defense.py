@@ -8,6 +8,7 @@ from models.autoencoder import AutoEncoder
 from vfl_dlg import *
 import vfl_dlg
 import vfl_dlg_mid
+import vfl_dlg_mid_aggregate
 import vfl_dlg_mid_backup
 from models.vision import *
 from utils import *
@@ -83,6 +84,9 @@ if __name__ == '__main__':
     parser.add_argument('--perturb_epsilon', default=1.0, type=float, help='the parameter DP-epsilon for GradPerturb')
     parser.add_argument('--apply_RRwithPrior', default=False, type=bool, help='wheather to use RRwithPrior for protection')
     parser.add_argument('--RRwithPrior_epsilon', default=1.0, type=float, help='the parameter DP-epsilon for RRwithPrior')
+    
+    parser.add_argument('--mid_aggregate', default=False, type=bool, help="apply mid model on aggregated H")
+    parser.add_argument('--attack_corrupt', default=False, type=bool, help="passive parties corrupt and use their information together for stronger attack")
 
     args = parser.parse_args()
     set_seed(args.seed)
@@ -143,7 +147,7 @@ if __name__ == '__main__':
     # args.exp_res_dir = f'exp_result/{args.dataset}/'
     # args.exp_res_dir = f'exp_result_2048/{args.dataset}/'
     # args.exp_res_dir = f'exp_result_2048/{args.dataset}/'
-    args.exp_res_dir = f'exp_result_2048_{args.k}/{args.dataset}/'
+    args.exp_res_dir = f'exp_result_2048_{args.k}/{args.dataset}/' if not args.mid_aggregate else f'./exp_result_2048_{args.k}/aggregate/{args.dataset}/'
     # args.exp_res_dir = f'exp_result_binary/{args.dataset}/'
     # all the route can be concatenated
     if args.apply_trainable_layer:
@@ -203,7 +207,10 @@ if __name__ == '__main__':
         mid_lambda_list = [0,1e-9,1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1,100,1000,10000]
         for mid_loss_lambda in mid_lambda_list:
             args.mid_loss_lambda = mid_loss_lambda
-            label_leakage = vfl_dlg_mid.LabelLeakage(args)
+            if not args.mid_aggregate:
+                label_leakage = vfl_dlg_mid.LabelLeakage(args)
+            else:
+                label_leakage = vfl_dlg_mid_aggregate.LabelLeakage(args)
             # label_leakage = vfl_dlg_mid_backup.LabelLeakage(args)
             label_leakage.train()
     elif args.apply_grad_perturb:
