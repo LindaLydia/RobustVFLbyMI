@@ -96,14 +96,22 @@ def tf_distance_cov_cor(input1, input2, debug=False):
     b = pairwise_dist(input2, input2)
     
     # A = a - tf.reduce_mean(a,axis=1) - tf.expand_dims(tf.reduce_mean(a,axis=0),axis=1) + tf.reduce_mean(a)
-    A = a - torch.mean(a,axis=1) - torch.unsqueeze(torch.mean(a,axis=0),axis=1) + torch.mean(a)
-    B = b - torch.mean(b,axis=1) - torch.unsqueeze(torch.mean(b,axis=0),axis=1) + torch.mean(b)
+    A = a - torch.mean(a,axis=1) - torch.unsqueeze(torch.mean(a,axis=0),axis=1) + torch.mean(a) + 1e-8
+    B = b - torch.mean(b,axis=1) - torch.unsqueeze(torch.mean(b,axis=0),axis=1) + torch.mean(b) + 1e-8
+
+    # print("A", A)
+    # print("B", B)
 
     dCovXY = torch.sqrt(torch.sum(A * B) / (n ** 2))
     dVarXX = torch.sqrt(torch.sum(A * A) / (n ** 2))
     dVarYY = torch.sqrt(torch.sum(B * B) / (n ** 2))
+    
+    # print("dCovXY", dCovXY)
+    # print("dVarXX", dVarXX)
+    # print("dVarYY", dVarYY)
 
-    dCorXY = dCovXY / torch.sqrt(dVarXX * dVarYY)
+    dCorXY = (dCovXY / torch.sqrt(dVarXX * dVarYY)) # if dCovXY.item() != 0.0 else torch.tensor()
+    # print("dCovXY", dCovXY)
     if debug:
         print(("tf distance cov: {} and cor: {}, dVarXX: {}, dVarYY:{}").format(
             dCovXY, dCorXY,dVarXX, dVarYY))
