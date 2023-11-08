@@ -141,7 +141,7 @@ if __name__ == '__main__':
 
     # args.num_exp = 10
     # args.num_exp = 5
-    args.num_exp = 3 if (args.k != 2) else 100
+    args.num_exp = 3
     # args.num_exp = 1
 
     # args.exp_res_dir = f'exp_result/{args.dataset}/'
@@ -231,10 +231,16 @@ if __name__ == '__main__':
             label_leakage.train()
     elif args.apply_distance_correlation:
         distance_correlation_lambda_list = [0.1, 0.01, 3e-3, 1e-3, 1e-4, 1e-5, 1e-6]
-        distance_correlation_lambda_list = [1e-6, 1e-5, 1e-4, 1e-3, 3e-3, 0.01, 0.1]
+        # distance_correlation_lambda_list = [1e-6, 1e-5, 1e-4, 1e-3, 3e-3, 0.01, 0.1]
         # mid_lambda_list = [0]
         for distance_correlation_lambda in distance_correlation_lambda_list:
             args.distance_correlation_lambda = distance_correlation_lambda
+            label_leakage = vfl_dlg_mid.LabelLeakage(args)
+            label_leakage.train()
+    elif args.apply_discrete_gradients:
+        discrete_gradients_bins_list = [3,6,12,18,24]
+        for discrete_gradients_bins in discrete_gradients_bins_list:
+            args.discrete_gradients_bins = discrete_gradients_bins
             label_leakage = vfl_dlg_mid.LabelLeakage(args)
             label_leakage.train()
     else:

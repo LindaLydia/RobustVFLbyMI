@@ -7,6 +7,7 @@ import tensorflow as tf
 import torch
 import torch.nn.functional as F
 import numpy as np
+from random import randint
 
 from models.vision import *
 from utils import *
@@ -385,60 +386,77 @@ class LabelLeakage(object):
                         for ik in range(self.k-1):
                             pred_a_gradients_clone[ik] = multistep_gradient(pred_a_gradients_clone[ik], bins_num=self.discrete_gradients_bins, bound_abs=self.discrete_gradients_bound)
                     ######################## defense end #################################################### defense3: mid ############################
-                    if self.attack_corrupt:
-                        original_dy_dx = [torch.autograd.grad(preds[ik], nets[ik].parameters(), grad_outputs=pred_a_gradients_clone[ik]) for ik in range(self.k-1)]
-                    else:
-                        original_dy_dx = [torch.autograd.grad(preds[int((self.k-1)//2)], nets[int((self.k-1)//2)].parameters(), grad_outputs=pred_a_gradients_clone[int((self.k-1)//2)])]
+                    
+                    
+                    
+                    # if self.attack_corrupt:
+                    #     original_dy_dx = [torch.autograd.grad(preds[ik], nets[ik].parameters(), grad_outputs=pred_a_gradients_clone[ik]) for ik in range(self.k-1)]
+                    # else:
+                    #     original_dy_dx = [torch.autograd.grad(preds[int((self.k-1)//2)], nets[int((self.k-1)//2)].parameters(), grad_outputs=pred_a_gradients_clone[int((self.k-1)//2)])]
 
-                    dummy_pred_b = torch.randn(preds[-1].size()).to(self.device).requires_grad_(True)
-                    dummy_label = torch.randn(gt_onehot_label.size()).to(self.device).requires_grad_(True)
+                    # dummy_pred_b = torch.randn(preds[-1].size()).to(self.device).requires_grad_(True)
+                    # dummy_label = torch.randn(gt_onehot_label.size()).to(self.device).requires_grad_(True)
 
-                    if self.apply_trainable_layer:
-                        optimizer = torch.optim.Adam([dummy_pred_b, dummy_label] + list(dummy_active_aggregate_model.parameters()), lr=self.lr)
-                    else:
-                        optimizer = torch.optim.Adam([dummy_pred_b, dummy_label], lr=self.lr)
+                    # if self.apply_trainable_layer:
+                    #     optimizer = torch.optim.Adam([dummy_pred_b, dummy_label] + list(dummy_active_aggregate_model.parameters()), lr=self.lr)
+                    # else:
+                    #     optimizer = torch.optim.Adam([dummy_pred_b, dummy_label], lr=self.lr)
 
-                    for iters in range(1, self.epochs + 1):
-                        def closure():
-                            optimizer.zero_grad()
-                            # dummy_pred = dummy_active_aggregate_model(net_a(gt_data_a), dummy_pred_b)
-                            dummy_pred = dummy_active_aggregate_model([nets[ik](gt_data_separate[ik]) for ik in range(self.k-1)]+[dummy_pred_b])
+                    # for iters in range(1, self.epochs + 1):
+                    #     def closure():
+                    #         optimizer.zero_grad()
+                    #         # dummy_pred = dummy_active_aggregate_model(net_a(gt_data_a), dummy_pred_b)
+                    #         dummy_pred = dummy_active_aggregate_model([nets[ik](gt_data_separate[ik]) for ik in range(self.k-1)]+[dummy_pred_b])
 
-                            dummy_onehot_label = F.softmax(dummy_label, dim=-1)
-                            dummy_loss = criterion(dummy_pred, dummy_onehot_label)
-                            if self.attack_corrupt:
-                                # dummy_dy_dx_a = torch.autograd.grad(dummy_loss, net_a.parameters(), create_graph=True)
-                                dummy_dy_dx_a = [torch.autograd.grad(dummy_loss, nets[ik].parameters(), create_graph=True) for ik in range(self.k-1)]
-                            else:
-                                # dummy_dy_dx_a = torch.autograd.grad(dummy_loss, net_a.parameters(), create_graph=True)
-                                dummy_dy_dx_a = [torch.autograd.grad(dummy_loss, nets[int((self.k-1)//2)].parameters(), create_graph=True)]
-                            grad_diff = 0
-                            for ik in range(len(dummy_dy_dx_a)): # len(dummy_dy_dx_a)==self.k-1 if self.attack_corrupt else 1
-                                for (gx, gy) in zip(dummy_dy_dx_a[ik], original_dy_dx[ik]):
-                                    grad_diff += ((gx - gy) ** 2).sum()                          
-                            grad_diff.backward()
-                            return grad_diff
+                    #         dummy_onehot_label = F.softmax(dummy_label, dim=-1)
+                    #         dummy_loss = criterion(dummy_pred, dummy_onehot_label)
+                    #         if self.attack_corrupt:
+                    #             # dummy_dy_dx_a = torch.autograd.grad(dummy_loss, net_a.parameters(), create_graph=True)
+                    #             dummy_dy_dx_a = [torch.autograd.grad(dummy_loss, nets[ik].parameters(), create_graph=True) for ik in range(self.k-1)]
+                    #         else:
+                    #             # dummy_dy_dx_a = torch.autograd.grad(dummy_loss, net_a.parameters(), create_graph=True)
+                    #             dummy_dy_dx_a = [torch.autograd.grad(dummy_loss, nets[int((self.k-1)//2)].parameters(), create_graph=True)]
+                    #         grad_diff = 0
+                    #         for ik in range(len(dummy_dy_dx_a)): # len(dummy_dy_dx_a)==self.k-1 if self.attack_corrupt else 1
+                    #             for (gx, gy) in zip(dummy_dy_dx_a[ik], original_dy_dx[ik]):
+                    #                 grad_diff += ((gx - gy) ** 2).sum()                          
+                    #         grad_diff.backward()
+                    #         return grad_diff
 
-                        rec_rate = self.calc_label_recovery_rate(dummy_label, gt_label)
-                        # if iters == 1:
-                        #     append_exp_res(f'exp_result/{self.dataset}/exp_on_{self.dataset}_rec_rate_change.txt',
-                        #                    f'{batch_size} 0 {rec_rate} {closure()}')
-                        optimizer.step(closure)
-                        # if self.calc_label_recovery_rate(dummy_label, gt_label) >= 99.99:
-                        #     break
+                    #     rec_rate = self.calc_label_recovery_rate(dummy_label, gt_label)
+                    #     # if iters == 1:
+                    #     #     append_exp_res(f'exp_result/{self.dataset}/exp_on_{self.dataset}_rec_rate_change.txt',
+                    #     #                    f'{batch_size} 0 {rec_rate} {closure()}')
+                    #     optimizer.step(closure)
+                    #     # if self.calc_label_recovery_rate(dummy_label, gt_label) >= 99.99:
+                    #     #     break
 
-                        # append_exp_res(f'exp_result/{self.dataset}/exp_on_{self.dataset}_rec_rate_change.txt',
-                        #                f'{batch_size} {iters} {rec_rate} {closure()}')
-                        # if rec_rate >= 0.999:
-                        #     break
-                        # print(iters, "%.4f" % closure().item())
-                        # if iters % 10 == 0:
-                        #     print(iters, torch.sum(torch.argmax(dummy_label, dim=-1) == torch.argmax(gt_label, dim=-1)).item() / batch_size)
-                        #     print(f'iters:{iters}, loss:{closure().item()}')
-                        #     append_exp_res(f'exp_result/exp_on_{self.dataset}_loss.txt', f'{iters} {closure().item()}')
-                        if self.early_stop == True:
-                            if closure().item() < self.early_stop_param:
+                    #     # append_exp_res(f'exp_result/{self.dataset}/exp_on_{self.dataset}_rec_rate_change.txt',
+                    #     #                f'{batch_size} {iters} {rec_rate} {closure()}')
+                    #     # if rec_rate >= 0.999:
+                    #     #     break
+                    #     # print(iters, "%.4f" % closure().item())
+                    #     # if iters % 10 == 0:
+                    #     #     print(iters, torch.sum(torch.argmax(dummy_label, dim=-1) == torch.argmax(gt_label, dim=-1)).item() / batch_size)
+                    #     #     print(f'iters:{iters}, loss:{closure().item()}')
+                    #     #     append_exp_res(f'exp_result/exp_on_{self.dataset}_loss.txt', f'{iters} {closure().item()}')
+                    #     if self.early_stop == True:
+                    #         if closure().item() < self.early_stop_param:
+                    #             break
+
+                    # ########## Direct Label Inference ##########
+                    pred_label = []
+                    for _gradient in pred_a_gradients_clone[int((self.k-1)//2)]:
+                        pred_idx = -1
+                        for idx in range(len(_gradient)):
+                            if _gradient[idx] < 0.0:
+                                pred_idx = idx
                                 break
+                        if pred_idx == -1:
+                            pred_idx = randint(0,num_classes-1)
+                        pred_label.append(pred_idx)
+                    dummy_label = label_to_onehot(torch.tensor(pred_label), num_classes).to(self.device)
+
 
                     rec_rate = self.calc_label_recovery_rate(dummy_label, gt_label)
                     recovery_rate_history.append(rec_rate)
@@ -465,9 +483,9 @@ class LabelLeakage(object):
                     elif self.apply_grad_perturb:
                         print(f'batch_size=%d,class_num=%d,exp_id=%d,perturb_epsilon=%lf,recovery_rate=%lf,time_used=%lf'
                               % (batch_size, num_classes, i_run, self.perturb_epsilon,rec_rate, end_time - start_time))
-                    elif self.apply_discrete_gradients:
-                        print(f'batch_size=%d,class_num=%d,exp_id=%d,ae_lambda=%s,recovery_rate=%lf,time_used=%lf'
-                              % (batch_size, num_classes, i_run, self.ae_lambda,rec_rate, end_time - start_time))
+                    elif self.apply_discrete_gradients and not self.apply_encoder:
+                        print(f'batch_size=%d,class_num=%d,exp_id=%d,discrete_gradients_bins=%s,recovery_rate=%lf,time_used=%lf'
+                              % (batch_size, num_classes, i_run, self.discrete_gradients_bins,rec_rate, end_time - start_time))
                     elif self.apply_encoder:
                         print(f'batch_size=%d,class_num=%d,exp_id=%d,ae_lambda=%s,recovery_rate=%lf,time_used=%lf'
                               % (batch_size, num_classes, i_run, self.ae_lambda,rec_rate, end_time - start_time))

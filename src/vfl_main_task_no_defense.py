@@ -269,7 +269,7 @@ if __name__ == '__main__':
     # num_exp = 5
     num_exp = 3
     # num_exp = 2
-    # num_exp = 1
+    num_exp = 1
 
     args.encoder = None
     # Model(pred_Z) for mid
@@ -396,6 +396,18 @@ if __name__ == '__main__':
                 test_acc = vfl_defence_image.train()
                 test_acc_list.append(test_acc[0])
             append_exp_res(path, str(args.distance_correlation_lambda) + ' ' + str(np.mean(test_acc_list))+ ' ' + str(test_acc_list) + ' ' + str(np.max(test_acc_list)))
+    elif args.apply_discrete_gradients:
+        discrete_gradients_bins_list = [3,6,12,18,24]
+        num_exp = 2
+        for discrete_gradients_bins in discrete_gradients_bins_list:
+            test_acc_list = []
+            rec_acc_list = []
+            for i in range(num_exp):
+                args.discrete_gradients_bins = discrete_gradients_bins
+                set_seed(args.seed)
+                vfl_defence_image = vfl_main_task_mid.VFLDefenceExperimentBase(args)
+                test_acc = vfl_defence_image.train()
+                test_acc_list.append(test_acc[0])
     elif args.apply_dravl:
         dravl_w_list = [0.0001,0.01,1.0,100.0,10000.0]
         # dravl_w_list = [0.0001,0.01,100.0,10000.0]
